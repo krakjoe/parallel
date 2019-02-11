@@ -1,0 +1,67 @@
+language: php
+compiler:
+  - gcc
+addons:
+  apt:
+    packages:
+      - valgrind
+php:
+  - 7.1
+  - 7.2
+  - 7.3
+  - 7.4snapshot
+
+env:
+  global:
+    - REPORT_EXIT_STATUS=1
+    - CONF="disable-parallel-coverage"
+    - RULE="all"
+    - DEF="-q --show-diff"
+    - MEMCHECK="-m --show-mem"
+  matrix:
+    - OPCACHE=0 TEST_PHP_ARGS="$DEF" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
+    - OPCACHE=1 TEST_PHP_ARGS="$DEF" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
+    - OPCACHE=0 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
+    - OPCACHE=1 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
+
+matrix:
+  allow_failures:
+    - php: nightly
+      env: OPCACHE=0 TEST_PHP_ARGS="$DEF" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
+    - php: nightly
+      env: OPCACHE=1 TEST_PHP_ARGS="$DEF" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
+    - php: nightly
+      env: OPCACHE=0 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
+    - php: nightly
+      env: OPCACHE=1 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
+
+before_install:
+  - test $CONF != "enable-parallel-coverage" || pip install --user cpp-coveralls
+
+before_script:
+  - echo "{"                                                      >> $HOME/default.supp
+  - echo "String_Equality_Intentionally_Reads_Uninit_Memory"      >> $HOME/default.supp
+  - echo "Memcheck:Cond"                                          >> $HOME/default.supp
+  - echo "fun:zend_string_equal_val"                              >> $HOME/default.supp
+  - echo "}"                                                      >> $HOME/default.supp
+  - echo  "#!/bin/bash"                                           >> $HOME/bin/valgrind
+  - echo "/usr/bin/valgrind --suppressions=$HOME/default.supp \$@" >> $HOME/bin/valgrind
+  - chmod +x $HOME/bin/valgrind
+  - export PATH=$HOME/bin:$PATH
+  - echo "variables_order=EGPCS"                >> $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/php.ini
+  - echo                                        > $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/conf.d/xdebug.ini
+  - echo "extension=parallel.so"               > $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/conf.d/parallel.ini
+  - echo "opcache.enable_cli=$OPCACHE"          > $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/conf.d/opcache.ini
+  - echo "opcache.optimization_level=0"         >> $HOME/.phpenv/versions/$TRAVIS_PHP_VERSION/etc/conf.d/opcache.ini
+
+script:
+  - cd $TRAVIS_BUILD_DIR
+  - phpize
+  - wget -q -O run-tests.php https://raw.githubusercontent.com/php/php-src/master/run-tests.php
+  - ./configure --$CONF
+  - make $RULE
+  - make install
+  - php run-tests.php -P
+
+after_success:
+  - test $CONF != "enable-parallel-coverage" || coveralls -b $TRAVIS_BUILD_DIR -E Zend --gcov-options '\-lp'
