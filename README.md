@@ -1,16 +1,29 @@
 parallel
 ========
 
+[![Build Status](https://travis-ci.org/krakjoe/parallel.svg?branch=master)](https://travis-ci.org/krakjoe/parallel)
+[![Coverage Status](https://coveralls.io/repos/github/krakjoe/parallel/badge.svg?branch=master)](https://coveralls.io/github/krakjoe/parallel)
+
 A succint parallel concurrency API for PHP 7:
 
 ```php
 class parallel\Runtime {
 	/*
-	* Shall construct a new parallel runtime, optionally bootstrapping and configuring
-	* @param string bootstrap file (generally an autoloader)
-	* @param array  ini configuration for the Runtime
+	* Shall construct a new Runtime
+	* @param string bootstrap (generally an autoloader)
+	* @param array  ini configuration
 	*/	
-	public function __construct(string $bootstrap = null, array $configuration = []);
+	public function __construct(string $bootstrap, array $configuration);
+	/**
+	* Shall construct a new Runtime
+	* @param string bootstrap (generally an autoloader)
+	**/
+	public function __construct(string $bootstrap);
+	/**
+	* Shall construct a new Runtime
+	* @param array ini configuration
+	**/
+	public function __construct(array $configuration);
 
 	/*
 	* Shall schedule a Closure for executing, optionally passing parameters and
