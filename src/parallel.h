@@ -29,6 +29,7 @@
 
 extern zend_class_entry *php_parallel_ce;
 extern zend_class_entry *php_parallel_future_ce;
+extern zend_string *php_parallel_main;
 
 typedef struct _php_parallel_entry_point_t {
 	zend_function *point;
