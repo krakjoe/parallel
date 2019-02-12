@@ -298,7 +298,7 @@ static inline zend_arg_info* php_parallel_copy_arginfo(zend_op_array *op_array, 
 	return info;
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_copying_lexical(zend_execute_data *execute_data, zend_function *function, zend_op *bind) { /* {{{ */
+static zend_always_inline zend_bool php_parallel_copying_lexical(zend_execute_data *execute_data, const zend_function *function, zend_op *bind) { /* {{{ */
 	zend_op *opline, *end;
 
 	if (EX(func)->type != ZEND_USER_FUNCTION) {
@@ -322,7 +322,7 @@ static zend_always_inline zend_bool php_parallel_copying_lexical(zend_execute_da
 	return 0;
 } /* }}} */
 
-zend_bool php_parallel_copy_arginfo_check(zend_function *function) { /* {{{ */
+zend_bool php_parallel_copy_arginfo_check(const zend_function *function) { /* {{{ */
 	zend_arg_info *it, *end;
 	int argc = 1;
 
@@ -380,7 +380,7 @@ zend_bool php_parallel_copy_arginfo_check(zend_function *function) { /* {{{ */
 	return 1;
 } /* }}} */
 
-static zend_bool php_parallel_copy_argv_check(zval *args, int *argc, zval *error) { /* {{{ */
+static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval *error) { /* {{{ */
 	zval *arg;
 
 	if (*argc == 0) {
@@ -410,7 +410,7 @@ static zend_bool php_parallel_copy_argv_check(zval *args, int *argc, zval *error
 	return 1;
 } /* }}} */
 
-zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execute_data *execute_data, zend_function * function, int argc, zval *argv) { /* {{{ */
+zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execute_data *execute_data, const zend_function * function, int argc, zval *argv) { /* {{{ */
 	zend_op *it = function->op_array.opcodes,
 		*end = it + function->op_array.last;
 	uint32_t errat = 0;
@@ -482,7 +482,7 @@ zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execut
 	return 1;
 } /* }}} */
 
-zend_function* php_parallel_copy(zend_function *function, zend_bool persistent) { /* {{{ */
+zend_function* php_parallel_copy(const zend_function *function, zend_bool persistent) { /* {{{ */
 	zend_function  *copy;	
 	zend_op_array  *op_array;
 	zend_string   **variables;
