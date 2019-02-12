@@ -42,7 +42,7 @@ zend_class_entry *php_parallel_ce;
 zend_class_entry *php_parallel_future_ce;
 zend_object_handlers php_parallel_handlers;
 zend_object_handlers php_parallel_future_handlers;
-PHPAPI zend_string *php_parallel_main;
+zend_string *php_parallel_main;
 
 void* php_parallel_routine(void *arg);
 
@@ -454,7 +454,7 @@ void php_parallel_future_destroy(zend_object *o) {
 	zend_object_std_dtor(o);
 }
 
-PHPAPI void php_parallel_startup(void) {
+void php_parallel_startup(void) {
 	zend_class_entry ce;
 
 	memcpy(&php_parallel_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
@@ -490,7 +490,7 @@ PHPAPI void php_parallel_startup(void) {
 	sapi_module.deactivate = NULL;
 }
 
-PHPAPI void php_parallel_shutdown(void) {
+void php_parallel_shutdown(void) {
 	sapi_module.deactivate = php_sapi_deactivate_function;
 
 	zend_string_release(php_parallel_main);
