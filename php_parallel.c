@@ -60,6 +60,7 @@ PHP_MINFO_FUNCTION(parallel)
 {
 	php_info_print_table_start();
 	php_info_print_table_header(2, "parallel support", "enabled");
+	php_info_print_table_row(2, "parallel version", PHP_PARALLEL_VERSION);
 	php_info_print_table_end();
 }
 /* }}} */
