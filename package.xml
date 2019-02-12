@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" packagerversion="1.10" version="2.0" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+ <name>parallel</name>
+ <channel>pecl.php.net</channel>
+ <summary>Parallel concurrency API</summary>
+ <description>A succint parallel concurrency API for PHP 7.</description>
+ <lead>
+  <name>Joe Watkins</name>
+  <user>krakjoe</user>
+  <email>krakjoe@php.net</email>
+  <active>yes</active>
+ </lead>
+ <lead>
+  <name>Remi Collet</name>
+  <user>remi</user>
+  <email>remi@php.net</email>
+  <active>yes</active>
+ </lead>
+ <date>2019-01-30</date>
+ <version>
+  <release>0.0.1dev</release>
+  <api>0.0.1</api>
+ </version>
+ <stability>
+  <release>beta</release>
+  <api>beta</api>
+ </stability>
+ <license uri="http://www.php.net/license">PHP License</license>
+ <notes>
+- initial pecl release
+ </notes>
+ <contents>
+  <dir name="/">
+   <file name="LICENSE" role="doc"/>
+   <file name="README.md" role="doc"/>
+   <file name="config.m4" role="src"/>
+   <file name="config.w32" role="src"/>
+   <file name="php_parallel.h" role="src"/>
+   <file name="php_parallel.c" role="src"/>
+   <dir name="src">
+    <file name="copy.c" role="src"/>
+    <file name="copy.h" role="src"/>
+    <file name="monitor.c" role="src"/>
+    <file name="monitor.h" role="src"/>
+    <file name="parallel.c" role="src"/>
+    <file name="parallel.h" role="src"/>
+   </dir> <!-- src -->
+   <dir name="tests">
+     <dir name="base">
+      <file name="001.phpt" role="test"/>
+      <file name="002.phpt" role="test"/>
+      <file name="003.phpt" role="test"/>
+      <file name="004.phpt" role="test"/>
+      <file name="005.phpt" role="test"/>
+      <file name="006.phpt" role="test"/>
+      <file name="007.phpt" role="test"/>
+      <file name="008.phpt" role="test"/>
+      <file name="009.phpt" role="test"/>
+      <file name="010.phpt" role="test"/>
+      <file name="011.phpt" role="test"/>
+      <file name="012.phpt" role="test"/>
+      <file name="013.phpt" role="test"/>
+      <file name="014.phpt" role="test"/>
+      <file name="015.phpt" role="test"/>
+      <file name="016.phpt" role="test"/>
+      <file name="017.phpt" role="test"/>
+      <file name="018.phpt" role="test"/>
+      <file name="019.phpt" role="test"/>
+      <file name="020.phpt" role="test"/>
+      <file name="021.phpt" role="test"/>
+      <file name="022.phpt" role="test"/>
+      <file name="023.phpt" role="test"/>
+      <file name="024.phpt" role="test"/>
+      <file name="025.phpt" role="test"/>
+      <file name="026.phpt" role="test"/>
+      <file name="027.phpt" role="test"/>
+      <file name="028.phpt" role="test"/>
+      <file name="029.phpt" role="test"/>
+      <file name="030.phpt" role="test"/>
+      <file name="031.phpt" role="test"/>
+      <file name="032.phpt" role="test"/>
+      <file name="033.phpt" role="test"/>
+      <file name="034.phpt" role="test"/>
+      <file name="bootstrapc.inc" role="test"/>
+      <file name="bootstrape.inc" role="test"/>
+      <file name="bootstrap.inc" role="test"/>
+    </dir> <!-- base -->
+   </dir> <!-- tests -->
+  </dir>
+ </contents>
+ <dependencies>
+  <required>
+   <php>
+    <min>7.1.0</min>
+   </php>
+   <pearinstaller>
+    <min>1.10</min>
+   </pearinstaller>
+  </required>
+ </dependencies>
+ <providesextension>parallel</providesextension>
+ <extsrcrelease/>
+</package>
