@@ -15,6 +15,6 @@ try {
 }
 ?>
 --EXPECTF--
-string(%d) "bootstrapping Runtime failed with %s/nope.php"
+string(%d) "bootstrapping Runtime failed with %snope.php"
 
 

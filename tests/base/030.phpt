@@ -20,11 +20,11 @@ try {
 }
 ?>
 --EXPECTF--
-Fatal error: Uncaught Exception in %s/030.php:4
+Fatal error: Uncaught Exception in %s030.php:4
 Stack trace:
 #0 [internal function]: \parallel\Runtime::run()
 #1 {main}
-  thrown in %s/030.php on line 4
+  thrown in %s030.php on line 4
 string(54) "an exception occured in Runtime, cannot retrieve value"
 
 
