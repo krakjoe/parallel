@@ -3,7 +3,7 @@ ARG_WITH('parallel', 'parallel support', 'no');
 
 if (PHP_PARALLEL != 'no') {
 	if (PHP_ZTS == "no") {
-		WARNING("Sandbox extension requires ZTS build of PHP on windows");
+		WARNING("Parallel extension requires ZTS build of PHP on windows");
 	} else {
 		AC_DEFINE('HAVE_PARALLEL', 1, 'parallel support enabled');
 
