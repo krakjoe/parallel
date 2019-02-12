@@ -10,7 +10,7 @@ PHP_ARG_ENABLE(parallel-coverage,      whether to enable parallel coverage suppo
 if test "$PHP_PARALLEL" != "no"; then
   AC_DEFINE(HAVE_PARALLEL, 1, [ Have parallel support ])
 
-  PHP_NEW_EXTENSION(parallel, parallel.c src/monitor.c src/parallel.c src/copy.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+  PHP_NEW_EXTENSION(parallel, php_parallel.c src/monitor.c src/parallel.c src/copy.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
 
   PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
   PHP_ADD_INCLUDE($ext_builddir)

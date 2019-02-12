@@ -12,7 +12,7 @@ if (PHP_PARALLEL != 'no') {
 			CHECK_LIB("pthreadVC2.lib", "parallel", PHP_PARALLEL) &&
 			CHECK_LIB("ws2_32.lib", "parallel", PHP_PARALLEL) &&
 			CHECK_LIB("Iphlpapi.lib", "parallel", PHP_PARALLEL)) {
-			EXTENSION("parallel", "parallel.c", PHP_PARALLEL_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /I" + configure_module_dirname);
+			EXTENSION("parallel", "php_parallel.c", PHP_PARALLEL_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /I" + configure_module_dirname);
 			ADD_SOURCES(
 				configure_module_dirname + "/src",
 				"copy.c monitor.c parallel.c", 
