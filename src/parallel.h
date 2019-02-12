@@ -15,8 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_H
-#define HAVE_PARALLEL_H
+#ifndef HAVE_PARALLEL_PARALLEL_H
+#define HAVE_PARALLEL_PARALLEL_H
 
 #include "php.h"
 #include "monitor.h"

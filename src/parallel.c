@@ -15,8 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL
-#define HAVE_PARALLEL
+#ifndef HAVE_PARALLEL_PARALLEL
+#define HAVE_PARALLEL_PARALLEL
 
 #include "parallel.h"
 #include "copy.h"
