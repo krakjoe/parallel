@@ -501,7 +501,7 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 	zend_op_array *ops;
 	zval rv;
 
-	int result = php_stream_open_for_zend_ex(ZSTR_VAL(file), &fh, USE_PATH|STREAM_OPEN_FOR_INCLUDE);
+	int result = php_stream_open_for_zend_ex(ZSTR_VAL(file), &fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
 
 	if (result != SUCCESS) {
 		return FAILURE;
