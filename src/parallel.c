@@ -498,7 +498,6 @@ void php_parallel_shutdown(void) {
 
 static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 	zend_file_handle fh;
-	zend_string *opened;
 	zend_op_array *ops;
 	zval rv;
 
