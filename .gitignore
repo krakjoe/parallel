@@ -1,0 +1,53 @@
+# Object files
+*.o
+*.lo
+
+# Libraries
+*.lib
+*.a
+*.la
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# archives
+parallel-*.tgz
+
+# autotools
+.deps
+.libs
+config.cache
+config.guess
+config.h
+config.h.in
+config.h.in~
+config.log
+config.nice
+config.status
+config.sub
+configure
+configure.ac
+configure.in
+conftest
+conftest.c
+Makefile
+Makefile.fragments
+Makefile.global
+Makefile.objects
+acinclude.m4
+aclocal.m4
+autom4te.cache
+build
+install-sh
+libtool
+ltmain.sh
+ltmain.sh.backup
+missing
+mkinstalldirs
+modules
+run-tests.php
+run-tests.log
+tmp-php.ini
