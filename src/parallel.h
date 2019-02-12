@@ -28,7 +28,7 @@
 
 extern zend_class_entry *php_parallel_ce;
 extern zend_class_entry *php_parallel_future_ce;
-PHPAPI zend_string *php_parallel_main;
+extern zend_string *php_parallel_main;
 
 typedef struct _php_parallel_entry_point_t {
 	zend_function *point;
@@ -54,8 +54,8 @@ typedef struct _php_parallel_t {
 	zend_object                std;
 } php_parallel_t;
 
-PHPAPI void php_parallel_shutdown(void);
-PHPAPI void php_parallel_startup(void);
+void php_parallel_shutdown(void);
+void php_parallel_startup(void);
 
 static zend_always_inline php_parallel_t* php_parallel_fetch(zend_object *o) {
 	return (php_parallel_t*) (((char*) o) - XtOffsetOf(php_parallel_t, std));
