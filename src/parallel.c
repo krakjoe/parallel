@@ -167,6 +167,23 @@ static zend_always_inline void php_parallel_stack_push(HashTable *stack, php_par
 	zend_hash_next_index_insert_mem(stack, &el, sizeof(php_parallel_stack_el_t));
 }
 
+#if PHP_VERSION_ID >= 70300
+static zend_always_inline php_parallel_stack_el_t* php_parallel_stack_pop(HashTable *stack, HashPosition *position) {
+	zval *el = zend_hash_get_current_data_ex(stack, position);
+
+	if (!el) {
+		zend_hash_clean(stack);
+		zend_hash_internal_pointer_reset_ex(stack, position);
+		return NULL;
+	}
+
+	if (zend_hash_move_forward_ex(stack, position) != SUCCESS) {
+		zend_hash_internal_pointer_reset_ex(stack, position);
+	}
+
+	return Z_PTR_P(el);
+}
+#else
 static zend_always_inline php_parallel_stack_el_t* php_parallel_stack_pop(HashTable *stack, HashPosition *position) {
 	zval *el = NULL;
 
@@ -176,7 +193,6 @@ static zend_always_inline php_parallel_stack_el_t* php_parallel_stack_pop(HashTa
 
 	if (!el) {
 		zend_hash_clean(stack);
-
 		*position = 0;
 		return NULL;
 	}
@@ -187,6 +203,7 @@ static zend_always_inline php_parallel_stack_el_t* php_parallel_stack_pop(HashTa
 
 	return Z_PTR_P(el);
 }
+#endif
 
 PHP_METHOD(Parallel, __construct)
 {
@@ -319,8 +336,12 @@ zend_object* php_parallel_create(zend_class_entry *type) {
 	parallel->creator = ts_resource(0);
 	
 	zend_hash_init(&parallel->stack, 64, NULL, php_parallel_stack_free, 1);
-	
+#if PHP_VERSION_ID >= 70300
+	zend_hash_internal_pointer_reset_ex(
+		&parallel->stack, &parallel->next);
+#else
 	parallel->next = 0;
+#endif
 
 	return &parallel->std;
 }
