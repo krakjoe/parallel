@@ -21,7 +21,6 @@
 #include "php.h"
 #include "monitor.h"
 #include "pthread.h"
-#include "parallel.h"
 
 #ifndef _WIN32
 #	include "sched.h"
