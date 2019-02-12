@@ -1,0 +1,2 @@
+<?php
+invalid syntax
