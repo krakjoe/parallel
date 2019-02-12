@@ -25,7 +25,6 @@
 #include "php_parallel.h"
 
 #include "src/parallel.h"
-#include "src/parallel.h"
 
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
