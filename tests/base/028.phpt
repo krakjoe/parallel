@@ -8,7 +8,7 @@ if (!extension_loaded('parallel')) {
 ?>
 --FILE--
 <?php
-$parallel = new \parallel\Runtime(sprintf("%s/bootstrap.php", __DIR__));
+$parallel = new \parallel\Runtime(sprintf("%s/bootstrap.inc", __DIR__));
 
 $future = $parallel->run(function(){
 	return bootstrapped();

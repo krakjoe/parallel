@@ -10,13 +10,13 @@ if (!extension_loaded('parallel')) {
 <?php
 
 try {
-	$parallel = new \parallel\Runtime(sprintf("%s/bootstrapc.php", __DIR__));
+	$parallel = new \parallel\Runtime(sprintf("%s/bootstrapc.inc", __DIR__));
 } catch (Exception $ex) {
 	var_dump($ex->getMessage());
 }
 ?>
 --EXPECTF--
-string(%d) "bootstrapping Runtime failed with %sbootstrapc.php"
+string(%d) "bootstrapping Runtime failed with %sbootstrapc.inc"
 
 
 
