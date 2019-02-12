@@ -26,6 +26,8 @@ extern zend_module_entry parallel_module_entry;
 
 # if defined(ZTS) && defined(COMPILE_DL_PARALLEL)
 ZEND_TSRMLS_CACHE_EXTERN()
+# else
+# error Only ZTS build are supported
 # endif
 
 #endif	/* PHP_PARALLEL_H */
