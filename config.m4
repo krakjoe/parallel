@@ -13,7 +13,7 @@ if test "$PHP_PARALLEL" != "no"; then
   PHP_NEW_EXTENSION(parallel, php_parallel.c src/monitor.c src/parallel.c src/copy.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
 
   PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
-  PHP_ADD_INCLUDE($ext_builddir)
+  PHP_ADD_INCLUDE($ext_srcdir)
 
   AC_MSG_CHECKING([parallel coverage])
   if test "$PHP_PARALLEL_COVERAGE" != "no"; then
