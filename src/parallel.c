@@ -222,7 +222,7 @@ PHP_METHOD(Parallel, __construct)
 	}
 
 	if (bootstrap) {
-		parallel->bootstrap = zend_string_copy(bootstrap);
+		parallel->bootstrap = zend_string_dup(bootstrap, 1);
 	}
 
 	if (configuration) {
@@ -508,7 +508,7 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 	}
 
 	if (!fh.opened_path) {
-		fh.opened_path = zend_string_dup(file, 0);	
+		fh.opened_path = zend_string_dup(file, 0);
 	}
 
 	if (!zend_hash_add_empty_element(&EG(included_files), fh.opened_path)) {
@@ -523,8 +523,6 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 		zend_file_handle_dtor(&fh);
 		return FAILURE;	
 	}
-
-	zend_string_release(fh.opened_path);
 
 	ZVAL_UNDEF(&rv);
 	zend_execute(ops, &rv);
