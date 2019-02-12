@@ -69,7 +69,7 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 		rc = zend_call_function(&fci, &fcc);
 	} zend_catch {
 		php_parallel_monitor_set(monitor,
-			PHP_PARALLEL_ERROR|PHP_PARALLEL_WAKE);
+			PHP_PARALLEL_ERROR);
 	} zend_end_try();
 
 	if (rc == SUCCESS && !Z_ISUNDEF(rv)) {
@@ -401,7 +401,7 @@ PHP_METHOD(Future, value)
 		return;
 	}
 
-	if (!Z_ISUNDEF(future->value)) {
+	if (Z_TYPE(future->value) != IS_NULL) {
 		php_parallel_copy_zval(return_value, &future->value, 0);
 
 		if (Z_REFCOUNTED(future->value)) {
@@ -517,6 +517,9 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 	}
 
 	if (!(ops = zend_compile_file(&fh, ZEND_REQUIRE))) {
+		if (EG(exception)) {
+			zend_clear_exception();
+		}
 		zend_file_handle_dtor(&fh);
 		return FAILURE;	
 	}
@@ -529,6 +532,7 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 	efree(ops);
 
 	if (EG(exception)) {
+		zend_clear_exception();
 		return FAILURE;
 	}
 
