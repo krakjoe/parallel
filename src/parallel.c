@@ -513,26 +513,30 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 
 	zend_hash_add_empty_element(&EG(included_files), fh.opened_path);
 
-	if (!(ops = zend_compile_file(&fh, ZEND_REQUIRE))) {
+	ops = zend_compile_file(
+		&fh, ZEND_REQUIRE);
+	zend_destroy_file_handle(&fh);
+
+	if (ops) {
+		ZVAL_UNDEF(&rv);
+		zend_execute(ops, &rv);
+		destroy_op_array(ops);
+		efree(ops);
+
 		if (EG(exception)) {
 			zend_clear_exception();
+			return FAILURE;
 		}
-		zend_file_handle_dtor(&fh);
-		return FAILURE;	
-	}
 
-	ZVAL_UNDEF(&rv);
-	zend_execute(ops, &rv);
-	destroy_op_array(ops);
-	efree(ops);
+		zval_ptr_dtor(&rv);
+		return SUCCESS;
+	}
 
 	if (EG(exception)) {
 		zend_clear_exception();
-		return FAILURE;
 	}
 
-	zval_ptr_dtor(&rv);
-	return SUCCESS;
+	return FAILURE;
 }
 
 void* php_parallel_routine(void *arg) {	
