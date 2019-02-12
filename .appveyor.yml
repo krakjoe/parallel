@@ -3,7 +3,7 @@ skip_tags: true
 
 branches:
         only:
-                - develop
+                - master
 
 clone_folder:  c:\projects\parallel
 
