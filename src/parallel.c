@@ -511,10 +511,7 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 		fh.opened_path = zend_string_dup(file, 0);
 	}
 
-	if (!zend_hash_add_empty_element(&EG(included_files), fh.opened_path)) {
-		zend_file_handle_dtor(&fh);
-		return FAILURE;
-	}
+	zend_hash_add_empty_element(&EG(included_files), fh.opened_path);
 
 	if (!(ops = zend_compile_file(&fh, ZEND_REQUIRE))) {
 		if (EG(exception)) {
