@@ -214,7 +214,7 @@ PHP_METHOD(Parallel, __construct)
 
 	if (ZEND_NUM_ARGS()) {
 		if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "a", &configuration) != SUCCESS &&
-		    zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "S|a", &bootstrap, &configuration)) {
+		    zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "S|a", &bootstrap, &configuration) != SUCCESS) {
 			php_parallel_monitor_set(parallel->monitor, PHP_PARALLEL_ERROR);
 			php_parallel_exception("bootstrap or bootstrap and optional configuration expected");
 			return;
