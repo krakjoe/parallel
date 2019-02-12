@@ -16,8 +16,7 @@ if (PHP_PARALLEL != 'no') {
 			ADD_SOURCES(
 				configure_module_dirname + "/src",
 				"copy.c monitor.c parallel.c", 
-				"parallel",
-				"src"
+				"parallel"
 			);
 		} else {
 			WARNING("parallel not enabled; pthread libraries and headers not found");
