@@ -157,7 +157,6 @@ void php_parallel_configure(zval *configuration) {
 	} ZEND_HASH_FOREACH_END();
 }
 
-
 static zend_always_inline void php_parallel_stack_push(HashTable *stack, php_parallel_entry_point_t *entry, php_parallel_monitor_t *monitor, zval *future) {
 	php_parallel_stack_el_t el;
 
@@ -169,16 +168,21 @@ static zend_always_inline void php_parallel_stack_push(HashTable *stack, php_par
 }
 
 static zend_always_inline php_parallel_stack_el_t* php_parallel_stack_pop(HashTable *stack, HashPosition *position) {
-	zval *el = zend_hash_get_current_data_ex(stack, position);
+	zval *el = NULL;
+
+	if (*position <= stack->nNumUsed) {
+		el = zend_hash_index_find(stack, *position);
+	}
 
 	if (!el) {
 		zend_hash_clean(stack);
-		zend_hash_internal_pointer_reset_ex(stack, position);
+
+		*position = 0;
 		return NULL;
 	}
 
-	if (zend_hash_move_forward_ex(stack, position) != SUCCESS) {
-		zend_hash_internal_pointer_reset_ex(stack, position);
+	if (++(*position) > stack->nNumUsed) {
+		*position = 0;
 	}
 
 	return Z_PTR_P(el);
@@ -315,8 +319,8 @@ zend_object* php_parallel_create(zend_class_entry *type) {
 	parallel->creator = ts_resource(0);
 	
 	zend_hash_init(&parallel->stack, 64, NULL, php_parallel_stack_free, 1);
-	zend_hash_internal_pointer_reset_ex(
-		&parallel->stack, &parallel->next);
+	
+	parallel->next = 0;
 
 	return &parallel->std;
 }

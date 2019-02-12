@@ -176,10 +176,10 @@ static inline zval* php_parallel_copy_literals(zval *old, int end, zend_bool per
 			case IS_TRUE:
 			case IS_FALSE:
 			case IS_NULL:
-			case IS_STRING:
 				zval_copy_ctor(&literals[it]);	
 			break;
 
+			case IS_STRING:
 			case IS_ARRAY:
 				php_parallel_copy_zval(&literals[it], &old[it], persistent);
 			break;
@@ -600,7 +600,6 @@ void php_parallel_copy_free(zend_function *function, zend_bool persistent) { /* 
 
 		while (it < end) {
 			switch (Z_TYPE(ops->literals[it])) {
-				case IS_STRING:
 				case IS_LONG:
 				case IS_TRUE:
 				case IS_FALSE:
@@ -608,6 +607,7 @@ void php_parallel_copy_free(zend_function *function, zend_bool persistent) { /* 
 					zval_ptr_dtor(&ops->literals[it]);
 				break;
 
+				case IS_STRING:
 				case IS_ARRAY:
 					php_parallel_zval_dtor(&ops->literals[it]);
 				break;
