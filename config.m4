@@ -12,6 +12,14 @@ PHP_ARG_ENABLE(xdebug-dev, whether to enable parallel developer build flags,
 
 
 if test "$PHP_PARALLEL" != "no"; then
+
+  AC_MSG_CHECKING([for ZTS])
+  if test "$PHP_THREAD_SAFETY" != "no"; then
+    AC_MSG_RESULT([ok])
+  else
+    AC_MSG_ERROR([parallel requires ZTS, please use PHP with ZTS enabled])
+  fi
+
   AC_DEFINE(HAVE_PARALLEL, 1, [ Have parallel support ])
 
   if test "$PHP_PARALLEL_DEV" != "no"; then
