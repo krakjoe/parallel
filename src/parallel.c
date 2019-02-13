@@ -267,7 +267,7 @@ PHP_METHOD(Parallel, run)
 
 	if (!php_parallel_copy_check(&entry, 
 		EG(current_execute_data)->prev_execute_data,
-		zend_get_closure_method_def(closure), 
+		zend_get_closure_method_def(closure),
 		ZEND_NUM_ARGS() - 1, argv)) {
 		php_parallel_monitor_unlock(parallel->monitor);
 		return;

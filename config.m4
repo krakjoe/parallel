@@ -6,7 +6,7 @@ PHP_ARG_ENABLE(parallel, whether to enable parallel support,
 PHP_ARG_ENABLE(parallel-coverage,      whether to enable parallel coverage support,
 [  --enable-parallel-coverage Enable parallel coverage support], no, no)
 
-PHP_ARG_ENABLE(xdebug-dev, whether to enable parallel developer build flags,
+PHP_ARG_ENABLE(parallel-dev, whether to enable parallel developer build flags,
 [  --enable-parallel-dev      Enable parallel developer flags], no, no)
 
 
