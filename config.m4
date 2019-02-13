@@ -34,7 +34,7 @@ if test "$PHP_PARALLEL" != "no"; then
     PARALLEL_CFLAGS="-Wall -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
   fi
 
-  PHP_NEW_EXTENSION(parallel, php_parallel.c src/monitor.c src/parallel.c src/copy.c, $ext_shared,, $PARALLEL_CFLAGS)
+  PHP_NEW_EXTENSION(parallel, php_parallel.c src/monitor.c src/parallel.c src/future.c src/copy.c, $ext_shared,, $PARALLEL_CFLAGS)
 
   PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
   PHP_ADD_INCLUDE($ext_srcdir)

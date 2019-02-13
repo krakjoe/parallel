@@ -37,6 +37,8 @@ php_parallel_monitor_t* php_parallel_monitor_create(void);
 int php_parallel_monitor_lock(php_parallel_monitor_t *m);
 uint32_t php_parallel_monitor_check(php_parallel_monitor_t *m, uint32_t state);
 int php_parallel_monitor_unlock(php_parallel_monitor_t *m);
+uint32_t php_parallel_monitor_waiting(php_parallel_monitor_t *m);
+uint32_t php_parallel_monitor_broadcast(php_parallel_monitor_t *m);
 uint32_t php_parallel_monitor_wait(php_parallel_monitor_t *m, uint32_t state);
 uint32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *m, uint32_t state);
 void php_parallel_monitor_set(php_parallel_monitor_t *m, uint32_t state);

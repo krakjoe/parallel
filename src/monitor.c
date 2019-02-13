@@ -103,6 +103,14 @@ uint32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, uint3
 	return changed;
 }
 
+uint32_t php_parallel_monitor_waiting(php_parallel_monitor_t *monitor) {
+	return pthread_cond_wait(&monitor->condition, &monitor->mutex);
+}
+
+uint32_t php_parallel_monitor_broadcast(php_parallel_monitor_t *monitor) {
+	return pthread_cond_broadcast(&monitor->condition);
+}
+
 void php_parallel_monitor_set(php_parallel_monitor_t *monitor, uint32_t state) {
 	monitor->state |= state;
 
