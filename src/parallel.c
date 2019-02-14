@@ -28,9 +28,6 @@
 
 #include "zend_closures.h"
 #include "zend_exceptions.h"
-#include "zend_extensions.h"
-
-#include "ext/standard/dl.h"
 
 typedef int (*php_sapi_deactivate_t)(void);
 
