@@ -36,9 +36,15 @@ class parallel\Runtime {
 	
 	/*
 	* Shall request the Runtime shutdown
-	* Note: anything scheduled for execution will be executed
+	* Note: Closures scheduled for execution will be executed
 	*/
 	public function close() : void;
+
+	/*
+	* Shall kill the Runtime
+	* Note: Closures scheduled for execution will not be executed
+	*/
+	public function kill() : void;
 }
 
 class parallel\Future {
