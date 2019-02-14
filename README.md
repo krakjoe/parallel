@@ -30,7 +30,10 @@ class parallel\Runtime {
 	* Shall schedule a Closure for execution passing optional arguments
 	* @param Closure handler
 	* @param argv
-	* Note: A Future shall only be returned if $handler returns a value
+	* Note: A Future shall only be returned if $handler returns a value, should
+	*	a Closure return a value that is ignored by the scheduling thread
+	*	the scheduling thread may block - to avoid this behaviour, always
+	*	take a reference to a Future for Closures that return a value
 	*/
 	public function run(Closure $handler, array $argv = []) : ?\parallel\Future;
 	
