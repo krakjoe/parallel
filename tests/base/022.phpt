@@ -10,12 +10,12 @@ if (!extension_loaded('parallel')) {
 <?php
 $parallel = new parallel\Runtime();
 
-$parallel->run(function(){
+$future = $parallel->run(function(){
 	return new stdClass;
 });
 
-echo "OK";
+var_dump($future->value());
 ?>
 --EXPECT--
-OK
+bool(true)
 
