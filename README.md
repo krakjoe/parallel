@@ -8,7 +8,7 @@ parallel
 A succinct parallel concurrency API for PHP 7:
 
 ```php
-class parallel\Runtime {
+final class parallel\Runtime {
 	/*
 	* Shall construct a new Runtime
 	* @param string bootstrap (generally an autoloader)
@@ -30,10 +30,9 @@ class parallel\Runtime {
 	* Shall schedule a Closure for execution passing optional arguments
 	* @param Closure handler
 	* @param argv
-	* Note: A Future shall only be returned if $handler returns a value, should
-	*	a Closure return a value that is ignored by the scheduling thread
-	*	the scheduling thread may block - to avoid this behaviour, always
-	*	take a reference to a Future for Closures that return a value
+	* Note: A Future shall only be returned if $handler contains a return statement
+	*	Should the caller ignore the return statement in $handler, an exception
+	*	shall be thrown
 	*/
 	public function run(Closure $handler, array $argv = []) : ?\parallel\Future;
 	
@@ -50,7 +49,7 @@ class parallel\Runtime {
 	public function kill() : void;
 }
 
-class parallel\Future {
+final class parallel\Future {
 	/*
 	* Shall wait until the value becomes available
 	*/
