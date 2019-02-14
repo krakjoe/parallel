@@ -10,7 +10,7 @@ if (!extension_loaded('parallel')) {
 <?php
 $parallel = new \parallel\Runtime();
 $future   = $parallel->run(function(){
-
+	return null;
 });
 
 if ($future->value() == null &&

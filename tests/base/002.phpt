@@ -20,6 +20,8 @@ $parallel->run(function() {
 	global $thing;
 
 	var_dump($thing);
+
+	return false;
 });
 
 var_dump(@$thing);

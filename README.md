@@ -13,7 +13,7 @@ class parallel\Runtime {
 	* Shall construct a new Runtime
 	* @param string bootstrap (generally an autoloader)
 	* @param array  ini configuration
-	*/	
+	*/
 	public function __construct(string $bootstrap, array $configuration);
 	/**
 	* Shall construct a new Runtime
@@ -27,12 +27,12 @@ class parallel\Runtime {
 	public function __construct(array $configuration);
 
 	/*
-	* Shall schedule a Closure for executing, optionally passing parameters and
-	* returning a Future value
+	* Shall schedule a Closure for execution passing optional arguments
 	* @param Closure handler
 	* @param argv
+	* Note: A Future shall only be returned if $handler returns a value
 	*/
-	public function run(Closure $handler, array $args = []) : \parallel\Future;
+	public function run(Closure $handler, array $argv = []) : ?\parallel\Future;
 	
 	/*
 	* Shall request the Runtime shutdown

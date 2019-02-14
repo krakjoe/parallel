@@ -66,12 +66,16 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 	zend_try {
 		rc = zend_call_function(&fci, &fcc);
 	} zend_catch {
-		php_parallel_monitor_set(monitor,
-			PHP_PARALLEL_ERROR);
+		if (monitor) {
+			php_parallel_monitor_set(monitor,
+				PHP_PARALLEL_ERROR);
+		}
 	} zend_end_try();
 
 	if (rc == SUCCESS && !Z_ISUNDEF(rv)) {
-		php_parallel_copy_zval(retval, &rv, 1);
+		if (retval) {
+			php_parallel_copy_zval(retval, &rv, 1);
+		}
 
 		if (Z_REFCOUNTED(rv)) {
 			zval_ptr_dtor(&rv);
@@ -208,7 +212,7 @@ PHP_METHOD(Parallel, __construct)
 	php_parallel_t *parallel = php_parallel_from(getThis());
 	zend_string    *bootstrap = NULL;
 	zval           *configuration = NULL;
-	uint32_t        state = SUCCESS;
+	int32_t        state = SUCCESS;
 
 	if (ZEND_NUM_ARGS()) {
 		if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "a", &configuration) != SUCCESS &&
@@ -251,6 +255,7 @@ PHP_METHOD(Parallel, run)
 	php_parallel_future_t   *future;
 	zval *closure = NULL;
 	zval *argv = NULL;
+	zend_bool returns = 0;
 
 	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "O|a", &closure, zend_ce_closure, &argv) != SUCCESS) {
 		php_parallel_exception("Closure, or Closure and args expected");
@@ -259,7 +264,7 @@ PHP_METHOD(Parallel, run)
 
 	php_parallel_monitor_lock(parallel->monitor);
 
-	if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_CLOSE|PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR)) {
+	if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_CLOSED|PHP_PARALLEL_ERROR)) {
 		php_parallel_monitor_unlock(parallel->monitor);
 		php_parallel_exception("Runtime unusable");
 		return;
@@ -268,20 +273,22 @@ PHP_METHOD(Parallel, run)
 	if (!php_parallel_copy_check(&entry, 
 		EG(current_execute_data)->prev_execute_data,
 		zend_get_closure_method_def(closure),
-		ZEND_NUM_ARGS() - 1, argv)) {
+		ZEND_NUM_ARGS() - 1, argv, &returns)) {
 		php_parallel_monitor_unlock(parallel->monitor);
 		return;
 	}
 
-	object_init_ex(return_value, php_parallel_future_ce);
+	if (returns) {
+		object_init_ex(return_value, php_parallel_future_ce);
 
-	future = php_parallel_future_from(return_value);
+		future = php_parallel_future_from(return_value);
+	}
 
 	php_parallel_stack_push(
 		&parallel->stack, 
 		&entry,
-		future->monitor, 
-		&future->value);
+		returns ? future->monitor : NULL, 
+		returns ? &future->value : NULL);
 
 	php_parallel_monitor_set(parallel->monitor, PHP_PARALLEL_EXEC);
 	php_parallel_monitor_unlock(parallel->monitor);
@@ -307,12 +314,43 @@ PHP_METHOD(Parallel, close)
 	pthread_join(parallel->thread, NULL);
 }
 
+PHP_METHOD(Parallel, kill)
+{
+	php_parallel_t *parallel = 
+		php_parallel_from(getThis());
+
+	if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_CLOSED|PHP_PARALLEL_ERROR)) {
+		php_parallel_exception("Runtime unusable");
+		return;
+	}
+
+	php_parallel_monitor_set(
+		parallel->monitor, PHP_PARALLEL_KILLED);
+	php_parallel_monitor_wait(
+		parallel->monitor, PHP_PARALLEL_DONE);
+	php_parallel_monitor_set(
+		parallel->monitor, PHP_PARALLEL_CLOSED);
+
+	pthread_join(parallel->thread, NULL);
+}
+
 zend_function_entry php_parallel_methods[] = {
 	PHP_ME(Parallel, __construct, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(Parallel, run, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(Parallel, close, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(Parallel, kill, NULL, ZEND_ACC_PUBLIC)
 	PHP_FE_END
 };
+
+int php_parallel_stack_kill(zval *zv) {
+	php_parallel_stack_el_t *el = Z_PTR_P(zv);
+
+	if (el->monitor) {
+		php_parallel_monitor_set(el->monitor, PHP_PARALLEL_KILLED);
+	}
+
+	return ZEND_HASH_APPLY_REMOVE;
+}
 
 void php_parallel_stack_free(zval *zv) {
 	php_parallel_stack_el_t *el = Z_PTR_P(zv);
@@ -348,7 +386,7 @@ void php_parallel_destroy(zend_object *o) {
 	php_parallel_t *parallel = 
 		php_parallel_fetch(o);
 
-	if (!php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_ERROR|PHP_PARALLEL_CLOSED)) {
+	if (!php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_CLOSED|PHP_PARALLEL_ERROR)) {
 		php_parallel_monitor_set(
 			parallel->monitor, 
 			PHP_PARALLEL_CLOSE);
@@ -451,8 +489,7 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 
 void* php_parallel_routine(void *arg) {	
 	php_parallel_t *parallel = (php_parallel_t*) arg;
-
-	uint32_t state = SUCCESS;
+	int32_t state = 0;
 
 	parallel->context = ts_resource(0);
 
@@ -493,16 +530,31 @@ void* php_parallel_routine(void *arg) {
 			break;
 		}
 
+		if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_KILLED)) {
+_php_parallel_kill:
+			zend_hash_apply(
+				&parallel->stack, 
+				php_parallel_stack_kill);
+			php_parallel_monitor_unlock(parallel->monitor);
+			goto _php_parallel_exit;
+		}
+
 		while (!(el = php_parallel_stack_pop(&parallel->stack, &parallel->next))) {
 			if (!(state & PHP_PARALLEL_CLOSE)) {
 				state = php_parallel_monitor_wait_locked(
-						parallel->monitor, 
-						PHP_PARALLEL_EXEC|PHP_PARALLEL_CLOSE|PHP_PARALLEL_DONE);
+						parallel->monitor,
+						PHP_PARALLEL_EXEC|PHP_PARALLEL_CLOSE|PHP_PARALLEL_KILLED);
 			}
 
-			if ((state & PHP_PARALLEL_CLOSE) && !zend_hash_num_elements(&parallel->stack)) {
-				php_parallel_monitor_unlock(parallel->monitor);
-				goto _php_parallel_exit;
+			if ((state & (PHP_PARALLEL_CLOSE|PHP_PARALLEL_KILLED))) {
+				if ((state & PHP_PARALLEL_KILLED)) {
+					goto _php_parallel_kill;
+				}
+
+				if (!zend_hash_num_elements(&parallel->stack)) {
+					php_parallel_monitor_unlock(parallel->monitor);
+					goto _php_parallel_exit;
+				}
 			}
 		}
 
@@ -515,7 +567,9 @@ void* php_parallel_routine(void *arg) {
 
 		php_parallel_zval_dtor(&el->entry.argv);
 
-		php_parallel_monitor_set(el->monitor, PHP_PARALLEL_READY);
+		if (el->monitor) {
+			php_parallel_monitor_set(el->monitor, PHP_PARALLEL_READY);
+		}
 	} while (1);
 
 _php_parallel_exit:

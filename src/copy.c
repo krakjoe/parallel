@@ -410,7 +410,7 @@ static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval *
 	return 1;
 } /* }}} */
 
-zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execute_data *execute_data, const zend_function * function, int argc, zval *argv) { /* {{{ */
+zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execute_data *execute_data, const zend_function * function, int argc, zval *argv, zend_bool *returns) { /* {{{ */
 	zend_op *it = function->op_array.opcodes,
 		*end = it + function->op_array.last;
 	uint32_t errat = 0;
@@ -467,6 +467,12 @@ zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execut
 					zend_throw_error(NULL,
 						"illegal instruction (lexical) in entry point");
 					return 0;
+				}
+			break;
+
+			case ZEND_RETURN:
+				if (it->extended_value != -1) {
+					*returns = 1;
 				}
 			break;
 		}

@@ -40,7 +40,7 @@ int php_parallel_monitor_lock(php_parallel_monitor_t *monitor) {
 	return pthread_mutex_lock(&monitor->mutex);
 }
 
-uint32_t php_parallel_monitor_check(php_parallel_monitor_t *monitor, uint32_t state) {
+int32_t php_parallel_monitor_check(php_parallel_monitor_t *monitor, int32_t state) {
 	return (monitor->state & (state));
 }
 
@@ -48,8 +48,8 @@ int php_parallel_monitor_unlock(php_parallel_monitor_t *monitor) {
 	return pthread_mutex_unlock(&monitor->mutex);
 }
 
-uint32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, uint32_t state) {
-	uint32_t changed = FAILURE;
+int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state) {
+	int32_t changed = FAILURE;
 	int      rc      = SUCCESS;
 
 	if (pthread_mutex_lock(&monitor->mutex) != SUCCESS) {
@@ -64,13 +64,6 @@ uint32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, uint32_t sta
 
 			return FAILURE;
 		}
-
-		if (monitor->state & (PHP_PARALLEL_DONE|PHP_PARALLEL_CLOSE)) {
-			changed = FAILURE;
-			pthread_mutex_unlock(&monitor->mutex);
-
-			return changed;
-		}
 	}
 
 	monitor->state ^= changed;
@@ -82,18 +75,13 @@ uint32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, uint32_t sta
 	return changed;
 }
 
-uint32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, uint32_t state) {
-	uint32_t changed = FAILURE;
+int32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, int32_t state) {
+	int32_t changed = FAILURE;
 	int      rc      = SUCCESS;
 
 	while (!(changed = (monitor->state & state))) {
-
 		if ((rc = pthread_cond_wait(
 				&monitor->condition, &monitor->mutex)) != SUCCESS) {
-			return FAILURE;
-		}
-
-		if (monitor->state & (PHP_PARALLEL_DONE|PHP_PARALLEL_CLOSE)) {
 			return FAILURE;
 		}
 	}
@@ -103,21 +91,21 @@ uint32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, uint3
 	return changed;
 }
 
-uint32_t php_parallel_monitor_waiting(php_parallel_monitor_t *monitor) {
+int32_t php_parallel_monitor_waiting(php_parallel_monitor_t *monitor) {
 	return pthread_cond_wait(&monitor->condition, &monitor->mutex);
 }
 
-uint32_t php_parallel_monitor_broadcast(php_parallel_monitor_t *monitor) {
+int32_t php_parallel_monitor_broadcast(php_parallel_monitor_t *monitor) {
 	return pthread_cond_broadcast(&monitor->condition);
 }
 
-void php_parallel_monitor_set(php_parallel_monitor_t *monitor, uint32_t state) {
+void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state) {
 	monitor->state |= state;
 
 	pthread_cond_signal(&monitor->condition);
 }
 
-void php_parallel_monitor_unset(php_parallel_monitor_t *monitor, uint32_t state) {
+void php_parallel_monitor_unset(php_parallel_monitor_t *monitor, int32_t state) {
 	monitor->state &= ~state;
 
 	pthread_cond_signal(&monitor->condition);

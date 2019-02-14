@@ -30,14 +30,14 @@ zend_object_handlers php_parallel_future_handlers;
 PHP_METHOD(Future, value) 
 {
 	php_parallel_future_t *future = php_parallel_future_from(getThis());
-	uint32_t state;
+	int32_t state;
 
 	if (!Z_ISUNDEF(future->saved)) {
 		ZVAL_COPY(return_value, &future->saved);
 		return;
 	}
 
-	if ((state = php_parallel_monitor_wait(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_ERROR)) == FAILURE) {
+	if ((state = php_parallel_monitor_wait(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED)) == FAILURE) {
 		php_parallel_exception(
 			"an error occured while waiting for a value from Runtime");
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
@@ -47,6 +47,13 @@ PHP_METHOD(Future, value)
 	if (state & PHP_PARALLEL_ERROR) {
 		php_parallel_exception(
 			"an exception occured in Runtime, cannot retrieve value");
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+		return;
+	}
+
+	if (state & PHP_PARALLEL_KILLED) {
+		php_parallel_exception(
+			"Runtime was killed, cannot retrieve value");
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
 		return;
 	}
@@ -88,7 +95,7 @@ void php_parallel_future_destroy(zend_object *o) {
 	php_parallel_future_t *future = 
 		php_parallel_future_fetch(o);
 
-	if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
+	if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_KILLED)) {
 		php_parallel_monitor_wait(future->monitor, PHP_PARALLEL_READY);
 		
 		if (Z_REFCOUNTED(future->value)) {
