@@ -471,7 +471,14 @@ zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execut
 			break;
 
 			case ZEND_RETURN:
-				if (it->extended_value != -1) {
+				if (!*returns && it->extended_value != -1) {
+					if (EX(opline)->result_type == IS_UNUSED) {
+						zend_throw_error(NULL,
+							"return on line %d of entry point ignored by caller, "
+							"caller must retain reference to Future",
+							it->lineno - function->op_array.line_start);
+						return 0;
+					}
 					*returns = 1;
 				}
 			break;

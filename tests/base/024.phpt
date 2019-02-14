@@ -12,7 +12,7 @@ $parallel = new parallel\Runtime();
 
 $parallel->run(function(){
 	try {
-		new \parallel\Runtime();
+		$child = new \parallel\Runtime();
 
 		echo "OK\n";
 	} catch (\parallel\Exception $ex) {

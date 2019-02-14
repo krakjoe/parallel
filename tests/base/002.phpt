@@ -16,7 +16,7 @@ $parallel->run(function() {
 	$thing = 10;
 });
 
-$parallel->run(function() {
+$future = $parallel->run(function() {
 	global $thing;
 
 	var_dump($thing);
@@ -24,8 +24,9 @@ $parallel->run(function() {
 	return false;
 });
 
-var_dump(@$thing);
+var_dump($future->value(), @$thing);
 ?>
 --EXPECT--
 int(10)
+bool(false)
 NULL
