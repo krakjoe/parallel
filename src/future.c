@@ -134,12 +134,31 @@ PHP_METHOD(Future, select)
 		f = php_parallel_future_from(future);
 
 		state = php_parallel_monitor_wait_timed(f->monitor, 
-			PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, timeout);		
+				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, timeout);		
 
 		if (state == FAILURE) {
-			
-		}				
+			zend_hash_index_update(
+				Z_ARRVAL_P(errored), idx, future);
+			Z_ADDREF_P(future);
+			php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);
+			continue;
+		}
+
+		if (state & (PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED)) {
+			zend_hash_index_update(
+				Z_ARRVAL_P(errored), idx, future);
+			Z_ADDREF_P(future);
+			php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);			
+			continue;
+		}
+
+		zend_hash_index_update(
+			Z_ARRVAL_P(resolved), idx, future);
+		Z_ADDREF_P(future);
+		php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);			
 	} ZEND_HASH_FOREACH_END();
+
+	return zend_hash_num_elements(Z_ARRVAL_P(resolved));
 }
 
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_select_arginfo, 0, 0, 3)
