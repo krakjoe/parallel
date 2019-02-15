@@ -73,8 +73,56 @@ PHP_METHOD(Future, value)
 	php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
 }
 
+PHP_METHOD(Future, select)
+{
+	zval *resolving;
+	zval *resolved;
+	zval *errored;
+	zend_long timeout = 0;
+	zend_long idx;
+	zval *future;
+	
+	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "aaa|l", &resolving, &resolved, &errored, &timeout) != SUCCESS) {
+		php_parallel_exception(
+			"resolving and resolved array with optional timeout expected");
+		return;
+	}
+
+	if (timeout < 0) {
+		php_parallel_exception(
+			"optional timeout must be non-negative");
+		return;
+	}
+
+	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(resolving), idx, future) {
+		int32_t state;
+		php_parallel_future_t *f;
+
+		if (Z_TYPE_P(future) != IS_OBJECT || !instanceof_function(Z_OBJCE_P(future), php_parallel_future_ce)) {
+			continue;
+		}
+
+		f = php_parallel_future_from(future);
+
+		state = php_parallel_monitor_wait_timed(f->monitor, 
+			PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, timeout);		
+
+		if (state == FAILURE) {
+			
+		}				
+	} ZEND_HASH_FOREACH_END();
+}
+
+ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_select_arginfo, 0, 0, 3)
+	ZEND_ARG_TYPE_INFO(1, resolving, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(1, resolved, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(1, errored, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
 zend_function_entry php_parallel_future_methods[] = {
 	PHP_ME(Future, value, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(Future, select, php_parallel_future_select_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_FE_END
 };
 
