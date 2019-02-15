@@ -31,16 +31,45 @@ PHP_METHOD(Future, value)
 {
 	php_parallel_future_t *future = php_parallel_future_from(getThis());
 	int32_t state;
+	zend_long timeout = -1;
+
+	if (ZEND_NUM_ARGS()) {
+		if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "l", &timeout) != SUCCESS) {
+			php_parallel_exception(
+				"expected optional timeout");
+			return;
+		}
+
+		if (timeout < 0) {
+			php_parallel_exception(
+				"expected timeout greater than or equal to 0");
+			return;
+		}
+	}
 
 	if (!Z_ISUNDEF(future->saved)) {
 		ZVAL_COPY(return_value, &future->saved);
 		return;
 	}
 
-	if ((state = php_parallel_monitor_wait(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED)) == FAILURE) {
+	if (timeout > -1) {
+		state = php_parallel_monitor_wait_timed(future->monitor, 
+				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, timeout);
+	} else {
+		state = php_parallel_monitor_wait(future->monitor, 
+				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED);
+	}
+
+	if (state == FAILURE) {
 		php_parallel_exception(
 			"an error occured while waiting for a value from Runtime");
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+		return;
+	}
+
+	if (state == ETIMEDOUT) {
+		php_parallel_exception(
+			"a timeout occured waiting for the value");
 		return;
 	}
 
