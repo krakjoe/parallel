@@ -11,7 +11,7 @@ if (!extension_loaded('parallel')) {
 $parallel = new \parallel\Runtime();
 
 $parallel->run(function(){
-	sleep(1);
+	while(1);
 });
 
 $future = $parallel->run(function(){
