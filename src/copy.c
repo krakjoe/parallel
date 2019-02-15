@@ -505,7 +505,10 @@ zend_function* php_parallel_copy(const zend_function *function, zend_bool persis
 	copy = (zend_function*) pecalloc(1, sizeof(zend_op_array), persistent);
 
 	memcpy(copy, function, sizeof(zend_op_array));
-	
+	/**
+	@TODO a non-persistent copy may do something like addref and omit to make a depp copy
+		this is easier to debug for now anyway ...
+	**/
 	op_array = &copy->op_array;
 	variables = op_array->vars;
 	literals = op_array->literals;
