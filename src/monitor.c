@@ -75,6 +75,49 @@ int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state
 	return changed;
 }
 
+int32_t php_parallel_monitor_wait_timed(php_parallel_monitor_t *monitor, int32_t state, zend_long timeout) {
+	struct timeval     time;
+	struct timespec    spec;
+	int32_t changed  = FAILURE;
+	int      rc      = SUCCESS;
+
+	if (gettimeofday(&time, NULL) != 0) {
+		return FAILURE;
+	}
+
+	time.tv_sec += (timeout / 1000000L);
+	time.tv_sec += (time.tv_usec + (timeout % 1000000L)) / 1000000L;
+	time.tv_usec = (time.tv_usec + (timeout % 1000000L)) % 1000000L;
+
+	spec.tv_sec = time.tv_sec;
+	spec.tv_nsec = time.tv_usec * 1000;
+
+	if (pthread_mutex_lock(&monitor->mutex) != SUCCESS) {
+		return FAILURE;
+	}
+
+	while (!(changed = (monitor->state & state))) {
+		if ((rc = pthread_cond_timedwait(
+				&monitor->condition, &monitor->mutex, &spec)) != SUCCESS) {
+			pthread_mutex_unlock(&monitor->mutex);
+
+			if (rc == ETIMEDOUT) {
+				return rc;
+			}
+
+			return FAILURE;
+		}
+	}
+
+	monitor->state ^= changed;
+
+	if (pthread_mutex_unlock(&monitor->mutex) != SUCCESS) {
+		return FAILURE;
+	}
+
+	return changed;
+}
+
 int32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, int32_t state) {
 	int32_t changed = FAILURE;
 	int      rc      = SUCCESS;
