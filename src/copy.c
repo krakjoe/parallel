@@ -370,7 +370,7 @@ zend_bool php_parallel_copy_arginfo_check(const zend_function *function) { /* {{
 
 		if (it->pass_by_reference) {
 			zend_throw_error(NULL,
-				"illegal variable (reference) accepted by to parallel at argument %d", argc);
+				"illegal variable (reference) accepted by parallel at argument %d", argc);
 			return 0;
 		}
 		it++;
