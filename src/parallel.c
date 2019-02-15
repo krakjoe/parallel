@@ -52,7 +52,7 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 #if PHP_VERSION_ID < 70300
 	fcc.initialized = 1;
 #endif
-	fcc.function_handler = php_parallel_copy(function, 0);
+	fcc.function_handler = function;
 
 	if (!Z_ISUNDEF_P(argv)) {
 		zend_fcall_info_args(&fci, argv);
@@ -82,8 +82,6 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 	if (!Z_ISUNDEF_P(argv)) {
 		zend_fcall_info_args_clear(&fci, 1);
 	}
-
-	php_parallel_copy_free(fcc.function_handler, 0);
 }
 
 static zend_always_inline void php_parallel_configure_callback(int (*zend_callback) (char *, size_t), zval *value) {
