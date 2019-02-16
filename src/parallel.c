@@ -46,7 +46,8 @@ TSRM_TLS php_parallel_t *parallel = NULL;
 void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
 
 void php_parallel_interrupt(zend_execute_data *execute_data) {
-	if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_KILLED)) {
+	if (parallel && 
+	    php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_KILLED)) {
 		zend_bailout();
 	}
 
