@@ -44,16 +44,16 @@ PHP_METHOD(Future, value)
 		return;
 	}
 
-	if (state & PHP_PARALLEL_ERROR) {
+	if (state & PHP_PARALLEL_KILLED) {
 		php_parallel_exception(
-			"an exception occured in Runtime, cannot retrieve value");
+			"Runtime was killed, cannot retrieve value");
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
 		return;
 	}
 
-	if (state & PHP_PARALLEL_KILLED) {
+	if (state & PHP_PARALLEL_ERROR) {
 		php_parallel_exception(
-			"Runtime was killed, cannot retrieve value");
+			"an exception occured in Runtime, cannot retrieve value");
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
 		return;
 	}

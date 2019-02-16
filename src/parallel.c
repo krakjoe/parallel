@@ -41,6 +41,20 @@ zend_string *php_parallel_main;
 
 void* php_parallel_routine(void *arg);
 
+TSRM_TLS php_parallel_t *parallel = NULL;
+
+void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
+
+void php_parallel_interrupt(zend_execute_data *execute_data) {
+	if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_KILLED)) {
+		zend_bailout();
+	}
+
+	if (zend_interrupt_handler) {
+		zend_interrupt_handler(execute_data);
+	}
+}
+
 void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *function, zval *argv, zval *retval) {
 	zval rv;
 	zend_fcall_info fci = empty_fcall_info;
@@ -65,8 +79,12 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 		rc = zend_call_function(&fci, &fcc);
 	} zend_catch {
 		if (monitor) {
-			php_parallel_monitor_set(monitor,
-				PHP_PARALLEL_ERROR);
+			if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_KILLED)) {
+				php_parallel_monitor_set(monitor, 
+					PHP_PARALLEL_KILLED|PHP_PARALLEL_ERROR);
+			} else {
+				php_parallel_monitor_set(monitor, PHP_PARALLEL_ERROR);
+			}
 		}
 	} zend_end_try();
 
@@ -324,6 +342,12 @@ PHP_METHOD(Parallel, kill)
 
 	php_parallel_monitor_set(
 		parallel->monitor, PHP_PARALLEL_KILLED);
+
+	(((zend_executor_globals*)
+		(*((void ***) parallel->context))[
+			TSRM_UNSHUFFLE_RSRC_ID(executor_globals_id)
+	])->vm_interrupt) = 1;
+
 	php_parallel_monitor_wait(
 		parallel->monitor, PHP_PARALLEL_DONE);
 	php_parallel_monitor_set(
@@ -434,12 +458,17 @@ void php_parallel_startup(void) {
 	php_sapi_deactivate_function = sapi_module.deactivate;
 
 	sapi_module.deactivate = NULL;
+
+	zend_interrupt_handler = zend_interrupt_function;
+	zend_interrupt_function = php_parallel_interrupt;
 }
 
 void php_parallel_shutdown(void) {
 	sapi_module.deactivate = php_sapi_deactivate_function;
 
 	zend_string_release(php_parallel_main);
+	
+	zend_interrupt_function = zend_interrupt_handler;
 }
 
 static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
@@ -486,9 +515,9 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 }
 
 void* php_parallel_routine(void *arg) {	
-	php_parallel_t *parallel = (php_parallel_t*) arg;
 	int32_t state = 0;
 
+	parallel = (php_parallel_t*) arg;
 	parallel->context = ts_resource(0);
 
 	TSRMLS_CACHE_UPDATE();

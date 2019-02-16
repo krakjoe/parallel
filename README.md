@@ -44,7 +44,9 @@ final class parallel\Runtime {
 
 	/*
 	* Shall kill the Runtime
-	* Note: Closures scheduled for execution will not be executed
+	* Note: Closures scheduled for execution will not be executed,
+	*	currently running Closure will be interrupted.
+	* Note: Cannot interrupt syscalls
 	*/
 	public function kill() : void;
 }
@@ -60,7 +62,7 @@ final class parallel\Future {
 Implementation
 ==============
 
-In PHP there was only one kind of parallel concurrency extension, the kind that pthreads and pht try to implement:
+In PHP there was only one kind of parallel concurrency extension API, the kind that pthreads and pht try to implement:
 
   * They are hugely complicated
   * They are error prone
