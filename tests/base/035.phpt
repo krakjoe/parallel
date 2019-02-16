@@ -10,9 +10,11 @@ if (!extension_loaded('parallel')) {
 <?php
 $parallel = new \parallel\Runtime();
 
-$parallel->run(function(){
-	while(1);
-});
+$parallel->run(function($a, $b){
+	while(1) {
+		$c += $a + $b;
+	}
+}, [1,2]);
 
 $future = $parallel->run(function(){
 	echo "NO";
