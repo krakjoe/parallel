@@ -353,10 +353,7 @@ PHP_METHOD(Parallel, kill)
 	php_parallel_monitor_set(
 		parallel->monitor, PHP_PARALLEL_KILLED, 0);
 
-	(((zend_executor_globals*)
-		(*((void ***) parallel->context))[
-			TSRM_UNSHUFFLE_RSRC_ID(executor_globals_id)
-	])->vm_interrupt) = 1;
+	*(parallel->child.interrupt) = 1;
 
 	php_parallel_monitor_wait_locked(
 		parallel->monitor, PHP_PARALLEL_DONE);
@@ -404,8 +401,7 @@ zend_object* php_parallel_create(zend_class_entry *type) {
 	parallel->std.handlers = &php_parallel_handlers;
 
 	parallel->monitor = php_parallel_monitor_create();
-	parallel->creator = ts_resource(0);
-	
+
 	zend_hash_init(&parallel->stack, 64, NULL, php_parallel_stack_free, 1);
 #if PHP_VERSION_ID >= 70300
 	zend_hash_internal_pointer_reset_ex(
@@ -413,6 +409,8 @@ zend_object* php_parallel_create(zend_class_entry *type) {
 #else
 	parallel->next = 0;
 #endif
+
+	parallel->parent.server = SG(server_context);
 
 	return &parallel->std;
 }
@@ -538,14 +536,14 @@ void* php_parallel_routine(void *arg) {
 
 	php_parallel_t *parallel = 
 		context = (php_parallel_t*) arg;
-	parallel->context = ts_resource(0);
+	
+	ts_resource(0);
 
 	TSRMLS_CACHE_UPDATE();
 
-	SG(server_context) = (((sapi_globals_struct*) 
-		(*((void ***) parallel->creator))[
-			TSRM_UNSHUFFLE_RSRC_ID(sapi_globals_id)
-	])->server_context);
+	SG(server_context) = parallel->parent.server;
+
+	parallel->child.interrupt = &EG(vm_interrupt);
 
 	PG(expose_php)       = 0;
 	PG(auto_globals_jit) = 0;
