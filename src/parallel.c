@@ -41,13 +41,13 @@ zend_string *php_parallel_main;
 
 void* php_parallel_routine(void *arg);
 
-TSRM_TLS php_parallel_t *parallel = NULL;
+TSRM_TLS php_parallel_t *context = NULL;
 
 void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
 
 void php_parallel_interrupt(zend_execute_data *execute_data) {
-	if (parallel && 
-	    php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_KILLED)) {
+	if (context && 
+	    php_parallel_monitor_check(context->monitor, PHP_PARALLEL_KILLED)) {
 		zend_bailout();
 	}
 
@@ -80,7 +80,7 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 		rc = zend_call_function(&fci, &fcc);
 	} zend_catch {
 		if (monitor) {
-			if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_KILLED)) {
+			if (php_parallel_monitor_check(context->monitor, PHP_PARALLEL_KILLED)) {
 				php_parallel_monitor_set(monitor, 
 					PHP_PARALLEL_KILLED|PHP_PARALLEL_ERROR);
 			} else {
@@ -518,7 +518,8 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 void* php_parallel_routine(void *arg) {	
 	int32_t state = 0;
 
-	parallel = (php_parallel_t*) arg;
+	php_parallel_t *parallel = 
+		context = (php_parallel_t*) arg;
 	parallel->context = ts_resource(0);
 
 	TSRMLS_CACHE_UPDATE();
