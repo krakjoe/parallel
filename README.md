@@ -13,15 +13,23 @@ final class parallel\Runtime {
 	* Shall construct a new Runtime
 	* @param string bootstrap (generally an autoloader)
 	* @param array  ini configuration
+	* @throws \parallel\Exception if arguments are invalid
+	* @throws \parallel\Exception if bootstrapping failed
+	* @throws \parallel\Exception the thread could not be created
 	*/
 	public function __construct(string $bootstrap, array $configuration);
 	/**
 	* Shall construct a new Runtime
 	* @param string bootstrap (generally an autoloader)
+	* @throws \parallel\Exception if arguments are invalid
+	* @throws \parallel\Exception if bootstrapping failed
+	* @throws \parallel\Exception if the thread could not be created	
 	**/
 	public function __construct(string $bootstrap);
 	/**
 	* Shall construct a new Runtime
+	* @throws \parallel\Exception if arguments are invalid
+	* @throws \parallel\Exception if the thread could not be created
 	* @param array ini configuration
 	**/
 	public function __construct(array $configuration);
@@ -29,7 +37,11 @@ final class parallel\Runtime {
 	/*
 	* Shall schedule a Closure for execution passing optional arguments
 	* @param Closure handler
-	* @param argv
+	* @param array argv
+	* @throws \parallel\Exception if \parallel\Runtime was closed
+	* @throws \parallel\Exception if \parallel\Runtime is in unusable state
+	* @throws \parallel\Exception if Closure contains illegal instructions
+	* @throws \parallel\Exception if return from Closure is ignored
 	* Note: A Future shall only be returned if $handler contains a return statement
 	*	Should the caller ignore the return statement in $handler, an exception
 	*	shall be thrown
@@ -39,6 +51,7 @@ final class parallel\Runtime {
 	/*
 	* Shall request the Runtime shutdown
 	* Note: Closures scheduled for execution will be executed
+	* @throws \parallel\Exception if \parallel\Runtime was already closed
 	*/
 	public function close() : void;
 
@@ -46,7 +59,8 @@ final class parallel\Runtime {
 	* Shall kill the Runtime
 	* Note: Closures scheduled for execution will not be executed,
 	*	currently running Closure will be interrupted.
-	* Note: Cannot interrupt syscalls
+	* Note: Cannot interrupt internal function calls in progress
+	* @throws \parallel\Exception if \parallel\Runtime was already closed
 	*/
 	public function kill() : void;
 }
@@ -54,6 +68,10 @@ final class parallel\Runtime {
 final class parallel\Future {
 	/*
 	* Shall wait until the value becomes available
+	* @throws \parallel\Exception if Closure was killed
+	* @throws \parallel\Exception if \parallel\Runtime was closed before execution
+	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
+	* @throws \parallel\Exception if Closure suffered a fatal error or exception
 	*/
 	public function value() : mixed;
 }
