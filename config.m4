@@ -23,12 +23,11 @@ if test "$PHP_PARALLEL" != "no"; then
   AC_DEFINE(HAVE_PARALLEL, 1, [ Have parallel support ])
 
   if test "$PHP_PARALLEL_DEV" != "no"; then
-    PHP_CHECK_GCC_ARG(-Werror,                  _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -Werror")
-    PHP_CHECK_GCC_ARG(-Wformat-security,        _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -Wformat-security")
-    PHP_CHECK_GCC_ARG(-Wno-unused-parameter,    _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -Wno-unused-parameter")
-    PHP_CHECK_GCC_ARG(-fsanitize-address,       _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fsanitize-address")
-    PHP_CHECK_GCC_ARG(-fstack-protector,        _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fstack-protector")
-    PHP_CHECK_GCC_ARG(-fstack-protector-strong, _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fstack-protector-strong")
+    AX_CHECK_COMPILE_FLAG(-Werror,                  _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -Werror")
+    AX_CHECK_COMPILE_FLAG(-Werror=format-security,  _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -Werror=format-security")
+    AX_CHECK_COMPILE_FLAG(-Wno-unused-parameter,    _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -Wno-unused-parameter")
+    AX_CHECK_COMPILE_FLAG(-fstack-protector,        _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fstack-protector")
+    AX_CHECK_COMPILE_FLAG(-fstack-protector-strong, _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fstack-protector-strong")
     PARALLEL_CFLAGS="-Wall -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 $_MAINTAINER_CFLAGS"
   else
     PARALLEL_CFLAGS="-Wall -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
