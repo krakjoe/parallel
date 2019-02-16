@@ -11,6 +11,7 @@ if (!extension_loaded('parallel')) {
 $parallel = new \parallel\Runtime();
 
 $parallel->run(function($a, $b){
+	$c = 0;
 	while(1) {
 		$c += $a + $b;
 	}
