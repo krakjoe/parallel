@@ -40,21 +40,21 @@ PHP_METHOD(Future, value)
 	if ((state = php_parallel_monitor_wait(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED)) == FAILURE) {
 		php_parallel_exception(
 			"an error occured while waiting for a value from Runtime");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
 		return;
 	}
 
 	if (state & PHP_PARALLEL_KILLED) {
 		php_parallel_exception(
 			"Runtime was killed, cannot retrieve value");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
 		return;
 	}
 
 	if (state & PHP_PARALLEL_ERROR) {
 		php_parallel_exception(
 			"an exception occured in Runtime, cannot retrieve value");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
 		return;
 	}
 
@@ -70,7 +70,7 @@ PHP_METHOD(Future, value)
 		ZVAL_NULL(&future->saved);
 	}
 
-	php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+	php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
 }
 
 zend_function_entry php_parallel_future_methods[] = {

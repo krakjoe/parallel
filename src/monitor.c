@@ -99,10 +99,18 @@ int32_t php_parallel_monitor_broadcast(php_parallel_monitor_t *monitor) {
 	return pthread_cond_broadcast(&monitor->condition);
 }
 
-void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state) {
+void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state, zend_bool lock) {
+	if (lock) {
+		pthread_mutex_lock(&monitor->mutex);
+	}
+
 	monitor->state |= state;
 
 	pthread_cond_signal(&monitor->condition);
+
+	if (lock) {
+		pthread_mutex_unlock(&monitor->mutex);
+	}
 }
 
 void php_parallel_monitor_unset(php_parallel_monitor_t *monitor, int32_t state) {
