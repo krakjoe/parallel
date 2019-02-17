@@ -61,14 +61,14 @@ static zend_always_inline void php_parallel_cast_resource(zval *dest, zval *sour
 	zend_resource *resource = Z_RES_P(source);
 #ifndef _WIN32
 	if (resource->type == php_file_le_stream() || resource->type == php_file_le_pstream()) {
-		php_socket_t fd;
+		int fd;
 		php_stream *stream = zend_fetch_resource2_ex(
 					source, "stream", 
 					php_file_le_stream(), 
 					php_file_le_pstream());
 
 		if (stream) {
-			if (php_stream_cast(stream, PHP_STREAM_AS_SOCKETD, (void*)&fd, 0) == SUCCESS) {
+			if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void*)&fd, 0) == SUCCESS) {
 				ZVAL_LONG(dest, fd);
 				return;
 			}
