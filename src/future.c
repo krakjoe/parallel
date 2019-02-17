@@ -24,7 +24,10 @@
 
 #include "zend_exceptions.h"
 
+#define php_parallel_timeout_exception(m, ...) zend_throw_exception_ex(php_parallel_timeout_exception_ce, 0, m, ##__VA_ARGS__)
+
 zend_class_entry *php_parallel_future_ce;
+zend_class_entry *php_parallel_timeout_exception_ce;
 zend_object_handlers php_parallel_future_handlers;
 
 PHP_METHOD(Future, value) 
@@ -60,24 +63,30 @@ PHP_METHOD(Future, value)
 				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED);
 	}
 
+	if (state == ETIMEDOUT) {
+		php_parallel_timeout_exception(
+			"a timeout occured waiting for value from Runtime");
+		return;
+	}
+
 	if (state == FAILURE) {
 		php_parallel_exception(
 			"an error occured while waiting for a value from Runtime");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR, 0);
 		return;
 	}
 
 	if (state & PHP_PARALLEL_KILLED) {
 		php_parallel_exception(
 			"Runtime was killed, cannot retrieve value");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_KILLED, 0);
 		return;
 	}
 
 	if (state & PHP_PARALLEL_ERROR) {
 		php_parallel_exception(
 			"an exception occured in Runtime, cannot retrieve value");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR, 0);
 		return;
 	}
 
@@ -98,27 +107,72 @@ PHP_METHOD(Future, value)
 
 PHP_METHOD(Future, select)
 {
-	zval *resolving;
-	zval *resolved;
-	zval *errored;
+	zval *resolving = NULL;
+	zval *resolved = NULL;
+	zval *errored = NULL;
+	zval *timedout = NULL;
 	zend_long timeout = -1;
 	zend_long idx;
 	zval *future;
-	
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "aaa|l", &resolving, &resolved, &errored, &timeout) != SUCCESS) {
+
+	if (ZEND_NUM_ARGS() == 3) {
+		ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 3, 3)
+			Z_PARAM_ARRAY_EX2(resolving, 1, 1, 0)
+			Z_PARAM_ARRAY_EX2(resolved,  1, 1, 1)
+			Z_PARAM_ARRAY_EX2(errored,   1, 1, 1)
+		ZEND_PARSE_PARAMETERS_END_EX(
+			php_parallel_exception(
+				"expected (array $resolving, array $resolved, array $errored)");
+			return;
+		);
+	} else if (ZEND_NUM_ARGS() == 5) {
+		ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 5, 5)
+			Z_PARAM_ARRAY_EX2(resolving, 1, 1, 0)
+			Z_PARAM_ARRAY_EX2(resolved,  1, 1, 1)
+			Z_PARAM_ARRAY_EX2(errored,   1, 1, 1)
+			Z_PARAM_ARRAY_EX2(timedout,   1, 1, 1)
+			Z_PARAM_LONG(timeout)
+		ZEND_PARSE_PARAMETERS_END_EX(
+			if (timeout >= 0) {
+				php_parallel_exception(
+					"expected (array $resolving, array $resolved, array $errored, array $timedout, int $timeout)");
+			} else {
+				php_parallel_exception(
+					"optional timeout must be non-negative");
+			}
+			return;
+		);
+	} else {
 		php_parallel_exception(
-			"resolving and resolved array with optional timeout expected");
+			"expected (array $resolving, array $resolved, array $errored) or"
+			        " (array $resolving, array $resolved, array $errored, array $timedout, int $timeout)");
 		return;
 	}
 
-	if (ZEND_NUM_ARGS() > 3 && timeout < 0) {
+	if (!resolving || !resolved || !errored || (ZEND_NUM_ARGS() == 5 && !timedout)) {
 		php_parallel_exception(
-			"optional timeout must be non-negative");
+			"array arguments must not be null");
 		return;
-	}
+	} 
 
 	if (!zend_hash_num_elements(Z_ARRVAL_P(resolving))) {
 		RETURN_LONG(0);
+	}
+
+	if (Z_TYPE_P(resolved) != IS_ARRAY) {
+		array_init(resolved);
+	} else zend_hash_clean(Z_ARRVAL_P(resolved));
+
+	if (Z_TYPE_P(errored) != IS_ARRAY) {
+		array_init(errored);
+	} else zend_hash_clean(Z_ARRVAL_P(errored));
+
+	if (ZEND_NUM_ARGS() == 5) {
+		if (Z_TYPE_P(timedout) != IS_ARRAY) {
+			array_init(timedout);
+		} else zend_hash_clean(Z_ARRVAL_P(timedout));
+
+		timeout = ceil(timeout / zend_hash_num_elements(Z_ARRVAL_P(resolving)));
 	}
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(resolving), idx, future) {
@@ -126,56 +180,83 @@ PHP_METHOD(Future, select)
 		php_parallel_future_t *f;
 
 		if (Z_TYPE_P(future) != IS_OBJECT || !instanceof_function(Z_OBJCE_P(future), php_parallel_future_ce)) {
+			zend_hash_index_del(Z_ARRVAL_P(resolving), idx);
 			continue;
 		}
 
 		f = php_parallel_future_from(future);
 
-		if (timeout) {
+		if (timeout > -1) {
 			state = php_parallel_monitor_wait_timed(f->monitor, 
-				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, ceil(timeout / zend_hash_num_elements(Z_ARRVAL_P(resolving))));
+					PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, 
+					timeout);
 		} else state = php_parallel_monitor_wait(f->monitor, 
-				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED);
-				
+					PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED);
 
 		if (state == FAILURE) {
-			zend_hash_index_update(
-				Z_ARRVAL_P(errored), idx, future);
+			/* failed to wait, internal error */
+			zend_hash_index_update(Z_ARRVAL_P(errored), idx, future);
 			Z_ADDREF_P(future);
-			php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);
+			php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR, 0);
 			zend_hash_index_del(Z_ARRVAL_P(resolving), idx);		
-			continue;
-		}
-
-		if (state & (PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED)) {
-			zend_hash_index_update(
-				Z_ARRVAL_P(errored), idx, future);
+		} else if (state == ETIMEDOUT) {
+			/* timeout occured while waiting */
+			zend_hash_index_update(Z_ARRVAL_P(timedout), idx, future);
 			Z_ADDREF_P(future);
-			php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);
-			zend_hash_index_del(Z_ARRVAL_P(resolving), idx);			
-			continue;
+		} else if (state & (PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED)) {
+			/* exception or killed */
+			zend_hash_index_update(Z_ARRVAL_P(errored), idx, future);
+			Z_ADDREF_P(future);
+			if (state & PHP_PARALLEL_ERROR) {
+				php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR, 0);
+			} else 	php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_KILLED, 0);
+
+			zend_hash_index_del(Z_ARRVAL_P(resolving), idx);
+		} else {
+			/* resolved */
+			zend_hash_index_update(Z_ARRVAL_P(resolved), idx, future);
+			Z_ADDREF_P(future);
+			php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE, 0);
+			zend_hash_index_del(Z_ARRVAL_P(resolving), idx);
 		}
 
-		zend_hash_index_update(
-			Z_ARRVAL_P(resolved), idx, future);
-		Z_ADDREF_P(future);
-		php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);
-
-		zend_hash_index_del(Z_ARRVAL_P(resolving), idx);
+		if (zend_hash_num_elements(Z_ARRVAL_P(resolved))) {
+			/* break out on first resolution */
+			break;
+		}
 	} ZEND_HASH_FOREACH_END();
 
-	RETURN_LONG(zend_hash_num_elements(Z_ARRVAL_P(resolved)) + zend_hash_num_elements(Z_ARRVAL_P(errored)));
+	if (ZEND_NUM_ARGS() == 5) {
+		RETURN_LONG(
+			zend_hash_num_elements(Z_ARRVAL_P(resolved)) + 
+			zend_hash_num_elements(Z_ARRVAL_P(errored)) +
+			zend_hash_num_elements(Z_ARRVAL_P(timedout)));
+	} else {
+		RETURN_LONG(
+			zend_hash_num_elements(Z_ARRVAL_P(resolved)) +
+			zend_hash_num_elements(Z_ARRVAL_P(errored)));
+	}
+}
+
+PHP_METHOD(Future, done)
+{
+	php_parallel_future_t *future = 
+		php_parallel_future_from(getThis());
+
+	RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE));
 }
 
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_select_arginfo, 0, 0, 3)
 	ZEND_ARG_TYPE_INFO(1, resolving, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(1, resolved, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(1, errored, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(1, timedout, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 zend_function_entry php_parallel_future_methods[] = {
 	PHP_ME(Future, value, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(Future, done, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(Future, select, php_parallel_future_select_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_FE_END
 };
@@ -197,7 +278,7 @@ void php_parallel_future_destroy(zend_object *o) {
 	php_parallel_future_t *future = 
 		php_parallel_future_fetch(o);
 
-	if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_KILLED)) {
+	if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED)) {
 		php_parallel_monitor_wait(future->monitor, PHP_PARALLEL_READY);
 		
 		if (Z_REFCOUNTED(future->value)) {
@@ -226,5 +307,9 @@ void php_parallel_future_startup() {
 	php_parallel_future_ce = zend_register_internal_class(&ce);
 	php_parallel_future_ce->create_object = php_parallel_future_create;
 	php_parallel_future_ce->ce_flags |= ZEND_ACC_FINAL;
+
+	INIT_NS_CLASS_ENTRY(ce, "parallel", "TimeoutException", NULL);
+
+	php_parallel_timeout_exception_ce = zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
 }
 #endif

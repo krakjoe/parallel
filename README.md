@@ -67,13 +67,56 @@ final class parallel\Runtime {
 
 final class parallel\Future {
 	/*
-	* Shall wait until the value becomes available
+	* Shall wait until the value is resolved
 	* @throws \parallel\Exception if Closure was killed
 	* @throws \parallel\Exception if \parallel\Runtime was closed before execution
 	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
 	* @throws \parallel\Exception if Closure suffered a fatal error or exception
 	*/
 	public function value() : mixed;
+
+	/*
+	* Shall wait until the value is resolved or the timeout is reached
+	* @param non-negative timeout in microseconds
+	* @throws \parallel\Exception if Closure was killed
+	* @throws \parallel\Exception if \parallel\Runtime was closed before execution
+	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
+	* @throws \parallel\Exception if Closure suffered a fatal error or exception
+	* @throws \parallel\Exception if timeout is negative
+	* @throws \parallel\TimeoutException if timeout is reached
+	*/
+	public function value(int $timeout) : mixed;
+
+	/*
+	* Shall indicate if the Future value is resolved
+	* @returns bool
+	*/
+	public function done() : bool;
+
+	/*
+	* Shall perform a select on the Future objects in $resolving,
+	*	returning upon the first successful resolve
+	* @param array $resolving array of Future objects
+	* @param array $resolved  shall be filled with resolved Future objects
+	* @param array $errored   shall be filled with Future objects that errored
+	* @return number of resolved and errored Future objects
+	* @throws \parallel\Exception if the arguments are invalid
+	*/
+	public static function select(array $resolving, array &$resolved, array &$errored) : int;
+
+	/*
+	* Shall perform a select on the Future objects in $resolving, 
+	*	returning upon the first successful resolve, 
+	*	with the given timeout in microseconds
+	* @param array $resolving array of Future objects
+	* @param array $resolved  shall be filled with resolved Future objects
+	* @param array $errored   shall be filled with Future objects that errored
+	* @param array $timedout  shall be filled with Future objects that timedout
+	* @param int   $timeout   timeout in microseconds
+	* @return number of resolved, errored, and timedout Future objects
+	* @throws \parallel\Exception if the arguments are invalid
+	*/
+	public static function select(array $resolving, array &$resolved, array &$errored, array &$timedout, int $timeout) : int;
 }
 ```
 
