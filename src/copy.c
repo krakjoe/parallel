@@ -24,6 +24,7 @@
 #include "copy.h"
 
 #include "php_streams.h"
+#include "php_network.h"
 
 #include <Zend/zend_vm.h>
 
@@ -60,7 +61,7 @@ static zend_always_inline void php_parallel_cast_resource(zval *dest, zval *sour
 	zend_resource *resource = Z_RES_P(source);
 
 	if (resource->type == php_file_le_stream() || resource->type == php_file_le_pstream()) {
-		int fd;
+		php_socket_t fd;
 		php_stream *stream = zend_fetch_resource2_ex(
 					source, "stream", 
 					php_file_le_stream(), 
