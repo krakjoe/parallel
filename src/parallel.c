@@ -472,7 +472,7 @@ void php_parallel_startup(void) {
 
 	php_parallel_exception_ce = zend_register_internal_class_ex(&ce, zend_ce_error_exception);
 
-	if (strncmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
+	if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
 		php_sapi_deactivate_function = sapi_module.deactivate;
 
 		sapi_module.deactivate = NULL;
@@ -483,7 +483,7 @@ void php_parallel_startup(void) {
 }
 
 void php_parallel_shutdown(void) {
-	if (strncmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
+	if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
 		sapi_module.deactivate = php_sapi_deactivate_function;
 	}
 
