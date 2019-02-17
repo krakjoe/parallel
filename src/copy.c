@@ -68,7 +68,7 @@ static zend_always_inline void php_parallel_cast_resource(zval *dest, zval *sour
 					php_file_le_pstream());
 
 		if (stream) {
-			if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void*) &fd, 0) == SUCCESS && fd <= 1024) {
+			if (php_stream_cast(stream, PHP_STREAM_AS_SOCKETD, (void*)&fd, 0) == SUCCESS) {
 				ZVAL_LONG(dest, fd);
 				return;
 			}
