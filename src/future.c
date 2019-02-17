@@ -117,9 +117,15 @@ PHP_METHOD(Future, select)
 
 	if (ZEND_NUM_ARGS() == 3) {
 		ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 3, 3)
+#if PHP_VERSION_ID >= 70200
 			Z_PARAM_ARRAY_EX2(resolving, 1, 1, 0)
 			Z_PARAM_ARRAY_EX2(resolved,  1, 1, 1)
 			Z_PARAM_ARRAY_EX2(errored,   1, 1, 1)
+#else
+			Z_PARAM_ARRAY_EX(resolving, 1, 0)
+			Z_PARAM_ARRAY_EX(resolved,  1, 1)
+			Z_PARAM_ARRAY_EX(errored,   1, 1)
+#endif
 		ZEND_PARSE_PARAMETERS_END_EX(
 			php_parallel_exception(
 				"expected (array $resolving, array $resolved, array $errored)");
@@ -127,10 +133,17 @@ PHP_METHOD(Future, select)
 		);
 	} else if (ZEND_NUM_ARGS() == 5) {
 		ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 5, 5)
+#if PHP_VERSION_ID >= 70200
 			Z_PARAM_ARRAY_EX2(resolving, 1, 1, 0)
 			Z_PARAM_ARRAY_EX2(resolved,  1, 1, 1)
 			Z_PARAM_ARRAY_EX2(errored,   1, 1, 1)
-			Z_PARAM_ARRAY_EX2(timedout,   1, 1, 1)
+			Z_PARAM_ARRAY_EX2(timedout,  1, 1, 1)
+#else
+			Z_PARAM_ARRAY_EX(resolving, 1, 0)
+			Z_PARAM_ARRAY_EX(resolved,  1, 1)
+			Z_PARAM_ARRAY_EX(errored,   1, 1)
+			Z_PARAM_ARRAY_EX(timedout,  1, 1)
+#endif
 			Z_PARAM_LONG(timeout)
 		ZEND_PARSE_PARAMETERS_END_EX(
 			if (timeout >= 0) {
@@ -154,6 +167,16 @@ PHP_METHOD(Future, select)
 			"array arguments must not be null");
 		return;
 	} 
+
+#if PHP_VERSION_ID < 70200
+	ZVAL_DEREF(resolving);
+	ZVAL_DEREF(resolved);
+	ZVAL_DEREF(errored);
+
+	if (ZEND_NUM_ARGS() == 5) {
+		ZVAL_DEREF(timedout);
+	}
+#endif
 
 	if (!zend_hash_num_elements(Z_ARRVAL_P(resolving))) {
 		RETURN_LONG(0);
