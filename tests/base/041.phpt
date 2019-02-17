@@ -2,8 +2,8 @@
 parallel streams
 --SKIPIF--
 <?php
-if (!extension_loaded('parallel') || strtoupper(substr(PHP_OS, 0, 3)) != 'WIN') {
-	echo 'skip';
+if (!extension_loaded('parallel') || strtoupper(substr(PHP_OS, 0, 3)) == 'WIN') {
+	die("skip non windows test");
 }
 ?>
 --FILE--
