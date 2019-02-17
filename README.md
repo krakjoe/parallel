@@ -102,7 +102,7 @@ final class parallel\Future {
 	* @return number of resolved and errored Future objects
 	* @throws \parallel\Exception if the arguments are invalid
 	*/
-	public static function select(array $resolving, array &$resolved, array &$errored) : int;
+	public static function select(array &$resolving, array &$resolved, array &$errored) : int;
 
 	/*
 	* Shall perform a select on the Future objects in $resolving, 
@@ -116,7 +116,7 @@ final class parallel\Future {
 	* @return number of resolved, errored, and timedout Future objects
 	* @throws \parallel\Exception if the arguments are invalid
 	*/
-	public static function select(array $resolving, array &$resolved, array &$errored, array &$timedout, int $timeout) : int;
+	public static function select(array &$resolving, array &$resolved, array &$errored, array &$timedout, int $timeout) : int;
 }
 ```
 
