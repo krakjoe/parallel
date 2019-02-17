@@ -107,7 +107,7 @@ PHP_METHOD(Future, select)
 	zval *resolving;
 	zval *resolved;
 	zval *errored;
-	zend_long timeout = 0;
+	zend_long timeout = -1;
 	zend_long idx;
 	zval *future;
 	
@@ -117,10 +117,14 @@ PHP_METHOD(Future, select)
 		return;
 	}
 
-	if (timeout < 0) {
+	if (ZEND_NUM_ARGS() > 3 && timeout < 0) {
 		php_parallel_exception(
 			"optional timeout must be non-negative");
 		return;
+	}
+
+	if (!zend_hash_num_elements(Z_ARRVAL_P(resolving))) {
+		RETURN_LONG(0);
 	}
 
 	ZEND_HASH_FOREACH_NUM_KEY_VAL(Z_ARRVAL_P(resolving), idx, future) {
@@ -133,14 +137,19 @@ PHP_METHOD(Future, select)
 
 		f = php_parallel_future_from(future);
 
-		state = php_parallel_monitor_wait_timed(f->monitor, 
-				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, timeout);		
+		if (timeout) {
+			state = php_parallel_monitor_wait_timed(f->monitor, 
+				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, ceil(timeout / zend_hash_num_elements(Z_ARRVAL_P(resolving))));
+		} else state = php_parallel_monitor_wait(f->monitor, 
+				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED);
+				
 
 		if (state == FAILURE) {
 			zend_hash_index_update(
 				Z_ARRVAL_P(errored), idx, future);
 			Z_ADDREF_P(future);
 			php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);
+			zend_hash_index_del(Z_ARRVAL_P(resolving), idx);		
 			continue;
 		}
 
@@ -148,17 +157,20 @@ PHP_METHOD(Future, select)
 			zend_hash_index_update(
 				Z_ARRVAL_P(errored), idx, future);
 			Z_ADDREF_P(future);
-			php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);			
+			php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);
+			zend_hash_index_del(Z_ARRVAL_P(resolving), idx);			
 			continue;
 		}
 
 		zend_hash_index_update(
 			Z_ARRVAL_P(resolved), idx, future);
 		Z_ADDREF_P(future);
-		php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);			
+		php_parallel_monitor_set(f->monitor, PHP_PARALLEL_DONE);
+
+		zend_hash_index_del(Z_ARRVAL_P(resolving), idx);
 	} ZEND_HASH_FOREACH_END();
 
-	return zend_hash_num_elements(Z_ARRVAL_P(resolved));
+	RETURN_LONG(zend_hash_num_elements(Z_ARRVAL_P(resolved)) + zend_hash_num_elements(Z_ARRVAL_P(errored)));
 }
 
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_select_arginfo, 0, 0, 3)
