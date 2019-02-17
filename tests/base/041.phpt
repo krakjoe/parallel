@@ -2,7 +2,7 @@
 parallel streams
 --SKIPIF--
 <?php
-if (!extension_loaded('parallel')) {
+if (!extension_loaded('parallel') || strtoupper(substr(PHP_OS, 0, 3)) != 'WIN') {
 	echo 'skip';
 }
 ?>
