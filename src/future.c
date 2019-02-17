@@ -63,27 +63,21 @@ PHP_METHOD(Future, value)
 	if (state == FAILURE) {
 		php_parallel_exception(
 			"an error occured while waiting for a value from Runtime");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
-		return;
-	}
-
-	if (state == ETIMEDOUT) {
-		php_parallel_exception(
-			"a timeout occured waiting for the value");
-		return;
-	}
-
-	if (state & PHP_PARALLEL_ERROR) {
-		php_parallel_exception(
-			"an exception occured in Runtime, cannot retrieve value");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
 		return;
 	}
 
 	if (state & PHP_PARALLEL_KILLED) {
 		php_parallel_exception(
 			"Runtime was killed, cannot retrieve value");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+		return;
+	}
+
+	if (state & PHP_PARALLEL_ERROR) {
+		php_parallel_exception(
+			"an exception occured in Runtime, cannot retrieve value");
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
 		return;
 	}
 
@@ -99,7 +93,7 @@ PHP_METHOD(Future, value)
 		ZVAL_NULL(&future->saved);
 	}
 
-	php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+	php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
 }
 
 PHP_METHOD(Future, select)

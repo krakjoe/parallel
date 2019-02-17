@@ -41,15 +41,19 @@ typedef struct _php_parallel_stack_el_t {
 } php_parallel_stack_el_t;
 
 typedef struct _php_parallel_t {
-	pthread_t                  thread;
-	void                    ***creator;
-	void                    ***context;
+	pthread_t                   thread;
 	php_parallel_monitor_t     *monitor;
-	HashTable                  stack;
-	HashPosition               next;
+	HashTable                   stack;
+	HashPosition                next;
 	zend_string                *bootstrap;
-	zval                       configuration;
-	zend_object                std;
+	zval                        configuration;
+	struct {
+		zend_bool          *interrupt;
+	} child;
+	struct {
+		void               *server;
+	} parent;
+	zend_object                 std;
 } php_parallel_t;
 
 void php_parallel_shutdown(void);
