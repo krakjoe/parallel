@@ -471,17 +471,21 @@ void php_parallel_startup(void) {
 	INIT_NS_CLASS_ENTRY(ce, "parallel", "Exception", NULL);
 
 	php_parallel_exception_ce = zend_register_internal_class_ex(&ce, zend_ce_error_exception);
-	
-	php_sapi_deactivate_function = sapi_module.deactivate;
 
-	sapi_module.deactivate = NULL;
+	if (strncmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
+		php_sapi_deactivate_function = sapi_module.deactivate;
+
+		sapi_module.deactivate = NULL;
+	}
 
 	zend_interrupt_handler = zend_interrupt_function;
 	zend_interrupt_function = php_parallel_interrupt;
 }
 
 void php_parallel_shutdown(void) {
-	sapi_module.deactivate = php_sapi_deactivate_function;
+	if (strncmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
+		sapi_module.deactivate = php_sapi_deactivate_function;
+	}
 
 	zend_string_release(php_parallel_main);
 	
