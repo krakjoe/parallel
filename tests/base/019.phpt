@@ -41,21 +41,12 @@ try {
 } catch (Error $ex) {
 	var_dump($ex->getMessage());
 }
-
-try {
-	$parallel->run(function($array) {}, [
-		[STDIN]
-	]);
-} catch (Error $ex) {
-	var_dump($ex->getMessage());
-}
 ?>
 --EXPECT--
 string(58) "illegal variable (object) passed to parallel at argument 1"
 string(58) "illegal variable (object) passed to parallel at argument 2"
 string(58) "illegal variable (object) passed to parallel at argument 3"
 string(58) "illegal variable (object) passed to parallel at argument 1"
-string(60) "illegal variable (resource) passed to parallel at argument 1"
 
 
 

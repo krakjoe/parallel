@@ -51,6 +51,6 @@ array(7) {
   ["eight"]=>
   string(11) "string here"
   ["stdin"]=>
-  bool(true)
+  NULL
 }
 

@@ -23,6 +23,8 @@
 
 #include "copy.h"
 
+#include "php_streams.h"
+
 #include <Zend/zend_vm.h>
 
 #ifndef GC_SET_REFCOUNT
@@ -43,6 +45,38 @@ static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size,
 
 HashTable *php_parallel_copy_hash(HashTable *source, zend_bool persistent);
 
+static zend_always_inline zend_bool php_parallel_resource_castable(zval *zv) {
+	zend_resource *resource = Z_RES_P(zv);
+
+	if (resource->type == php_file_le_stream() ||
+	    resource->type == php_file_le_pstream()) {
+		return 1;
+	}
+
+	return 0;
+}
+
+static zend_always_inline void php_parallel_cast_resource(zval *dest, zval *source) {
+	zend_resource *resource = Z_RES_P(source);
+
+	if (resource->type == php_file_le_stream() || resource->type == php_file_le_pstream()) {
+		int fd;
+		php_stream *stream = zend_fetch_resource2_ex(
+					source, "stream", 
+					php_file_le_stream(), 
+					php_file_le_pstream());
+
+		if (stream) {
+			if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void*) &fd, 0) == SUCCESS && fd <= 1024) {
+				ZVAL_LONG(dest, fd);
+				return;
+			}
+		}
+	}
+
+	ZVAL_NULL(dest);
+}
+
 void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent) {
 	switch (Z_TYPE_P(source)) {
 		case IS_NULL:
@@ -60,6 +94,12 @@ void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent) {
 		case IS_ARRAY:
 			ZVAL_ARR(dest, php_parallel_copy_hash(Z_ARRVAL_P(source), persistent));
 		break;
+
+		case IS_RESOURCE:
+			if (php_parallel_resource_castable(source)) {
+				php_parallel_cast_resource(dest, source);
+				break;
+			}
 
 		default:
 			ZVAL_BOOL(dest, zend_is_true(source));
@@ -400,8 +440,10 @@ static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval *
 		}
 
 		if (Z_TYPE_P(arg) == IS_RESOURCE) {
-			ZVAL_COPY_VALUE(error, arg);
-			return 0;
+			if (!php_parallel_resource_castable(arg)) {
+				ZVAL_COPY_VALUE(error, arg);
+				return 0;
+			}
 		}
 
 		(*argc)++;
