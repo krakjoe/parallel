@@ -16,10 +16,10 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-01-30</date>
+ <date>2019-02-18</date>
  <version>
-  <release>0.0.1dev</release>
-  <api>0.0.1</api>
+  <release>0.8.0</release>
+  <api>0.8.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -40,6 +40,8 @@
    <dir name="src">
     <file name="copy.c" role="src"/>
     <file name="copy.h" role="src"/>
+    <file name="future.c" role="src"/>
+    <file name="future.h" role="src"/>
     <file name="monitor.c" role="src"/>
     <file name="monitor.h" role="src"/>
     <file name="parallel.c" role="src"/>
@@ -81,6 +83,14 @@
       <file name="032.phpt" role="test"/>
       <file name="033.phpt" role="test"/>
       <file name="034.phpt" role="test"/>
+      <file name="035.phpt" role="test"/>
+      <file name="036.phpt" role="test"/>
+      <file name="037.phpt" role="test"/>
+      <file name="038.phpt" role="test"/>
+      <file name="039.phpt" role="test"/>
+      <file name="040.phpt" role="test"/>
+      <file name="041.phpt" role="test"/>
+      <file name="042.phpt" role="test"/>
       <file name="bootstrapc.inc" role="test"/>
       <file name="bootstrape.inc" role="test"/>
       <file name="bootstrap.inc" role="test"/>
