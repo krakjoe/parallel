@@ -11,6 +11,8 @@ if (!extension_loaded('parallel')) {
 $parallel = new \parallel\Runtime();
 $future   = $parallel->run(function(){
 	throw new Exception();
+
+	return false;
 });
 
 try {

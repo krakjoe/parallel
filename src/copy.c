@@ -23,6 +23,9 @@
 
 #include "copy.h"
 
+#include "php_streams.h"
+#include "php_network.h"
+
 #include <Zend/zend_vm.h>
 
 #ifndef GC_SET_REFCOUNT
@@ -43,6 +46,38 @@ static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size,
 
 HashTable *php_parallel_copy_hash(HashTable *source, zend_bool persistent);
 
+static zend_always_inline zend_bool php_parallel_resource_castable(zval *zv) {
+	zend_resource *resource = Z_RES_P(zv);
+
+	if (resource->type == php_file_le_stream() ||
+	    resource->type == php_file_le_pstream()) {
+		return 1;
+	}
+
+	return 0;
+}
+
+static zend_always_inline void php_parallel_cast_resource(zval *dest, zval *source) {
+	zend_resource *resource = Z_RES_P(source);
+#ifndef _WIN32
+	if (resource->type == php_file_le_stream() || resource->type == php_file_le_pstream()) {
+		int fd;
+		php_stream *stream = zend_fetch_resource2_ex(
+					source, "stream", 
+					php_file_le_stream(), 
+					php_file_le_pstream());
+
+		if (stream) {
+			if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void*)&fd, 0) == SUCCESS) {
+				ZVAL_LONG(dest, fd);
+				return;
+			}
+		}
+	}
+#endif
+	ZVAL_NULL(dest);
+}
+
 void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent) {
 	switch (Z_TYPE_P(source)) {
 		case IS_NULL:
@@ -60,6 +95,12 @@ void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent) {
 		case IS_ARRAY:
 			ZVAL_ARR(dest, php_parallel_copy_hash(Z_ARRVAL_P(source), persistent));
 		break;
+
+		case IS_RESOURCE:
+			if (php_parallel_resource_castable(source)) {
+				php_parallel_cast_resource(dest, source);
+				break;
+			}
 
 		default:
 			ZVAL_BOOL(dest, zend_is_true(source));
@@ -130,9 +171,13 @@ static inline HashTable* php_parallel_copy_statics(HashTable *old, zend_bool per
 static inline zend_string** php_parallel_copy_variables(zend_string **old, int end, zend_bool persistent) {
 	zend_string **variables = pecalloc(end, sizeof(zend_string*), persistent);
 	int it = 0;
-	
+
 	while (it < end) {
-		variables[it] = zend_string_dup(old[it], persistent);
+		variables[it] = 
+			zend_string_dup(old[it], persistent);
+		if (!persistent) {
+			zend_is_auto_global(variables[it]);
+		}
 		it++;
 	}
 	
@@ -178,12 +223,18 @@ static inline zval* php_parallel_copy_literals(zval *old, int end, zend_bool per
 			case IS_NULL:
 #if PHP_VERSION_ID >= 70300
 			case IS_STRING:
+				if (!persistent && Z_TYPE(literals[it]) == IS_STRING) {
+					zend_is_auto_global(Z_STR(literals[it]));
+				}
 #endif
 				zval_copy_ctor(&literals[it]);	
 			break;
 
 #if PHP_VERSION_ID < 70300
 			case IS_STRING:
+				if (!persistent && Z_TYPE(literals[it]) == IS_STRING) {
+					zend_is_auto_global(Z_STR(literals[it]));
+				}
 #endif
 			case IS_ARRAY:
 				php_parallel_copy_zval(&literals[it], &old[it], persistent);
@@ -370,7 +421,7 @@ zend_bool php_parallel_copy_arginfo_check(const zend_function *function) { /* {{
 
 		if (it->pass_by_reference) {
 			zend_throw_error(NULL,
-				"illegal variable (reference) accepted by to parallel at argument %d", argc);
+				"illegal variable (reference) accepted by parallel at argument %d", argc);
 			return 0;
 		}
 		it++;
@@ -400,8 +451,10 @@ static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval *
 		}
 
 		if (Z_TYPE_P(arg) == IS_RESOURCE) {
-			ZVAL_COPY_VALUE(error, arg);
-			return 0;
+			if (!php_parallel_resource_castable(arg)) {
+				ZVAL_COPY_VALUE(error, arg);
+				return 0;
+			}
 		}
 
 		(*argc)++;
@@ -410,7 +463,7 @@ static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval *
 	return 1;
 } /* }}} */
 
-zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execute_data *execute_data, const zend_function * function, int argc, zval *argv) { /* {{{ */
+zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execute_data *execute_data, const zend_function * function, int argc, zval *argv, zend_bool *returns) { /* {{{ */
 	zend_op *it = function->op_array.opcodes,
 		*end = it + function->op_array.last;
 	uint32_t errat = 0;
@@ -469,6 +522,19 @@ zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execut
 					return 0;
 				}
 			break;
+
+			case ZEND_RETURN:
+				if (!*returns && it->extended_value != -1) {
+					if (EX(opline)->result_type == IS_UNUSED) {
+						zend_throw_error(NULL,
+							"return on line %d of entry point ignored by caller, "
+							"caller must retain reference to Future",
+							it->lineno - function->op_array.line_start);
+						return 0;
+					}
+					*returns = 1;
+				}
+			break;
 		}
 		it++;
 	}
@@ -492,7 +558,10 @@ zend_function* php_parallel_copy(const zend_function *function, zend_bool persis
 	copy = (zend_function*) pecalloc(1, sizeof(zend_op_array), persistent);
 
 	memcpy(copy, function, sizeof(zend_op_array));
-	
+	/**
+	@TODO a non-persistent copy may do something like addref and omit to make a depp copy
+		this is easier to debug for now anyway ...
+	**/
 	op_array = &copy->op_array;
 	variables = op_array->vars;
 	literals = op_array->literals;

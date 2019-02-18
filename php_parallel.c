@@ -25,11 +25,13 @@
 #include "php_parallel.h"
 
 #include "src/parallel.h"
+#include "src/future.h"
 
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
 {
 	php_parallel_startup();
+	php_parallel_future_startup();
 
 	return SUCCESS;
 } /* }}} */

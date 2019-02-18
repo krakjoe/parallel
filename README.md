@@ -5,54 +5,125 @@ parallel
 [![Build status](https://ci.appveyor.com/api/projects/status/cppfcu6unc0r0h0b?svg=true)](https://ci.appveyor.com/project/krakjoe/parallel)
 [![Coverage Status](https://coveralls.io/repos/github/krakjoe/parallel/badge.svg?branch=develop)](https://coveralls.io/github/krakjoe/parallel)
 
-A succint parallel concurrency API for PHP 7:
+A succinct parallel concurrency API for PHP 7:
 
 ```php
-class parallel\Runtime {
+final class parallel\Runtime {
 	/*
 	* Shall construct a new Runtime
 	* @param string bootstrap (generally an autoloader)
 	* @param array  ini configuration
-	*/	
+	* @throws \parallel\Exception if arguments are invalid
+	* @throws \parallel\Exception if bootstrapping failed
+	* @throws \parallel\Exception the thread could not be created
+	*/
 	public function __construct(string $bootstrap, array $configuration);
 	/**
 	* Shall construct a new Runtime
 	* @param string bootstrap (generally an autoloader)
+	* @throws \parallel\Exception if arguments are invalid
+	* @throws \parallel\Exception if bootstrapping failed
+	* @throws \parallel\Exception if the thread could not be created	
 	**/
 	public function __construct(string $bootstrap);
 	/**
 	* Shall construct a new Runtime
+	* @throws \parallel\Exception if arguments are invalid
+	* @throws \parallel\Exception if the thread could not be created
 	* @param array ini configuration
 	**/
 	public function __construct(array $configuration);
 
 	/*
-	* Shall schedule a Closure for executing, optionally passing parameters and
-	* returning a Future value
+	* Shall schedule a Closure for execution passing optional arguments
 	* @param Closure handler
-	* @param argv
+	* @param array argv
+	* @throws \parallel\Exception if \parallel\Runtime was closed
+	* @throws \parallel\Exception if \parallel\Runtime is in unusable state
+	* @throws \parallel\Exception if Closure contains illegal instructions
+	* @throws \parallel\Exception if return from Closure is ignored
+	* Note: A Future shall only be returned if $handler contains a return statement
+	*	Should the caller ignore the return statement in $handler, an exception
+	*	shall be thrown
 	*/
-	public function run(Closure $handler, array $args = []) : \parallel\Future;
+	public function run(Closure $handler, array $argv = []) : ?\parallel\Future;
 	
 	/*
 	* Shall request the Runtime shutdown
-	* Note: anything scheduled for execution will be executed
+	* Note: Closures scheduled for execution will be executed
+	* @throws \parallel\Exception if \parallel\Runtime was already closed
 	*/
 	public function close() : void;
+
+	/*
+	* Shall kill the Runtime
+	* Note: Closures scheduled for execution will not be executed,
+	*	currently running Closure will be interrupted.
+	* Note: Cannot interrupt internal function calls in progress
+	* @throws \parallel\Exception if \parallel\Runtime was already closed
+	*/
+	public function kill() : void;
 }
 
-class parallel\Future {
+final class parallel\Future {
 	/*
-	* Shall wait until the value becomes available
+	* Shall wait until the value is resolved
+	* @throws \parallel\Exception if Closure was killed
+	* @throws \parallel\Exception if \parallel\Runtime was closed before execution
+	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
+	* @throws \parallel\Exception if Closure suffered a fatal error or exception
 	*/
 	public function value() : mixed;
+
+	/*
+	* Shall wait until the value is resolved or the timeout is reached
+	* @param non-negative timeout in microseconds
+	* @throws \parallel\Exception if Closure was killed
+	* @throws \parallel\Exception if \parallel\Runtime was closed before execution
+	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
+	* @throws \parallel\Exception if Closure suffered a fatal error or exception
+	* @throws \parallel\Exception if timeout is negative
+	* @throws \parallel\TimeoutException if timeout is reached
+	*/
+	public function value(int $timeout) : mixed;
+
+	/*
+	* Shall indicate if the Future value is resolved
+	* @returns bool
+	*/
+	public function done() : bool;
+
+	/*
+	* Shall perform a select on the Future objects in $resolving,
+	*	returning upon the first successful resolve
+	* @param array $resolving array of Future objects
+	* @param array $resolved  shall be filled with resolved Future objects
+	* @param array $errored   shall be filled with Future objects that errored
+	* @return number of resolved and errored Future objects
+	* @throws \parallel\Exception if the arguments are invalid
+	*/
+	public static function select(array &$resolving, array &$resolved, array &$errored) : int;
+
+	/*
+	* Shall perform a select on the Future objects in $resolving, 
+	*	returning upon the first successful resolve, 
+	*	with the given timeout in microseconds
+	* @param array $resolving array of Future objects
+	* @param array $resolved  shall be filled with resolved Future objects
+	* @param array $errored   shall be filled with Future objects that errored
+	* @param array $timedout  shall be filled with Future objects that timedout
+	* @param int   $timeout   timeout in microseconds
+	* @return number of resolved, errored, and timedout Future objects
+	* @throws \parallel\Exception if the arguments are invalid
+	*/
+	public static function select(array &$resolving, array &$resolved, array &$errored, array &$timedout, int $timeout) : int;
 }
 ```
 
 Implementation
 ==============
 
-In PHP there was only one kind of parallel concurrency extension, the kind that pthreads and pht try to implement:
+In PHP there was only one kind of parallel concurrency extension API, the kind that pthreads and pht try to implement:
 
   * They are hugely complicated
   * They are error prone

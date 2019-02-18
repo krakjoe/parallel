@@ -15,20 +15,31 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_FUTURE_H
+#define HAVE_PARALLEL_FUTURE_H
 
-#ifndef PHP_PARALLEL_H
-# define PHP_PARALLEL_H
+#include "php.h"
+#include "monitor.h"
 
-extern zend_module_entry parallel_module_entry;
-# define phpext_parallel_ptr &parallel_module_entry
+extern zend_class_entry *php_parallel_future_ce;
 
-# define PHP_PARALLEL_VERSION "0.8.0"
+typedef struct _php_parallel_future_t {
+	php_parallel_monitor_t *monitor;
+	zval value;
+	zval saved;
+	zend_object std;
+} php_parallel_future_t;
 
-# if defined(ZTS) && defined(COMPILE_DL_PARALLEL)
-ZEND_TSRMLS_CACHE_EXTERN()
-# else
-# error Only ZTS build are supported
-# endif
+static zend_always_inline php_parallel_future_t* php_parallel_future_fetch(zend_object *o) {
+	return (php_parallel_future_t*) (((char*) o) - XtOffsetOf(php_parallel_future_t, std));
+}
 
-#endif	/* PHP_PARALLEL_H */
+static zend_always_inline php_parallel_future_t* php_parallel_future_from(zval *z) {
+	return php_parallel_future_fetch(Z_OBJ_P(z));
+}
 
+zend_object* php_parallel_future_create(zend_class_entry *);
+void         php_parallel_future_destroy(zend_object *);
+
+void         php_parallel_future_startup();
+#endif
