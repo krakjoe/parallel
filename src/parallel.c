@@ -554,6 +554,7 @@ void* php_parallel_routine(void *arg) {
 
 	php_request_startup();
 
+	zend_disable_function(ZEND_STRL("setlocale"));
 	zend_disable_function(ZEND_STRL("putenv"));
 
 	PG(during_request_startup)  = 0;
