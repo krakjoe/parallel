@@ -171,9 +171,13 @@ static inline HashTable* php_parallel_copy_statics(HashTable *old, zend_bool per
 static inline zend_string** php_parallel_copy_variables(zend_string **old, int end, zend_bool persistent) {
 	zend_string **variables = pecalloc(end, sizeof(zend_string*), persistent);
 	int it = 0;
-	
+
 	while (it < end) {
-		variables[it] = zend_string_dup(old[it], persistent);
+		variables[it] = 
+			zend_string_dup(old[it], persistent);
+		if (!persistent) {
+			zend_is_auto_global(variables[it]);
+		}
 		it++;
 	}
 	
@@ -219,12 +223,18 @@ static inline zval* php_parallel_copy_literals(zval *old, int end, zend_bool per
 			case IS_NULL:
 #if PHP_VERSION_ID >= 70300
 			case IS_STRING:
+				if (!persistent && Z_TYPE(literals[it]) == IS_STRING) {
+					zend_is_auto_global(Z_STR(literals[it]));
+				}
 #endif
 				zval_copy_ctor(&literals[it]);	
 			break;
 
 #if PHP_VERSION_ID < 70300
 			case IS_STRING:
+				if (!persistent && Z_TYPE(literals[it]) == IS_STRING) {
+					zend_is_auto_globals(Z_STR(literals[it]));
+				}
 #endif
 			case IS_ARRAY:
 				php_parallel_copy_zval(&literals[it], &old[it], persistent);
