@@ -550,9 +550,12 @@ void* php_parallel_routine(void *arg) {
 	parallel->child.interrupt = &EG(vm_interrupt);
 
 	PG(expose_php)       = 0;
-	PG(auto_globals_jit) = 0;
+	PG(auto_globals_jit) = 1;
 
 	php_request_startup();
+
+	zend_is_auto_global_str(ZEND_STRL("_SERVER"));
+	zend_is_auto_global_str(ZEND_STRL("_ENV"));
 
 	zend_disable_function(ZEND_STRL("setlocale"));
 	zend_disable_function(ZEND_STRL("putenv"));
