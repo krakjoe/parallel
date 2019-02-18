@@ -233,7 +233,7 @@ static inline zval* php_parallel_copy_literals(zval *old, int end, zend_bool per
 #if PHP_VERSION_ID < 70300
 			case IS_STRING:
 				if (!persistent && Z_TYPE(literals[it]) == IS_STRING) {
-					zend_is_auto_globals(Z_STR(literals[it]));
+					zend_is_auto_global(Z_STR(literals[it]));
 				}
 #endif
 			case IS_ARRAY:
