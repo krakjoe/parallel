@@ -272,7 +272,7 @@ PHP_METHOD(Future, done)
 	php_parallel_future_t *future = 
 		php_parallel_future_from(getThis());
 
-	RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY));
+	RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_DONE));
 }
 
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_select_arginfo, 0, 0, 3)
