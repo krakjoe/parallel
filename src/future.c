@@ -55,6 +55,11 @@ PHP_METHOD(Future, value)
 		return;
 	}
 
+    if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
+        /* resolved by select() not yet read */
+        goto _php_parallel_future_done;
+    }
+
 	if (timeout > -1) {
 		state = php_parallel_monitor_wait_timed(future->monitor, 
 				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, timeout);
@@ -90,6 +95,7 @@ PHP_METHOD(Future, value)
 		return;
 	}
 
+_php_parallel_future_done:
 	if (Z_TYPE(future->value) != IS_NULL) {
 		php_parallel_copy_zval(return_value, &future->value, 0);
 
@@ -266,7 +272,7 @@ PHP_METHOD(Future, done)
 	php_parallel_future_t *future = 
 		php_parallel_future_from(getThis());
 
-	RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE));
+	RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY));
 }
 
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_select_arginfo, 0, 0, 3)
