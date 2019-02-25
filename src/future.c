@@ -55,7 +55,8 @@ PHP_METHOD(Future, value)
 		return;
 	}
 
-    if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
+    if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE) &&
+        !php_parallel_monitor_check(future->monitor, PHP_PARALLEL_KILLED|PHP_PARALLEL_ERROR)) {
         /* resolved by select() not yet read */
         goto _php_parallel_future_done;
     }
