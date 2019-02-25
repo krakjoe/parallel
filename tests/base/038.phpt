@@ -20,7 +20,7 @@ $futures = [];
 
 while ($i++ < 5) {
 	$futures[$i] = $workers[$i]->run(function(){
-		return true;
+		return 'x';
 	});
 }
 
@@ -29,14 +29,19 @@ $errored  = [];
 
 $storedResolutions = [];
 $storedErrors      = [];
+$result = '';
 
 while (\parallel\Future::select($futures, $resolved, $errored)) {
+	foreach ($resolved as $r) {
+		$result .= $r->value();
+	}
 	$storedResolutions = array_merge($storedResolutions, $resolved);
 	$storedErrors      = array_merge($storedErrors, $errored);
 }
 
-var_dump(count($storedResolutions), count($storedErrors));
+var_dump(count($storedResolutions), count($storedErrors), $result);
 ?>
 --EXPECT--
 int(5)
 int(0)
+string(5) "xxxxx"
