@@ -16,9 +16,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-02-18</date>
+ <date>2019-02-25</date>
  <version>
-  <release>0.8.0</release>
+  <release>0.8.1</release>
   <api>0.8.0</api>
  </version>
  <stability>
@@ -27,7 +27,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- initial pecl release
+- fix gh#11 Future::value after Future::select hangs
  </notes>
  <contents>
   <dir name="/">
@@ -110,4 +110,21 @@
  </dependencies>
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
+ <changelog>
+  <release>
+   <date>2019-02-18</date>
+   <version>
+    <release>0.8.0</release>
+    <api>0.8.0</api>
+   </version>
+   <stability>
+    <release>beta</release>
+    <api>beta</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- initial pecl release
+   </notes>
+  </release>
+ </changelog>
 </package>
