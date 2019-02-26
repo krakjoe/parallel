@@ -468,6 +468,12 @@ zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execut
 		*end = it + function->op_array.last;
 	uint32_t errat = 0;
 	zval errarg;
+	
+	if (function->type != ZEND_USER_FUNCTION) {
+	    zend_throw_error(NULL, 
+	        "illegal function type (internal) passed to parallel");
+	    return 0;
+	}
 
 	if (!php_parallel_copy_arginfo_check(function)) {
 		return 0;
