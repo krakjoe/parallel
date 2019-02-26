@@ -150,12 +150,12 @@ Instructions prohibited directly in Closures intended for parallel execution are
 
 __No instructions are prohibited in the files which the Runtime may include.__
 
-Requirements
-============
 
-  * PHP 7.1+
-  * ZTS
-  * <pthread.h>
+Requirements and Installation
+=============================
+
+See [INSTALL.md](INSTALL.md)
+
 
 Configuring the Runtime
 =======================
