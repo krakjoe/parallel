@@ -61,7 +61,8 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 	zend_fcall_info fci = empty_fcall_info;
 	zend_fcall_info_cache fcc = empty_fcall_info_cache;
 	int rc = FAILURE;
-
+    zval args;
+    
 	fci.size = sizeof(zend_fcall_info);
 	fci.retval = &rv;
 #if PHP_VERSION_ID < 70300
@@ -71,7 +72,10 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 	fcc.function_handler = php_parallel_copy(function, 0);
 
 	if (!Z_ISUNDEF_P(argv)) {
-		zend_fcall_info_args(&fci, argv);
+	    php_parallel_copy_zval(
+	        &args, argv, 0);
+	    
+		zend_fcall_info_args(&fci, &args);
 	}
 
 	ZVAL_UNDEF(&rv);
@@ -100,7 +104,10 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 	}
 
 	if (!Z_ISUNDEF_P(argv)) {
-		zend_fcall_info_args_clear(&fci, 1);
+		zend_fcall_info_args_clear(
+		    &fci, 1);
+		
+		php_parallel_zval_dtor(&args);
 	}
 
 	php_parallel_copy_free(fcc.function_handler, 0);
