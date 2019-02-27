@@ -18,6 +18,18 @@
 #ifndef HAVE_PARALLEL_COPY_H
 #define HAVE_PARALLEL_COPY_H
 
+#ifndef GC_SET_REFCOUNT
+# define GC_SET_REFCOUNT(ref, rc) (GC_REFCOUNT(ref) = (rc))
+#endif
+
+#ifndef GC_DELREF
+# define GC_DELREF(r) --GC_REFCOUNT(r)
+#endif
+
+#ifndef GC_ADDREF
+# define GC_ADDREF(r) ++GC_REFCOUNT(r)
+#endif
+
 zend_function* php_parallel_copy(const zend_function *function, zend_bool persistent);
 void php_parallel_copy_free(zend_function *function, zend_bool persistent);
 void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent);
