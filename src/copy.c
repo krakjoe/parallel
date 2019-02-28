@@ -89,7 +89,11 @@ void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent) {
 		break;
 
 		case IS_STRING:
-			ZVAL_STR(dest, zend_string_init(Z_STRVAL_P(source), Z_STRLEN_P(source), persistent));
+		    if (ZSTR_IS_INTERNED(Z_STR_P(source))) {
+		        ZVAL_STR(dest, Z_STR_P(source));
+		    } else {
+		        ZVAL_STR(dest, zend_string_init(Z_STRVAL_P(source), Z_STRLEN_P(source), persistent));
+		    }
 		break;
 
 		case IS_ARRAY:
@@ -215,32 +219,11 @@ static inline zval* php_parallel_copy_literals(zval *old, int end, zend_bool per
 	memcpy(literals, old, sizeof(zval) * end);
 
 	while (it < end) {
-		switch (Z_TYPE(literals[it])) {
-			case IS_LONG:
-			case IS_DOUBLE:
-			case IS_TRUE:
-			case IS_FALSE:
-			case IS_NULL:
-#if PHP_VERSION_ID >= 70300
-			case IS_STRING:
-				if (!persistent && Z_TYPE(literals[it]) == IS_STRING) {
-					zend_is_auto_global(Z_STR(literals[it]));
-				}
-#endif
-				zval_copy_ctor(&literals[it]);	
-			break;
-
-#if PHP_VERSION_ID < 70300
-			case IS_STRING:
-				if (!persistent && Z_TYPE(literals[it]) == IS_STRING) {
-					zend_is_auto_global(Z_STR(literals[it]));
-				}
-#endif
-			case IS_ARRAY:
-				php_parallel_copy_zval(&literals[it], &old[it], persistent);
-			break;
+		if (!persistent && Z_TYPE(literals[it]) == IS_STRING) {
+			zend_is_auto_global(Z_STR(literals[it]));
 		}
 
+		php_parallel_copy_zval(&literals[it], &old[it], persistent);
 		it++;
 	}
 	
@@ -468,6 +451,12 @@ zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execut
 		*end = it + function->op_array.last;
 	uint32_t errat = 0;
 	zval errarg;
+	
+	if (function->type != ZEND_USER_FUNCTION) {
+	    zend_throw_error(NULL, 
+	        "illegal function type (internal) passed to parallel");
+	    return 0;
+	}
 
 	if (!php_parallel_copy_arginfo_check(function)) {
 		return 0;
@@ -673,25 +662,7 @@ void php_parallel_copy_free(zend_function *function, zend_bool persistent) { /* 
 		int end = ops->last_literal;
 
 		while (it < end) {
-			switch (Z_TYPE(ops->literals[it])) {
-				case IS_LONG:
-				case IS_TRUE:
-				case IS_FALSE:
-				case IS_NULL:
-#if PHP_VERSION_ID >= 70300
-				case IS_STRING:
-#endif
-					zval_ptr_dtor(&ops->literals[it]);
-				break;
-
-#if PHP_VERSION_ID < 70300
-				case IS_STRING:
-#endif
-				case IS_ARRAY:
-					php_parallel_zval_dtor(&ops->literals[it]);
-				break;
-			}
-
+			php_parallel_zval_dtor(&ops->literals[it]);
 			it++;
 		}
 
