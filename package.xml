@@ -16,9 +16,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-02-25</date>
+ <date>2019-02-28</date>
  <version>
-  <release>0.8.1</release>
+  <release>0.8.2</release>
   <api>0.8.0</api>
  </version>
  <stability>
@@ -27,7 +27,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- fix gh#11 Future::value after Future::select hangs
+- fix bugs in copying literals
  </notes>
  <contents>
   <dir name="/">
@@ -91,6 +91,7 @@
       <file name="040.phpt" role="test"/>
       <file name="041.phpt" role="test"/>
       <file name="042.phpt" role="test"/>
+      <file name="043.phpt" role="test"/>
       <file name="bootstrapc.inc" role="test"/>
       <file name="bootstrape.inc" role="test"/>
       <file name="bootstrap.inc" role="test"/>
@@ -111,6 +112,21 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-02-25</date>
+   <version>
+    <release>0.8.1</release>
+    <api>0.8.0</api>
+   </version>
+   <stability>
+    <release>beta</release>
+    <api>beta</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- fix gh#11 Future::value after Future::select hangs
+   </notes>
+  </release>
   <release>
    <date>2019-02-18</date>
    <version>
