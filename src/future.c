@@ -55,19 +55,22 @@ PHP_METHOD(Future, value)
 		return;
 	}
 
-    if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE) &&
-        !php_parallel_monitor_check(future->monitor, PHP_PARALLEL_KILLED|PHP_PARALLEL_ERROR)) {
+    if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
         /* resolved by select() not yet read */
-        goto _php_parallel_future_done;
+        if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_KILLED|PHP_PARALLEL_ERROR)) {
+            goto _php_parallel_future_done;
+        }
+        
+        state = future->monitor->state;
+    } else {
+        if (timeout > -1) {
+		    state = php_parallel_monitor_wait_timed(future->monitor, 
+				    PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, timeout);
+	    } else {
+		    state = php_parallel_monitor_wait(future->monitor, 
+				    PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED);
+	    }
     }
-
-	if (timeout > -1) {
-		state = php_parallel_monitor_wait_timed(future->monitor, 
-				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, timeout);
-	} else {
-		state = php_parallel_monitor_wait(future->monitor, 
-				PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED);
-	}
 
 	if (state == ETIMEDOUT) {
 		php_parallel_timeout_exception(
