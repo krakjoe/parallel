@@ -16,9 +16,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-02-28</date>
+ <date>2019-03-25</date>
  <version>
-  <release>0.8.2</release>
+  <release>0.8.3</release>
   <api>0.8.0</api>
  </version>
  <stability>
@@ -27,7 +27,8 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- fix bugs in copying literals
+- Fix potential race condition for state on Future::value (where an exception was thrown)
+- Better compatibility with JIT
  </notes>
  <contents>
   <dir name="/">
@@ -112,6 +113,21 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-02-28</date>
+   <version>
+    <release>0.8.2</release>
+    <api>0.8.0</api>
+   </version>
+   <stability>
+    <release>beta</release>
+    <api>beta</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- fix bugs in copying literals
+   </notes>
+  </release>
   <release>
    <date>2019-02-25</date>
    <version>
