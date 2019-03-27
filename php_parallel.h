@@ -22,7 +22,7 @@
 extern zend_module_entry parallel_module_entry;
 # define phpext_parallel_ptr &parallel_module_entry
 
-# define PHP_PARALLEL_VERSION "0.8.3-dev"
+# define PHP_PARALLEL_VERSION "0.8.4-dev"
 
 # if defined(ZTS) && defined(COMPILE_DL_PARALLEL)
 ZEND_TSRMLS_CACHE_EXTERN()
