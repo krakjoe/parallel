@@ -562,7 +562,10 @@ void* php_parallel_routine(void *arg) {
 	php_request_startup();
 
 	zend_disable_function(ZEND_STRL("setlocale"));
+#if PHP_VERSION_ID < 70400
+	zend_disable_function(ZEND_STRL("getenv"));
 	zend_disable_function(ZEND_STRL("putenv"));
+#endif
 
 	PG(during_request_startup)  = 0;
 	SG(sapi_started)            = 0;
