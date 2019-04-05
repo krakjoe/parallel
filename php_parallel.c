@@ -26,12 +26,14 @@
 
 #include "src/parallel.h"
 #include "src/future.h"
+#include "src/channel.h"
 
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
 {
 	php_parallel_startup();
 	php_parallel_future_startup();
+	php_parallel_channel_startup();
 
 	return SUCCESS;
 } /* }}} */
@@ -39,6 +41,7 @@ PHP_MINIT_FUNCTION(parallel)
 /* {{{ PHP_MSHUTDOWN_FUNCTION */
 PHP_MSHUTDOWN_FUNCTION(parallel)
 {
+	php_parallel_channel_shutdown();
 	php_parallel_shutdown();
 
 	return SUCCESS;

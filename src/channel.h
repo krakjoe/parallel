@@ -15,20 +15,34 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_CHANNEL_H
+#define HAVE_PARALLEL_CHANNEL_H
 
-#ifndef PHP_PARALLEL_H
-# define PHP_PARALLEL_H
+#include "link.h"
 
-extern zend_module_entry parallel_module_entry;
-# define phpext_parallel_ptr &parallel_module_entry
+typedef struct _php_parallel_channels_t {
+	php_parallel_monitor_t *monitor;
+	HashTable links;
+} php_parallel_channels_t;
 
-# define PHP_PARALLEL_VERSION "0.9.0-dev"
+php_parallel_channels_t php_parallel_channels;
 
-# if defined(ZTS) && defined(COMPILE_DL_PARALLEL)
-ZEND_TSRMLS_CACHE_EXTERN()
-# else
-# error Only ZTS build are supported
-# endif
+typedef struct _php_parallel_channel_t {
+	php_parallel_link_t *link;
+	zend_object std;
+} php_parallel_channel_t;
 
-#endif	/* PHP_PARALLEL_H */
+static zend_always_inline php_parallel_channel_t* php_parallel_channel_fetch(zend_object *o) {
+	return (php_parallel_channel_t*) (((char*) o) - XtOffsetOf(php_parallel_channel_t, std));
+}
 
+static zend_always_inline php_parallel_channel_t* php_parallel_channel_from(zval *z) {
+	return php_parallel_channel_fetch(Z_OBJ_P(z));
+}
+
+zend_object* php_parallel_channel_create(zend_class_entry *);
+void         php_parallel_channel_destroy(zend_object *);
+
+void php_parallel_channel_startup();
+void php_parallel_channel_shutdown();
+#endif

@@ -134,14 +134,6 @@ int32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, int32_
 	return changed;
 }
 
-int32_t php_parallel_monitor_waiting(php_parallel_monitor_t *monitor) {
-	return pthread_cond_wait(&monitor->condition, &monitor->mutex);
-}
-
-int32_t php_parallel_monitor_broadcast(php_parallel_monitor_t *monitor) {
-	return pthread_cond_broadcast(&monitor->condition);
-}
-
 void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state, zend_bool lock) {
 	if (lock) {
 		pthread_mutex_lock(&monitor->mutex);
@@ -154,12 +146,6 @@ void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state, ze
 	if (lock) {
 		pthread_mutex_unlock(&monitor->mutex);
 	}
-}
-
-void php_parallel_monitor_unset(php_parallel_monitor_t *monitor, int32_t state) {
-	monitor->state &= ~state;
-
-	pthread_cond_signal(&monitor->condition);
 }
 
 void php_parallel_monitor_destroy(php_parallel_monitor_t *monitor) {

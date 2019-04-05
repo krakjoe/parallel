@@ -118,6 +118,50 @@ final class parallel\Future {
 	*/
 	public static function select(array &$resolving, array &$resolved, array &$errored, array &$timedout, int $timeout) : int;
 }
+
+final class Channel {
+    
+    /*
+    * Shall make an unbuffered channel with the given name
+    * @param string name
+    * @throws \parallel\Exception if channel already exists
+    */
+    public static function make(string $name) : Channel;
+    
+    /*
+    * Shall make a buffered channel with the given name and capacity
+    * @param string name
+    * @param int    capacity may be -1 for unlimited, or a positive integer
+    * @throws \parallel\Exception if arguments are invalid
+    * @throws \parallel\Exception if channel already exists
+    */
+    public static function make(string $name, int $capacity) : Channel;
+    
+    /*
+    * Shall open the channel with the given name
+    * @param string name a previously made channel
+    * @throws \parallel\Exception if the channel cannot be found
+    */
+    public static function open(string $name) : Channel;
+    
+    /*
+    * Shall send the given value on this channel
+    * @param mixed value any non-object, non-resource, non-null value
+    */
+    public function send(mixed $value) : bool;
+    
+    /*
+    * Shall recv a value from this channel
+    * @returns mixed
+    */
+    public function recv() : mixed;
+    
+    /*
+    * Shall close the channel
+    * @throws \parallel\Exception if this channel was already closed
+    */
+    public function close() : void;
+}
 ```
 
 Implementation

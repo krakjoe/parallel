@@ -15,20 +15,17 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_LINK_H
+#define HAVE_PARALLEL_LINK_H
 
-#ifndef PHP_PARALLEL_H
-# define PHP_PARALLEL_H
+typedef struct _php_parallel_link_t php_parallel_link_t;
 
-extern zend_module_entry parallel_module_entry;
-# define phpext_parallel_ptr &parallel_module_entry
-
-# define PHP_PARALLEL_VERSION "0.9.0-dev"
-
-# if defined(ZTS) && defined(COMPILE_DL_PARALLEL)
-ZEND_TSRMLS_CACHE_EXTERN()
-# else
-# error Only ZTS build are supported
-# endif
-
-#endif	/* PHP_PARALLEL_H */
-
+php_parallel_link_t* php_parallel_link_init(zend_string *name, zend_bool buffered, zend_long capacity);
+zend_string*         php_parallel_link_name(php_parallel_link_t *link);
+php_parallel_link_t* php_parallel_link_copy(php_parallel_link_t *link);
+zend_bool            php_parallel_link_send(php_parallel_link_t *link, zval *value);
+zend_bool            php_parallel_link_recv(php_parallel_link_t *link, zval *value);
+zend_bool            php_parallel_link_close(php_parallel_link_t *link);
+zend_bool            php_parallel_link_closed(php_parallel_link_t *link);
+void                 php_parallel_link_destroy(php_parallel_link_t *link);
+#endif
