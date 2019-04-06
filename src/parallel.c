@@ -563,7 +563,6 @@ void* php_parallel_routine(void *arg) {
 
 	zend_disable_function(ZEND_STRL("setlocale"));
 #if PHP_VERSION_ID < 70400
-	zend_disable_function(ZEND_STRL("getenv"));
 	zend_disable_function(ZEND_STRL("putenv"));
 #endif
 
