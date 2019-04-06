@@ -254,6 +254,11 @@ static inline zend_op* php_parallel_copy_opcodes(zend_op_array *op_array, zval *
 						((zval*)((char*)(op_array->opcodes + (opline - copy)) +
 						(int32_t)opline->op1.constant) - literals)) -
 					(char*)opline;
+				if (opline->opcode == ZEND_SEND_VAL
+				 || opline->opcode == ZEND_SEND_VAL_EX
+				 || opline->opcode == ZEND_QM_ASSIGN) {
+					zend_vm_set_opcode_handler_ex(opline, 0, 0, 0);
+				}
 			}
 			if (opline->op2_type == IS_CONST) {
 				opline->op2.constant =
