@@ -65,13 +65,13 @@ final class parallel\Runtime {
 	public function kill() : void;
 	
 	/*
-    * Shall yield control to the scheduler for this Runtime
-    * @param $reschedule shall control rescheduling
-    * Note: The currently executing task shall return control and allow
-    *       other tasks scheduled for the current Runtime to execute.
-    *       Re-entry occurs at the top of the currently executing task
-    *       (not at the point of yield)
-    */
+	* Shall yield control to the scheduler for this Runtime
+	* @param $reschedule shall control rescheduling
+	* Note: The currently executing task shall return control and allow
+	* 		other tasks scheduled for the current Runtime to execute.
+	* 		Re-entry occurs at the top of the currently executing task
+	* 		(not at the point of yield)
+	*/
 	public static function yield(bool $reschedule = true) : void;
 	
 	/*
