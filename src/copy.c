@@ -301,6 +301,7 @@ static inline zend_op* php_parallel_copy_opcodes(zend_op_array *op_array, zval *
 				}
 			}
 #endif
+
 		}
 	}
 
