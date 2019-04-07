@@ -46,53 +46,38 @@ TSRM_TLS zval php_parallel_stack;
 
 void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
 
-static zend_always_inline void php_parallel_stack_push(HashTable *stack, php_parallel_entry_point_t *entry, php_parallel_monitor_t *monitor, zval *future) {
+static zend_always_inline void php_parallel_stack_push(zend_llist *stack, php_parallel_entry_point_t *entry, php_parallel_monitor_t *monitor, zval *future) {
 	php_parallel_stack_el_t el;
 
 	el.entry = *entry;
+	el.entry.point = php_parallel_copy(el.entry.point, 1);
 	el.monitor = monitor;
 	el.future = future;
 
-	zend_hash_next_index_insert_mem(stack, &el, sizeof(php_parallel_stack_el_t));
+	zend_llist_add_element(stack, &el);
 }
 
-#if PHP_VERSION_ID >= 70300
-static zend_always_inline php_parallel_stack_el_t* php_parallel_stack_pop(HashTable *stack, HashPosition *position) {
-	zval *el = zend_hash_get_current_data_ex(stack, position);
-
-	if (!el) {
-		zend_hash_clean(stack);
-		zend_hash_internal_pointer_reset_ex(stack, position);
-		return NULL;
-	}
-
-	if (zend_hash_move_forward_ex(stack, position) != SUCCESS) {
-		zend_hash_internal_pointer_reset_ex(stack, position);
-	}
-
-	return Z_PTR_P(el);
+static zend_always_inline int php_parallel_stack_delete(void *lhs, void *rhs) {
+    return lhs == rhs;
 }
-#else
-static zend_always_inline php_parallel_stack_el_t* php_parallel_stack_pop(HashTable *stack, HashPosition *position) {
-	zval *el = NULL;
 
-	if (*position <= stack->nNumUsed) {
-		el = zend_hash_index_find(stack, *position);
+static zend_always_inline zend_bool php_parallel_stack_pop(zend_llist *stack, php_parallel_stack_el_t *el) {
+	php_parallel_stack_el_t *top;
+	
+	if (zend_llist_count(stack) == 0) {
+	    return 0;
 	}
+	
+	top = zend_llist_get_first(stack);
+	
+	memcpy(el, top, sizeof(php_parallel_stack_el_t));
+	
+	el->entry.point = php_parallel_copy(el->entry.point, 0);
+	
+	zend_llist_del_element(stack, top, php_parallel_stack_delete);
 
-	if (!el) {
-		zend_hash_clean(stack);
-		*position = 0;
-		return NULL;
-	}
-
-	if (++(*position) > stack->nNumUsed) {
-		*position = 0;
-	}
-
-	return Z_PTR_P(el);
+	return 1;
 }
-#endif
 
 void php_parallel_interrupt(zend_execute_data *execute_data) {
 	if (context && 
@@ -118,7 +103,7 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 	fcc.initialized = 1;
 #endif
 
-	fcc.function_handler = php_parallel_copy(function, 0);
+	fcc.function_handler = function;
 
 	if (!Z_ISUNDEF(php_parallel_stack)) {
 	    php_parallel_copy_zval(
@@ -146,7 +131,7 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
             if (php_parallel_monitor_check(context->monitor, PHP_PARALLEL_SCHED)) {
                 php_parallel_entry_point_t entry;
                 
-                entry.point = php_parallel_copy(function, 1);
+                entry.point = function;
                 
                 if (!Z_ISUNDEF(php_parallel_stack)) {
 		            ZVAL_COPY(&entry.argv, &php_parallel_stack);
@@ -182,8 +167,6 @@ void php_parallel_execute(php_parallel_monitor_t *monitor, zend_function *functi
 		
 		php_parallel_zval_dtor(&args);
 	}
-
-	php_parallel_copy_free(fcc.function_handler, 0);
 }
 
 static zend_always_inline void php_parallel_configure_callback(int (*zend_callback) (char *, size_t), zval *value) {
@@ -398,6 +381,31 @@ PHP_METHOD(Parallel, kill)
 	pthread_join(parallel->thread, NULL);
 }
 
+static zend_always_inline void php_parallel_yield_cleanup(zend_execute_data *execute_data) {
+    if (EX(func)) {
+        if (ZEND_USER_CODE(EX(func)->type)) {
+            zval *cv = EX_VAR_NUM(0);
+            int   count = EX(func)->op_array.last_var;
+            
+            while (count != 0) {
+                if (Z_REFCOUNTED_P(cv)) {
+                    zend_refcounted *rc = Z_COUNTED_P(cv);
+                    if (!GC_DELREF(rc)) {
+                        ZVAL_NULL(cv);
+                        rc_dtor_func(rc);
+                    } else {
+                        gc_check_possible_root(rc);
+                    }
+                }
+                cv++;
+                count--;
+            }
+        }
+        
+        zend_vm_stack_free_call_frame(execute_data);        
+    }
+}
+
 PHP_METHOD(Parallel, yield)
 {
     zend_bool schedule = 1;
@@ -441,6 +449,10 @@ PHP_METHOD(Parallel, yield)
         }
     }
     
+    do {
+        php_parallel_yield_cleanup(execute_data);
+    } while ((execute_data = EX(prev_execute_data)));
+    
     zend_bailout();
 }
 
@@ -453,22 +465,20 @@ zend_function_entry php_parallel_methods[] = {
 	PHP_FE_END
 };
 
-int php_parallel_stack_kill(zval *zv) {
-	php_parallel_stack_el_t *el = Z_PTR_P(zv);
+void php_parallel_stack_kill(void *stacked) {
+	php_parallel_stack_el_t *el = 
+	    (php_parallel_stack_el_t*) stacked;
 
 	if (el->monitor) {
 		php_parallel_monitor_set(el->monitor, PHP_PARALLEL_KILLED, 1);
 	}
-
-	return ZEND_HASH_APPLY_REMOVE;
 }
 
-void php_parallel_stack_free(zval *zv) {
-	php_parallel_stack_el_t *el = Z_PTR_P(zv);
-
-	php_parallel_copy_free(el->entry.point, 1);
-
-	free(Z_PTR_P(zv));
+void php_parallel_stack_free(void *stacked) {
+  	php_parallel_stack_el_t *el = 
+	    (php_parallel_stack_el_t*) stacked;
+	    
+    php_parallel_copy_free(el->entry.point, 1);
 }
 
 zend_object* php_parallel_create(zend_class_entry *type) {
@@ -481,13 +491,7 @@ zend_object* php_parallel_create(zend_class_entry *type) {
 
 	parallel->monitor = php_parallel_monitor_create();
 
-	zend_hash_init(&parallel->stack, 64, NULL, php_parallel_stack_free, 1);
-#if PHP_VERSION_ID >= 70300
-	zend_hash_internal_pointer_reset_ex(
-		&parallel->stack, &parallel->next);
-#else
-	parallel->next = 0;
-#endif
+	zend_llist_init(&parallel->stack, sizeof(php_parallel_stack_el_t), NULL, 1);
 
 	parallel->parent.server = SG(server_context);
 
@@ -526,7 +530,7 @@ void php_parallel_destroy(zend_object *o) {
 		zval_ptr_dtor(&parallel->configuration);
 	}
 
-	zend_hash_destroy(&parallel->stack);
+	zend_llist_destroy(&parallel->stack);
 	
 	zend_object_std_dtor(o);
 }
@@ -657,7 +661,7 @@ void* php_parallel_routine(void *arg) {
 	php_parallel_monitor_set(parallel->monitor, PHP_PARALLEL_READY, 1);
 
 	do {
-		php_parallel_stack_el_t *el = NULL;
+		php_parallel_stack_el_t el;
 
 		if (php_parallel_monitor_lock(parallel->monitor) != SUCCESS) {
 			break;
@@ -665,14 +669,15 @@ void* php_parallel_routine(void *arg) {
 
 		if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_KILLED)) {
 _php_parallel_kill:
-			zend_hash_apply(
+			zend_llist_apply(
 				&parallel->stack, 
 				php_parallel_stack_kill);
+		    zend_llist_clean(&parallel->stack);
 			php_parallel_monitor_unlock(parallel->monitor);
 			goto _php_parallel_exit;
 		}
 
-		while (!(el = php_parallel_stack_pop(&parallel->stack, &parallel->next))) {
+		while (!php_parallel_stack_pop(&parallel->stack, &el)) {
 			if (!(state & PHP_PARALLEL_CLOSE)) {
 				state = php_parallel_monitor_wait_locked(
 						parallel->monitor,
@@ -684,7 +689,7 @@ _php_parallel_kill:
 					goto _php_parallel_kill;
 				}
 
-				if (!zend_hash_num_elements(&parallel->stack)) {
+				if (!zend_llist_count(&parallel->stack)) {
 					php_parallel_monitor_unlock(parallel->monitor);
 					goto _php_parallel_exit;
 				}
@@ -693,17 +698,19 @@ _php_parallel_kill:
 
 		php_parallel_monitor_unlock(parallel->monitor);
 
-        php_parallel_stack = el->entry.argv;
+        php_parallel_stack = el.entry.argv;
         
 		zend_first_try {
-			php_parallel_execute(el->monitor, el->entry.point, el->future);
+			php_parallel_execute(el.monitor, el.entry.point, el.future);
 		} zend_end_try();
 
-		php_parallel_zval_dtor(&el->entry.argv);
+		php_parallel_zval_dtor(&el.entry.argv);
 
-		if (el->monitor) {
-			php_parallel_monitor_set(el->monitor, PHP_PARALLEL_READY, 1);
+		if (el.monitor) {
+			php_parallel_monitor_set(el.monitor, PHP_PARALLEL_READY, 1);
 		}
+		
+		php_parallel_copy_free(el.entry.point, 0);
 	} while (1);
 
 _php_parallel_exit:

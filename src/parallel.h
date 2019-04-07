@@ -44,8 +44,7 @@ typedef struct _php_parallel_stack_el_t {
 typedef struct _php_parallel_t {
 	pthread_t                   thread;
 	php_parallel_monitor_t     *monitor;
-	HashTable                   stack;
-	HashPosition                next;
+	zend_llist                  stack;
 	zend_string                *bootstrap;
 	zval                        configuration;
 	struct {

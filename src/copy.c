@@ -535,7 +535,7 @@ zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execut
 		it++;
 	}
 
-	entry->point = php_parallel_copy(function, 1);
+	entry->point = function;
 
 	if (argc) {
 		php_parallel_copy_zval(&entry->argv, argv, 1);
