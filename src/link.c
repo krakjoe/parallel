@@ -211,6 +211,11 @@ static zend_always_inline zend_bool php_parallel_link_send_buffered(php_parallel
         link->s.w--;
     }
     
+    if (link->s.c) {
+        pthread_mutex_unlock(&link->m.m);
+        return 0;
+    }
+    
     php_parallel_copy_zval(&sent, value, 1);
     
     zend_llist_add_element(
@@ -279,6 +284,11 @@ static zend_always_inline zend_bool php_parallel_link_recv_buffered(php_parallel
         link->s.r--;
     }
     
+    if (link->s.c) {
+        pthread_mutex_unlock(&link->m.m);
+        return 0;
+    }
+    
     head = zend_llist_get_first(&link->port.q.l);
     
     php_parallel_copy_zval(value, head, 0);
@@ -320,13 +330,7 @@ zend_bool php_parallel_link_close(php_parallel_link_t *link) {
 }
 
 zend_bool php_parallel_link_closed(php_parallel_link_t *link) {
-    zend_bool closed = 0;
-    
-    pthread_mutex_lock(&link->m.m);
-    closed = link->s.c;
-    pthread_mutex_unlock(&link->m.m);
-    
-    return closed;
+    return link->s.c;
 }
 
 zend_string* php_parallel_link_name(php_parallel_link_t *link) {

@@ -25,6 +25,7 @@
 #include "zend_exceptions.h"
 
 zend_class_entry *php_parallel_channel_ce;
+zend_class_entry *php_parallel_channel_closed_ce;
 zend_object_handlers php_parallel_channel_handlers;
 
 static zend_always_inline void php_parallel_channels_make(zval *return_value, zend_string *name, zend_bool buffered, zend_long capacity) {
@@ -109,7 +110,9 @@ PHP_METHOD(Channel, open)
 	php_parallel_monitor_lock(php_parallel_channels.monitor);
 
 	if (!(link = zend_hash_find_ptr(&php_parallel_channels.links, name))) {
-		php_parallel_exception("channel named %s is not available, was it closed ?", ZSTR_VAL(name));
+		php_parallel_exception(
+		    "channel named %s is not available, was it closed ?", 
+		    ZSTR_VAL(name));
 	} else {
 		php_parallel_channels_open(return_value, link);
 	}
@@ -136,13 +139,14 @@ PHP_METHOD(Channel, send)
         return;
     }
     
-    if (php_parallel_link_closed(channel->link)) {
-        php_parallel_exception("channel(%s) closed", 
+    if (php_parallel_link_closed(channel->link) ||
+        !php_parallel_link_send(channel->link, value)) {
+        php_parallel_exception_ex(
+            php_parallel_channel_closed_ce,
+            "channel(%s) closed", 
             ZSTR_VAL(php_parallel_link_name(channel->link)));
         return;
     }
-    
-    RETURN_BOOL(php_parallel_link_send(channel->link, value));
 }
 
 PHP_METHOD(Channel, recv)
@@ -155,13 +159,14 @@ PHP_METHOD(Channel, recv)
         return;
     );
     
-    if (php_parallel_link_closed(channel->link)) {
-        php_parallel_exception("channel(%s) closed", 
+    if (php_parallel_link_closed(channel->link) ||
+        !php_parallel_link_recv(channel->link, return_value)) {
+        php_parallel_exception_ex(
+            php_parallel_channel_closed_ce,
+            "channel(%s) closed", 
             ZSTR_VAL(php_parallel_link_name(channel->link)));
         return;
     }
-    
-    php_parallel_link_recv(channel->link, return_value);
 }
 
 PHP_METHOD(Channel, close)
@@ -175,7 +180,9 @@ PHP_METHOD(Channel, close)
     );
 
 	if (!php_parallel_link_close(channel->link)) {
-        php_parallel_exception("channel(%s) already closed", 
+        php_parallel_exception_ex(
+            php_parallel_channel_closed_ce,
+            "channel(%s) already closed", 
             ZSTR_VAL(php_parallel_link_name(channel->link)));		
     }
     
@@ -233,7 +240,10 @@ void php_parallel_channels_link_destroy(zval *zv) {
 void php_parallel_channel_startup() {
 	zend_class_entry ce;
 
-	memcpy(&php_parallel_channel_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	memcpy(
+	    &php_parallel_channel_handlers, 
+	    zend_get_std_object_handlers(), 
+	    sizeof(zend_object_handlers));
 
 	php_parallel_channel_handlers.offset = XtOffsetOf(php_parallel_channel_t, std);
 	php_parallel_channel_handlers.free_obj = php_parallel_channel_destroy;
@@ -243,6 +253,11 @@ void php_parallel_channel_startup() {
 	php_parallel_channel_ce = zend_register_internal_class(&ce);
 	php_parallel_channel_ce->create_object = php_parallel_channel_create;
 	php_parallel_channel_ce->ce_flags |= ZEND_ACC_FINAL;
+
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel", "Closed", NULL);
+    
+    php_parallel_channel_closed_ce = 
+        zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
 
 	php_parallel_channels.monitor = php_parallel_monitor_create();
 

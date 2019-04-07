@@ -147,18 +147,20 @@ final class Channel {
     /*
     * Shall send the given value on this channel
     * @param mixed value any non-object, non-resource, non-null value
+    * @throws \parallel\Channel\Closed if this channel is closed
     */
     public function send(mixed $value) : bool;
     
     /*
     * Shall recv a value from this channel
     * @returns mixed
+    * @throws \parallel\Channel\Closed if this channel is closed
     */
     public function recv() : mixed;
     
     /*
     * Shall close the channel
-    * @throws \parallel\Exception if this channel was already closed
+    * @throws \parallel\Channel\Closed if this channel was already closed
     */
     public function close() : void;
 }
