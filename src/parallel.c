@@ -392,7 +392,11 @@ static zend_always_inline void php_parallel_yield_cleanup(zend_execute_data *exe
                     zend_refcounted *rc = Z_COUNTED_P(cv);
                     if (!GC_DELREF(rc)) {
                         ZVAL_NULL(cv);
+#if PHP_VERSION_ID >= 70300
                         rc_dtor_func(rc);
+#else
+                        zval_dtor_func(rc);
+#endif
                     } else {
                         gc_check_possible_root(rc);
                     }
