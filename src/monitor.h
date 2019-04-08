@@ -33,7 +33,7 @@ typedef struct _php_parallel_monitor_t {
 #define PHP_PARALLEL_KILLED (1<<4)
 #define PHP_PARALLEL_ERROR  (1<<5)
 #define PHP_PARALLEL_YIELD  (1<<6)
-#define PHP_PARALLEL_SCHED  (1<<7)
+
 #define PHP_PARALLEL_DONE   (1<<10)
 
 

@@ -21,7 +21,6 @@ try {
 --EXPECTF--
 Fatal error: Uncaught Error in %s:6
 Stack trace:
-#0 [internal function]: \parallel\Runtime::run()
-#1 {main}
+#0 {main}
   thrown in %s on line 6
 

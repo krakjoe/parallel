@@ -38,32 +38,27 @@ var_dump(count($storedResolutions), count($storedErrors));
 --EXPECTF--
 Fatal error: Uncaught Exception in %s:10
 Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
+#0 {main}
   thrown in %s on line 10
 
 Fatal error: Uncaught Exception in %s:10
 Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
+#0 {main}
   thrown in %s on line 10
 
 Fatal error: Uncaught Exception in %s:10
 Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
+#0 {main}
   thrown in %s on line 10
 
 Fatal error: Uncaught Exception in %s:10
 Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
+#0 {main}
   thrown in %s on line 10
 
 Fatal error: Uncaught Exception in %s:10
 Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
+#0 {main}
   thrown in %s on line 10
 int(0)
 int(5)

@@ -33,7 +33,7 @@
 zend_function* php_parallel_copy(const zend_function *function, zend_bool persistent);
 void php_parallel_copy_free(zend_function *function, zend_bool persistent);
 void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent);
-zend_bool php_parallel_copy_check(php_parallel_entry_point_t *parallel, zend_execute_data *execute_data, const zend_function * function, int argc, zval *argv, zend_bool *returns);
+zend_bool php_parallel_copy_check(zend_execute_data *execute_data, const zend_function * function, zval *argv, zend_bool *returns);
 
 static zend_always_inline void php_parallel_ht_dtor(HashTable *table, zend_bool persistent) {
     if (GC_DELREF(table) == 0) {
@@ -58,5 +58,6 @@ static zend_always_inline void php_parallel_zval_dtor(zval *zv) {
 	}
 }
 
-
+void php_parallel_copy_shutdown(void);
+void php_parallel_copy_startup(void);
 #endif

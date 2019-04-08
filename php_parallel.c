@@ -27,6 +27,7 @@
 #include "src/parallel.h"
 #include "src/future.h"
 #include "src/channel.h"
+#include "src/copy.h"
 
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
@@ -55,6 +56,18 @@ PHP_RINIT_FUNCTION(parallel)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 
+    php_parallel_copy_startup();
+
+	return SUCCESS;
+}
+/* }}} */
+
+/* {{{ PHP_RSHUTDOWN_FUNCTION
+ */
+PHP_RSHUTDOWN_FUNCTION(parallel)
+{
+    php_parallel_copy_shutdown();
+
 	return SUCCESS;
 }
 /* }}} */
@@ -79,7 +92,7 @@ zend_module_entry parallel_module_entry = {
 	PHP_MINIT(parallel),
 	PHP_MSHUTDOWN(parallel),
 	PHP_RINIT(parallel),
-	NULL,
+	PHP_RSHUTDOWN(parallel),
 	PHP_MINFO(parallel),
 	PHP_PARALLEL_VERSION,
 	STANDARD_MODULE_PROPERTIES

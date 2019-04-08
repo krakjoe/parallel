@@ -29,16 +29,9 @@ extern zend_class_entry *php_parallel_ce;
 extern zend_class_entry *php_parallel_exception_ce;
 extern zend_string *php_parallel_main;
 
-typedef struct _php_parallel_entry_point_t {
-	zend_function *point;
-	zval argv;
-	zval retval;
-} php_parallel_entry_point_t;
-
 typedef struct _php_parallel_stack_el_t {
-	php_parallel_entry_point_t  entry;
+	zend_execute_data           *frame;
 	php_parallel_monitor_t      *monitor;
-	zval                        *future;
 } php_parallel_stack_el_t;
 
 typedef struct _php_parallel_t {

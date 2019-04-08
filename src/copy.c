@@ -36,6 +36,14 @@ extern zend_string* php_parallel_main;
 
 static const uint32_t uninitialized_bucket[-HT_MIN_MASK] = {HT_INVALID_IDX, HT_INVALID_IDX};
 
+void php_parallel_copy_startup(void) {
+
+}
+
+void php_parallel_copy_shutdown(void) {
+
+}
+
 static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) {
 	void *destination = (void*) pemalloc(size, persistent);
 
@@ -115,7 +123,8 @@ HashTable *php_parallel_copy_hash(HashTable *source, zend_bool persistent) {
 	uint32_t idx;
 	HashTable *ht = (HashTable*) php_parallel_copy_mem(
 					source, sizeof(HashTable), persistent);
-
+    void *arData;
+    
 	GC_SET_REFCOUNT(ht, 1);
 
 #if PHP_VERSION_ID < 70300
@@ -144,7 +153,13 @@ HashTable *php_parallel_copy_hash(HashTable *source, zend_bool persistent) {
 
 	ht->nNextFreeElement = 0;
 	ht->nInternalPointer = HT_INVALID_IDX;
-	HT_SET_DATA_ADDR(ht, php_parallel_copy_mem(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht), persistent));
+	
+	arData = php_parallel_copy_mem(
+	    HT_GET_DATA_ADDR(ht), 
+	    HT_USED_SIZE(ht), 
+	    persistent);
+	    
+	HT_SET_DATA_ADDR(ht, arData);
 	for (idx = 0; idx < ht->nNumUsed; idx++) {
 		Bucket *p = ht->arData + idx;
 		if (Z_TYPE(p->val) == IS_UNDEF) continue;
@@ -163,6 +178,12 @@ HashTable *php_parallel_copy_hash(HashTable *source, zend_bool persistent) {
 		php_parallel_copy_zval(&p->val, &p->val, persistent);
 	}
 
+#if PHP_VERSION_ID >= 70200 && PHP_VERSION_ID < 70300
+    if (!persistent) {
+        zend_hash_rehash(ht);
+    }
+#endif
+    
 	return ht;
 }
 
@@ -301,7 +322,6 @@ static inline zend_op* php_parallel_copy_opcodes(zend_op_array *op_array, zval *
 				}
 			}
 #endif
-
 		}
 	}
 
@@ -453,7 +473,7 @@ static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval *
 	return 1;
 } /* }}} */
 
-zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execute_data *execute_data, const zend_function * function, int argc, zval *argv, zend_bool *returns) { /* {{{ */
+zend_bool php_parallel_copy_check(zend_execute_data *execute_data, const zend_function * function, zval *argv, zend_bool *returns) { /* {{{ */
 	zend_op *it = function->op_array.opcodes,
 		*end = it + function->op_array.last;
 	uint32_t errat = 0;
@@ -469,7 +489,7 @@ zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execut
 		return 0;
 	}
 
-	if (argc && !php_parallel_copy_argv_check(argv, &errat, &errarg)) {
+	if (argv && Z_TYPE_P(argv) == IS_ARRAY && !php_parallel_copy_argv_check(argv, &errat, &errarg)) {
 		zend_throw_error(NULL, 
 			"illegal variable (%s) passed to parallel at argument %d", 
 			zend_get_type_by_const(Z_TYPE(errarg)), errat);
@@ -535,12 +555,6 @@ zend_bool php_parallel_copy_check(php_parallel_entry_point_t *entry, zend_execut
 		it++;
 	}
 
-	entry->point = function;
-
-	if (argc) {
-		php_parallel_copy_zval(&entry->argv, argv, 1);
-	} else  ZVAL_UNDEF(&entry->argv);
-
 	return 1;
 } /* }}} */
 
@@ -554,10 +568,7 @@ zend_function* php_parallel_copy(const zend_function *function, zend_bool persis
 	copy = (zend_function*) pecalloc(1, sizeof(zend_op_array), persistent);
 
 	memcpy(copy, function, sizeof(zend_op_array));
-	/**
-	@TODO a non-persistent copy may do something like addref and omit to make a depp copy
-		this is easier to debug for now anyway ...
-	**/
+
 	op_array = &copy->op_array;
 	variables = op_array->vars;
 	literals = op_array->literals;
@@ -610,12 +621,12 @@ zend_function* php_parallel_copy(const zend_function *function, zend_bool persis
 		op_array->fn_flags |= ZEND_ACC_IMMUTABLE;
 #endif
 	}
-
+    
 	return copy;
 } /* }}} */
 
 void php_parallel_copy_free(zend_function *function, zend_bool persistent) { /* {{{ */
-	zend_op_array *ops = &function->op_array;
+	zend_op_array *ops = (zend_op_array*) function;
 
 	if (ops->static_variables) {
 		php_parallel_ht_dtor(ops->static_variables, persistent);
