@@ -5,6 +5,7 @@ addons:
   apt:
     packages:
       - valgrind
+      - libonig-dev
 php:
   - 7.1
   - 7.2
