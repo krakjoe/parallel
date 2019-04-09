@@ -24,6 +24,13 @@
 
 #include "zend_exceptions.h"
 
+typedef struct _php_parallel_channels_t {
+	php_parallel_monitor_t *monitor;
+	HashTable links;
+} php_parallel_channels_t;
+
+php_parallel_channels_t php_parallel_channels;
+
 zend_class_entry *php_parallel_channel_ce;
 zend_class_entry *php_parallel_channel_closed_ce;
 zend_object_handlers php_parallel_channel_handlers;

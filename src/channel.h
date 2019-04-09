@@ -20,13 +20,6 @@
 
 #include "link.h"
 
-typedef struct _php_parallel_channels_t {
-	php_parallel_monitor_t *monitor;
-	HashTable links;
-} php_parallel_channels_t;
-
-php_parallel_channels_t php_parallel_channels;
-
 typedef struct _php_parallel_channel_t {
 	php_parallel_link_t *link;
 	zend_object std;
