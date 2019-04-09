@@ -480,7 +480,7 @@ PHP_METHOD(Parallel, yield)
         return;
     );
     
-    if (!PARALLEL_CONTEXT()) {
+    if (!PARALLEL_CONTEXT() || EX(prev_execute_data) != top) {
         php_parallel_exception(
             "cannot yield from this context");
         return;
@@ -530,8 +530,7 @@ PHP_METHOD(Parallel, yield)
         php_parallel_stack_push(
             &PCTX(stack), 
             PARALLEL_MONITOR(), 
-            top->func, 
-            args, 
+            top->func, args,
             PARALLEL_FUTURE());
         php_parallel_monitor_set(
             PCTX(monitor), PHP_PARALLEL_EXEC, 0);
