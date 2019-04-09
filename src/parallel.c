@@ -427,36 +427,6 @@ PHP_METHOD(Parallel, kill)
 	pthread_join(parallel->thread, NULL);
 }
 
-static zend_always_inline void php_parallel_yield_cleanup(zend_execute_data *execute_data) {
-    if (EX(func)) {
-        if (ZEND_USER_CODE(EX(func)->type)) {
-            zval *cv = EX_VAR_NUM(0);
-            int   count = EX(func)->op_array.last_var;
-            
-            while (count != 0) {
-                if (Z_REFCOUNTED_P(cv)) {
-                    zend_refcounted *rc = Z_COUNTED_P(cv);
-                    if (!GC_DELREF(rc)) {
-                        ZVAL_NULL(cv);
-#if PHP_VERSION_ID >= 70300
-                        rc_dtor_func(rc);
-#else
-                        zval_dtor_func(rc);
-#endif
-                    } else {
-                        gc_check_possible_root(rc);
-                    }
-                }
-                cv++;
-                count--;
-            }
-        }
-
-        zend_vm_stack_free_args(execute_data);
-        zend_vm_stack_free_call_frame(execute_data);        
-    }
-}
-
 static zend_execute_data* php_parallel_yield_top(zend_execute_data *execute_data) {
     while (EX(prev_execute_data)) {
         execute_data = EX(prev_execute_data);
@@ -538,10 +508,6 @@ PHP_METHOD(Parallel, yield)
         
         php_parallel_zval_dtor(args);
     }
-    
-    do {
-        php_parallel_yield_cleanup(execute_data);
-    } while ((execute_data = EX(prev_execute_data)));
     
     zend_bailout();
 }
