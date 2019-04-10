@@ -93,7 +93,10 @@ void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent) {
 		case IS_FALSE:
 		case IS_LONG:
 		case IS_DOUBLE:
-			ZVAL_DUP(dest, source);
+		case IS_UNDEF:
+			if (source != dest) {
+			    *dest = *source;
+			}
 		break;
 
 		case IS_STRING:
