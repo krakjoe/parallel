@@ -173,8 +173,9 @@ static zend_always_inline zend_bool php_parallel_stack_pop(zend_llist *stack, ph
         
         memcpy((zval*) el->frame  + ZEND_CALL_FRAME_SLOT, 
               ((zval*) head->frame) + ZEND_CALL_FRAME_SLOT,
-              zend_vm_calc_used_stack(
-                ZEND_CALL_NUM_ARGS(head->frame), head->frame->func));
+              ZEND_MM_ALIGNED_SIZE(sizeof(zval) *
+                (head->frame->func->op_array.last_var +
+                 head->frame->func->op_array.T)));
                 
         el->frame->opline = head->frame->opline + 1;
     }
