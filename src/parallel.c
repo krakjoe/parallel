@@ -161,7 +161,7 @@ static zend_always_inline zend_bool php_parallel_stack_pop(zend_llist *stack, ph
             &el->frame->func->op_array, 
             el->frame->return_value);
     } else {
-        el->frame = zend_vm_stack_push_call_frame(    
+        el->frame = zend_vm_stack_push_call_frame(  
             ZEND_CALL_INFO(head->frame),
             head->frame->func,
             ZEND_CALL_NUM_ARGS(head->frame), NULL, NULL);
