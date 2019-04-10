@@ -15,9 +15,9 @@ $parallel = new Runtime();
 $parallel->run(function(){
     global $f;
     
-    echo "first\n";
-    
-    if ($f++<5) {
+    while ($f++<5) {
+        echo "first\n";
+        
         Runtime::yield();
     }
 });
@@ -25,9 +25,9 @@ $parallel->run(function(){
 $parallel->run(function(){
     global $s;
 
-    echo "second\n";
-    
-    if ($s++<5) {
+    while ($s++<5) {
+        echo "second\n";
+        
         Runtime::yield();
     }
 });
@@ -44,6 +44,5 @@ first
 second
 first
 second
-first
-second
+
 
