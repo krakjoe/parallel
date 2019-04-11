@@ -29,15 +29,14 @@ extern zend_class_entry *php_parallel_ce;
 extern zend_class_entry *php_parallel_exception_ce;
 extern zend_string *php_parallel_main;
 
-typedef struct _php_parallel_stack_el_t {
+typedef struct _php_parallel_schedule_el_t {
 	zend_execute_data           *frame;
 	php_parallel_monitor_t      *monitor;
-} php_parallel_stack_el_t;
+} php_parallel_schedule_el_t;
 
 typedef struct _php_parallel_t {
 	pthread_t                   thread;
 	php_parallel_monitor_t     *monitor;
-	zend_llist                  stack;
 	zend_string                *bootstrap;
 	zval                        configuration;
 	struct {
@@ -46,6 +45,7 @@ typedef struct _php_parallel_t {
 	struct {
 		void               *server;
 	} parent;
+	zend_llist                  schedule;
 	zend_object                 std;
 } php_parallel_t;
 

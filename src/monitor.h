@@ -26,16 +26,24 @@ typedef struct _php_parallel_monitor_t {
 	volatile int32_t state;
 } php_parallel_monitor_t;
 
-#define PHP_PARALLEL_READY  (1<<0)
-#define PHP_PARALLEL_EXEC   (1<<1)
-#define PHP_PARALLEL_CLOSE  (1<<2)
-#define PHP_PARALLEL_CLOSED (1<<3)
-#define PHP_PARALLEL_KILLED (1<<4)
-#define PHP_PARALLEL_ERROR  (1<<5)
-#define PHP_PARALLEL_YIELD  (1<<6)
+#define PHP_PARALLEL_READY     (1<<0)
+#define PHP_PARALLEL_EXEC      (1<<1)
+#define PHP_PARALLEL_CLOSE     (1<<2)
+#define PHP_PARALLEL_CLOSED    (1<<3)
+#define PHP_PARALLEL_KILLED    (1<<4)
+#define PHP_PARALLEL_ERROR     (1<<5)
 
-#define PHP_PARALLEL_DONE   (1<<10)
+#define PHP_PARALLEL_YIELDING  (1<<6)
 
+#define PHP_PARALLEL_DONE      (1<<10)
+
+static inline unsigned char php_parallel_monitor_wipe(php_parallel_monitor_t *monitor, int32_t state) {
+    unsigned char wiped = (monitor->state & state) == state;
+    
+    monitor->state &= ~state;
+    
+    return wiped;
+}
 
 php_parallel_monitor_t* php_parallel_monitor_create(void);
 int php_parallel_monitor_lock(php_parallel_monitor_t *m);
