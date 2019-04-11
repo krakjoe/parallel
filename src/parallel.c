@@ -271,18 +271,10 @@ PHP_METHOD(Parallel, kill)
 	pthread_join(parallel->thread, NULL);
 }
 
-static zend_always_inline zend_execute_data* php_parallel_yield_frame(zend_execute_data *frame) {
-    while (frame->prev_execute_data) {
-        frame = frame->prev_execute_data;
-    }
-    
-    return frame;
-}
-
 PHP_METHOD(Parallel, yield)
 {
     zend_bool schedule = 1;
-    zend_execute_data *frame = php_parallel_yield_frame(execute_data);
+    zend_execute_data *yielding;
     
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
         Z_PARAM_OPTIONAL
@@ -293,14 +285,14 @@ PHP_METHOD(Parallel, yield)
         return;
     );
     
-    if (!php_parallel_scheduler_may_yield(execute_data, frame)) {
+    if (!(yielding = php_parallel_scheduler_may_yield(execute_data))) {
         php_parallel_exception(
-            "cannot yield from this context");
+            "cannot yield from here");
         return;
     }
     
     if (schedule) {
-        php_parallel_scheduler_yield(frame);
+        php_parallel_scheduler_yield(yielding);
     }
     
     zend_bailout();
@@ -489,7 +481,8 @@ void* php_parallel_routine(void *arg) {
 
 	do {
 		php_parallel_schedule_el_t el;
-
+        zend_bool yielding = 0;
+        
 		if (php_parallel_monitor_lock(parallel->monitor) != SUCCESS) {
 			break;
 		}
@@ -514,7 +507,7 @@ _php_parallel_kill:
 					goto _php_parallel_kill;
 				}
 
-				if (!zend_llist_count(&parallel->schedule)) {
+				if (php_parallel_scheduler_empty()) {
 					php_parallel_monitor_unlock(parallel->monitor);
 					goto _php_parallel_exit;
 				}
@@ -524,10 +517,10 @@ _php_parallel_kill:
 		php_parallel_monitor_unlock(parallel->monitor);
         
 		zend_first_try {
-			php_parallel_scheduler_run(el.monitor, el.frame);
+			yielding = php_parallel_scheduler_run(el.monitor, el.frame);
 		} zend_end_try();
 
-		if (el.monitor) {
+		if (el.monitor && !yielding) {
 			php_parallel_monitor_set(el.monitor, PHP_PARALLEL_READY, 1);
 		}
 	} while (1);

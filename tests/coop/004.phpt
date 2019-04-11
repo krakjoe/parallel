@@ -21,5 +21,5 @@ $parallel->run(function(){
 });
 ?>
 --EXPECT--
-string(30) "cannot yield from this context"
+string(22) "cannot yield from here"
 
