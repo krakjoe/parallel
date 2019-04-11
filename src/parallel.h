@@ -31,7 +31,6 @@ extern zend_string *php_parallel_main;
 
 typedef struct _php_parallel_schedule_el_t {
 	zend_execute_data           *frame;
-	php_parallel_monitor_t      *monitor;
 } php_parallel_schedule_el_t;
 
 typedef struct _php_parallel_t {

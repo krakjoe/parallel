@@ -481,7 +481,6 @@ void* php_parallel_routine(void *arg) {
 
 	do {
 		php_parallel_schedule_el_t el;
-        zend_bool yielding = 0;
         
 		if (php_parallel_monitor_lock(parallel->monitor) != SUCCESS) {
 			break;
@@ -516,13 +515,7 @@ _php_parallel_kill:
 
 		php_parallel_monitor_unlock(parallel->monitor);
         
-		zend_first_try {
-			yielding = php_parallel_scheduler_run(el.monitor, el.frame);
-		} zend_end_try();
-
-		if (el.monitor && !yielding) {
-			php_parallel_monitor_set(el.monitor, PHP_PARALLEL_READY, 1);
-		}
+		php_parallel_scheduler_run(el.frame);
 	} while (1);
 
 _php_parallel_exit:

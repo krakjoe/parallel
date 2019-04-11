@@ -29,7 +29,7 @@ zend_bool php_parallel_scheduler_empty();
 zend_execute_data* php_parallel_scheduler_may_yield(zend_execute_data *current);
 void php_parallel_scheduler_yield(zend_execute_data *frame);
 
-zend_bool php_parallel_scheduler_run(php_parallel_monitor_t *monitor, zend_execute_data *frame);
+void php_parallel_scheduler_run(zend_execute_data *frame);
 
 void php_parallel_scheduler_kill();
 zend_bool php_parallel_scheduler_killed();
