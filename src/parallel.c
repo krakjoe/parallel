@@ -519,13 +519,7 @@ _php_parallel_kill:
 	} while (1);
 
 _php_parallel_exit:
-	php_parallel_monitor_set(parallel->monitor, PHP_PARALLEL_DONE, 1);
-
-	php_request_shutdown(NULL);
-
-	ts_free_thread();
-
-	pthread_exit(NULL);
+	php_parallel_scheduler_exit();
 
 	return NULL;
 }

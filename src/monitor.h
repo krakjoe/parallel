@@ -33,8 +33,6 @@ typedef struct _php_parallel_monitor_t {
 #define PHP_PARALLEL_KILLED    (1<<4)
 #define PHP_PARALLEL_ERROR     (1<<5)
 
-#define PHP_PARALLEL_YIELDING  (1<<6)
-
 #define PHP_PARALLEL_DONE      (1<<10)
 
 static inline unsigned char php_parallel_monitor_wipe(php_parallel_monitor_t *monitor, int32_t state) {

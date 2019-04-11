@@ -23,9 +23,11 @@ void php_parallel_scheduler_push(zend_llist *schedule, php_parallel_monitor_t *m
 void php_parallel_scheduler_destroy(zend_llist *schedule);
 
 php_parallel_t* php_parallel_scheduler_setup(php_parallel_t *parallel);
+void php_parallel_scheduler_exit();
 
 zend_bool php_parallel_scheduler_pop(php_parallel_schedule_el_t *el);
 zend_bool php_parallel_scheduler_empty();
+
 zend_execute_data* php_parallel_scheduler_may_yield(zend_execute_data *current);
 void php_parallel_scheduler_yield(zend_execute_data *frame);
 
