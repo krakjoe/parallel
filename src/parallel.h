@@ -40,6 +40,7 @@ typedef struct _php_parallel_t {
 	zval                        configuration;
 	struct {
 		zend_bool          *interrupt;
+		zend_bool           yielding;
 	} child;
 	struct {
 		void               *server;

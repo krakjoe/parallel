@@ -29,9 +29,7 @@
 #include "zend_exceptions.h"
 #include "zend_vm.h"
 
-TSRM_TLS php_parallel_t*         php_parallel_scheduler_context = NULL;
-TSRM_TLS zval*                   php_parallel_scheduler_future = NULL;
-TSRM_TLS zend_bool               php_parallel_scheduler_yielding = 0;
+TSRM_TLS php_parallel_t* php_parallel_scheduler_context = NULL;
 
 #define PHP_PARALLEL_CALL_YIELD (1<<12)
 #define PHP_PARALLEL_CALL_YIELDED(f)  \
@@ -213,21 +211,21 @@ zend_bool php_parallel_scheduler_pop(php_parallel_t *parallel, php_parallel_sche
                 param++;
             }
         }
-        
+
         zend_init_func_execute_data(
             el->frame, 
             &el->frame->func->op_array, 
-            el->frame->return_value);
+            head->frame->return_value);
     } else {
         el->frame = zend_vm_stack_push_call_frame(  
             ZEND_CALL_INFO(head->frame),
             head->frame->func,
             ZEND_CALL_NUM_ARGS(head->frame), NULL, NULL);
-        
+
         zend_init_func_execute_data(
             el->frame, 
             &el->frame->func->op_array, 
-            el->frame->return_value);
+            head->frame->return_value);
         
         memcpy((zval*) el->frame  + ZEND_CALL_FRAME_SLOT, 
               ((zval*) head->frame) + ZEND_CALL_FRAME_SLOT,
@@ -239,8 +237,6 @@ zend_bool php_parallel_scheduler_pop(php_parallel_t *parallel, php_parallel_sche
     }
     
     Z_PTR(el->frame->This) = Z_PTR(head->frame->This);
-    
-    el->frame->return_value = head->frame->return_value;
       
 	zend_llist_del_element(
 	    &parallel->schedule, 
@@ -254,16 +250,15 @@ void php_parallel_scheduler_yield(php_parallel_t *parallel, zend_execute_data *f
     php_parallel_schedule_el_t el;
     size_t used = zend_vm_calc_used_stack(
         ZEND_CALL_NUM_ARGS(frame), frame->func);
-        
-    php_parallel_scheduler_yielding = 1;
-        
+    
+    parallel->child.yielding = 1;
+    
     php_parallel_monitor_lock(parallel->monitor);
     
     el.frame = (zend_execute_data*) ecalloc(1, used);
 	
 	memcpy(el.frame, frame, used);
 	
-	el.frame->return_value = php_parallel_scheduler_future;
 	Z_PTR(el.frame->This)  = Z_PTR(frame->This);
 
 	ZEND_ADD_CALL_FLAG(el.frame, PHP_PARALLEL_CALL_YIELD);
@@ -276,19 +271,10 @@ void php_parallel_scheduler_yield(php_parallel_t *parallel, zend_execute_data *f
 }
 
 void php_parallel_scheduler_run(php_parallel_t *parallel, zend_execute_data *frame) {
-	zval *future = NULL;
     zval retval;
     php_parallel_monitor_t *monitor = Z_PTR(frame->This);
     
     zend_first_try {
-	    if (frame->return_value) {
-            php_parallel_scheduler_future = future = frame->return_value;
-	    } else {
-	        php_parallel_scheduler_future = future = NULL;
-	    }
-	    
-	    frame->return_value = &retval;
-	    
 	    ZVAL_UNDEF(&retval);
 	    
 	    zend_try {
@@ -303,7 +289,7 @@ void php_parallel_scheduler_run(php_parallel_t *parallel, zend_execute_data *fra
 		        }
 		    }
 	    } zend_catch {
-            if (!php_parallel_scheduler_yielding) {
+            if (!parallel->child.yielding) {
                 if (monitor) {
 			        if (php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_KILLED)) {
 				        php_parallel_monitor_set(monitor, 
@@ -315,15 +301,16 @@ void php_parallel_scheduler_run(php_parallel_t *parallel, zend_execute_data *fra
             }
 	    } zend_end_try();
 
-        if (!php_parallel_scheduler_yielding) {
-            if (!Z_ISUNDEF(retval)) {
-                if (future) {
-                    php_parallel_copy_zval(
-                        future, frame->return_value, 1);
-                }
-
-		        if (Z_REFCOUNTED(retval)) {
-			        zval_ptr_dtor(&retval);
+        if (!parallel->child.yielding) {
+            if (frame->return_value  && !Z_ISUNDEF_P(frame->return_value)) {
+                zval garbage = *frame->return_value;
+                
+		        if (Z_REFCOUNTED(garbage)) {
+		            php_parallel_copy_zval(
+                        frame->return_value, 
+                        frame->return_value, 1);
+                        
+			        zval_ptr_dtor(&garbage);
 		        }
 	        }
 	    
@@ -333,11 +320,11 @@ void php_parallel_scheduler_run(php_parallel_t *parallel, zend_execute_data *fra
         zend_vm_stack_free_call_frame(frame);
     } zend_end_try ();
 
-    if (monitor && !php_parallel_scheduler_yielding) {
+    if (monitor && !parallel->child.yielding) {
 		php_parallel_monitor_set(monitor, PHP_PARALLEL_READY, 1);
 	}
 	
-	php_parallel_scheduler_yielding = 0;
+	parallel->child.yielding = 0;
 }
 
 static zend_always_inline zend_execute_data* php_parallel_scheduler_first_frame(zend_execute_data *frame) {

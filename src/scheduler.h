@@ -21,20 +21,16 @@
 void php_parallel_scheduler_startup(void);
 void php_parallel_scheduler_shutdown(void);
 
-void php_parallel_scheduler_init(php_parallel_t *parallel);
-void php_parallel_scheduler_push(php_parallel_t *parallel, php_parallel_monitor_t *monitor, zend_function *function, zval *argv, zval *future);
-void php_parallel_scheduler_destroy(php_parallel_t *parallel);
-
+void               php_parallel_scheduler_init(php_parallel_t *parallel);
+void               php_parallel_scheduler_push(php_parallel_t *parallel, php_parallel_monitor_t *monitor, zend_function *function, zval *argv, zval *future);
 zend_execute_data* php_parallel_scheduler_may_yield(zend_execute_data *current, php_parallel_t **parallel);
 void               php_parallel_scheduler_yield(php_parallel_t *parallel, zend_execute_data *frame);
+void               php_parallel_scheduler_destroy(php_parallel_t *parallel);
 
 php_parallel_t* php_parallel_scheduler_setup(php_parallel_t *parallel);
+zend_bool       php_parallel_scheduler_empty(php_parallel_t *parallel);
+zend_bool       php_parallel_scheduler_pop(php_parallel_t *parallel, php_parallel_schedule_el_t *el);
+void            php_parallel_scheduler_run(php_parallel_t *parallel, zend_execute_data *frame);
+void            php_parallel_scheduler_kill(php_parallel_t *parallel);
 void            php_parallel_scheduler_exit(php_parallel_t *parallel);
-
-zend_bool php_parallel_scheduler_pop(php_parallel_t *parallel, php_parallel_schedule_el_t *el);
-zend_bool php_parallel_scheduler_empty(php_parallel_t *parallel);
-
-void php_parallel_scheduler_run(php_parallel_t *parallel, zend_execute_data *frame);
-
-void      php_parallel_scheduler_kill(php_parallel_t *parallel);
 #endif
