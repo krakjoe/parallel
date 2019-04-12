@@ -35,30 +35,30 @@ final class parallel\Runtime {
 	public function __construct(array $configuration);
 
 	/*
-	* Shall schedule a Closure for execution passing optional arguments
-	* @param Closure handler
+	* Shall schedule a task for execution passing optional arguments
+	* @param Closure task
 	* @param array argv
 	* @throws \parallel\Exception if \parallel\Runtime was closed
 	* @throws \parallel\Exception if \parallel\Runtime is in unusable state
-	* @throws \parallel\Exception if Closure contains illegal instructions
-	* @throws \parallel\Exception if return from Closure is ignored
-	* Note: A Future shall only be returned if $handler contains a return statement
-	*	Should the caller ignore the return statement in $handler, an exception
+	* @throws \parallel\Exception if task contains illegal instructions
+	* @throws \parallel\Exception if return from task is ignored
+	* Note: A Future shall only be returned if task contains a return statement
+	*	Should the caller ignore the return statement in task, an exception
 	*	shall be thrown
 	*/
-	public function run(Closure $handler, array $argv = []) : ?\parallel\Future;
+	public function run(Closure $task, array $argv = []) : ?\parallel\Future;
 	
 	/*
 	* Shall request the Runtime shutdown
-	* Note: Closures scheduled for execution will be executed
+	* Note: Tasks scheduled for execution will be executed
 	* @throws \parallel\Exception if \parallel\Runtime was already closed
 	*/
 	public function close() : void;
 
 	/*
 	* Shall kill the Runtime
-	* Note: Closures scheduled for execution will not be executed,
-	*	currently running Closure will be interrupted.
+	* Note: Tasks scheduled for execution will not be executed,
+	*	currently running task will be interrupted.
 	* Note: Cannot interrupt internal function calls in progress
 	* @throws \parallel\Exception if \parallel\Runtime was already closed
 	*/
@@ -67,8 +67,8 @@ final class parallel\Runtime {
 	/*
 	* Shall yield control to the scheduler for this Runtime
 	* @param $reschedule shall control rescheduling
-	* Note: The currently executing task shall return control and allow
-	* 		other tasks scheduled for the current Runtime to execute.
+	* Note: The currently executing task shall return control to the scheduler 
+	*       to allow other tasks scheduled for the current Runtime to execute.
 	*/
 	public static function yield(bool $reschedule = true) : void;
 }
@@ -76,20 +76,20 @@ final class parallel\Runtime {
 final class parallel\Future {
 	/*
 	* Shall wait until the value is resolved
-	* @throws \parallel\Exception if Closure was killed
+	* @throws \parallel\Exception if task was killed
 	* @throws \parallel\Exception if \parallel\Runtime was closed before execution
 	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
-	* @throws \parallel\Exception if Closure suffered a fatal error or exception
+	* @throws \parallel\Exception if task suffered a fatal error or exception
 	*/
 	public function value() : mixed;
 
 	/*
 	* Shall wait until the value is resolved or the timeout is reached
 	* @param non-negative timeout in microseconds
-	* @throws \parallel\Exception if Closure was killed
+	* @throws \parallel\Exception if task was killed
 	* @throws \parallel\Exception if \parallel\Runtime was closed before execution
 	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
-	* @throws \parallel\Exception if Closure suffered a fatal error or exception
+	* @throws \parallel\Exception if task suffered a fatal error or exception
 	* @throws \parallel\Exception if timeout is negative
 	* @throws \parallel\TimeoutException if timeout is reached
 	*/
@@ -157,7 +157,7 @@ final class Channel {
     * @param mixed value any non-object, non-resource, non-null value
     * @throws \parallel\Channel\Closed if this channel is closed
     */
-    public function send(mixed $value) : bool;
+    public function send(mixed $value) : void;
     
     /*
     * Shall recv a value from this channel
@@ -187,22 +187,22 @@ In PHP there was only one kind of parallel concurrency extension API, the kind t
 
 `parallel` takes a totally different approach to these two by providing only a very small, easy to understand API that exposes the power of parallel concurrency without any of the aforementioned headaches.
 
-By placing some restrictions upon what a Closure intended for parallel execution can do, we remove almost all of the cognitive overhead of using threads, we hide away completely any mutual exclusion and all the things a programmer using threads must think about.
+By placing some restrictions upon what a task intended for parallel execution can do, we remove almost all of the cognitive overhead of using threads, we hide away completely any mutual exclusion and all the things a programmer using threads must think about.
 
-In practice this means Closures intended for parallel execution must not:
+In practice this means tasks intended for parallel execution must not:
 
   * accept or return by reference
   * accept or return objects
   * execute a limited set of instructions
 
-Instructions prohibited directly in Closures intended for parallel execution are:
+Instructions prohibited directly in tasks intended for parallel execution are:
 
   * declare (anonymous) function
   * declare (anonymous) class
   * lexical scope access
   * yield
 
-__No instructions are prohibited in the files which the Runtime may include.__
+__No instructions are prohibited in the files which the task may include.__
 
 
 Requirements and Installation
