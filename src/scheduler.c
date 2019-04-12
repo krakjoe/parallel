@@ -77,6 +77,21 @@ php_parallel_t* php_parallel_scheduler_setup(php_parallel_t *parallel) {
 
     parallel->child.interrupt = &EG(vm_interrupt);
     
+    PG(expose_php)       = 0;
+	PG(auto_globals_jit) = 1;
+
+	php_request_startup();
+
+	zend_disable_function(ZEND_STRL("setlocale"));
+#if PHP_VERSION_ID < 70400
+	zend_disable_function(ZEND_STRL("putenv"));
+#endif
+
+	PG(during_request_startup)  = 0;
+	SG(sapi_started)            = 0;
+	SG(headers_sent)            = 1;
+	SG(request_info).no_headers = 1;
+    
     return parallel;
 }
 
