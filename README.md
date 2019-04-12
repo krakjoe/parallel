@@ -139,7 +139,7 @@ final class Channel {
     /*
     * Shall make a buffered channel with the given name and capacity
     * @param string name
-    * @param int    capacity may be -1 for unlimited, or a positive integer
+    * @param int    capacity may be Channel::Infinite, or a positive integer
     * @throws \parallel\Exception if arguments are invalid
     * @throws \parallel\Exception if channel already exists
     */
@@ -171,6 +171,8 @@ final class Channel {
     * @throws \parallel\Channel\Closed if this channel was already closed
     */
     public function close() : void;
+    
+    public const Infinite;
 }
 ```
 
