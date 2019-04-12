@@ -198,7 +198,11 @@ zend_bool php_parallel_scheduler_pop(php_parallel_t *parallel, php_parallel_sche
         el->frame = zend_vm_stack_push_call_frame(
 	        ZEND_CALL_TOP_FUNCTION, 
 	        php_parallel_copy(head->frame->func, 0), 
-	        ZEND_CALL_NUM_ARGS(head->frame), NULL, NULL);
+	        ZEND_CALL_NUM_ARGS(head->frame), 
+#if PHP_VERSION_ID < 80000
+	        NULL, 
+#endif
+	        NULL);
 	    
 	    if (ZEND_CALL_NUM_ARGS(head->frame)) {
             zval *slot = (zval*) ZEND_CALL_ARG(head->frame, 1),
@@ -220,7 +224,11 @@ zend_bool php_parallel_scheduler_pop(php_parallel_t *parallel, php_parallel_sche
         el->frame = zend_vm_stack_push_call_frame(  
             ZEND_CALL_INFO(head->frame),
             head->frame->func,
-            ZEND_CALL_NUM_ARGS(head->frame), NULL, NULL);
+            ZEND_CALL_NUM_ARGS(head->frame), 
+#if PHP_VERSION_ID < 80000
+	        NULL, 
+#endif
+            NULL);
 
         zend_init_func_execute_data(
             el->frame, 
