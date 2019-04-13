@@ -280,6 +280,7 @@ PHP_METHOD(Parallel, yield)
             case IS_FALSE:
                 schedule = 0;
             case IS_TRUE:
+                value = NULL;
                 break;
                 
             default:
