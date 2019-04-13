@@ -206,7 +206,7 @@ zend_bool php_parallel_scheduler_pop(php_parallel_t *parallel, php_parallel_sche
 	        ZEND_CALL_TOP_FUNCTION, 
 	        php_parallel_copy(head->frame->func, 0), 
 	        ZEND_CALL_NUM_ARGS(head->frame), 
-#if PHP_VERSION_ID < 80000
+#if PHP_VERSION_ID < 70400
 	        NULL, 
 #endif
 	        NULL);
@@ -232,7 +232,7 @@ zend_bool php_parallel_scheduler_pop(php_parallel_t *parallel, php_parallel_sche
             ZEND_CALL_INFO(head->frame),
             head->frame->func,
             ZEND_CALL_NUM_ARGS(head->frame), 
-#if PHP_VERSION_ID < 80000
+#if PHP_VERSION_ID < 70400
 	        NULL, 
 #endif
             NULL);
