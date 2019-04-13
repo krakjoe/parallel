@@ -268,17 +268,28 @@ PHP_METHOD(Parallel, yield)
     
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
         Z_PARAM_OPTIONAL
-        Z_PARAM_BOOL(schedule)
+        Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END_EX(
-        ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
-            Z_PARAM_OPTIONAL
-            Z_PARAM_ZVAL(value)
-        ZEND_PARSE_PARAMETERS_END_EX(
-            php_parallel_exception(
-                "expected optional argument");
-            return;
-        );
+        php_parallel_exception(
+            "expected optional argument");
+        return;
     );
+    
+    if (value) {
+        switch (Z_TYPE_P(value)) {
+            case IS_FALSE:
+                schedule = 0;
+            case IS_TRUE:
+                break;
+                
+            default:
+                if (!zend_is_iterable(value)) {
+                    php_parallel_exception(
+                        "expected boolean, or iterable");
+                    return;
+                }
+        }
+    }
     
     if (!(yielding = php_parallel_scheduler_may_yield(execute_data, &parallel))) {
         php_parallel_exception(
@@ -324,6 +335,7 @@ void php_parallel_destroy(zend_object *o) {
 		php_parallel_fetch(o);
 
 	php_parallel_monitor_lock(parallel->monitor);
+
 
 	if (!php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_CLOSED|PHP_PARALLEL_ERROR)) {
 		php_parallel_monitor_set(
