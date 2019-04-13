@@ -275,7 +275,7 @@ void php_parallel_scheduler_yield(php_parallel_t *parallel, zend_execute_data *f
 	if (value) {
 	    zend_llist_add_element(
 	        &php_parallel_scheduler_yielded, value);
-	    Z_ADDREF_P(value);
+	    Z_TRY_ADDREF_P(value);
 	}
 	
 	memcpy(el.frame, frame, used);
