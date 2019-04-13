@@ -262,6 +262,7 @@ PHP_METHOD(Parallel, kill)
 PHP_METHOD(Parallel, yield)
 {
     zend_bool schedule = 1;
+    zval *value = NULL;
     zend_execute_data *yielding;
     php_parallel_t *parallel;
     
@@ -269,9 +270,14 @@ PHP_METHOD(Parallel, yield)
         Z_PARAM_OPTIONAL
         Z_PARAM_BOOL(schedule)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
-            "expected optional boolean argument");
-        return;
+        ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
+            Z_PARAM_OPTIONAL
+            Z_PARAM_ZVAL(value)
+        ZEND_PARSE_PARAMETERS_END_EX(
+            php_parallel_exception(
+                "expected optional argument");
+            return;
+        );
     );
     
     if (!(yielding = php_parallel_scheduler_may_yield(execute_data, &parallel))) {
@@ -281,7 +287,7 @@ PHP_METHOD(Parallel, yield)
     }
     
     if (schedule) {
-        php_parallel_scheduler_yield(parallel, yielding);
+        php_parallel_scheduler_yield(parallel, yielding, value);
     }
     
     zend_bailout();

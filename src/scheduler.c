@@ -30,6 +30,7 @@
 #include "zend_vm.h"
 
 TSRM_TLS php_parallel_t* php_parallel_scheduler_context = NULL;
+TSRM_TLS zval            php_parallel_scheduler_yielded;
 
 #define PHP_PARALLEL_CALL_YIELD (1<<12)
 #define PHP_PARALLEL_CALL_YIELDED(f)  \
@@ -113,6 +114,8 @@ php_parallel_t* php_parallel_scheduler_setup(php_parallel_t *parallel) {
     SG(sapi_started)            = 0;
     SG(headers_sent)            = 1;
     SG(request_info).no_headers = 1;
+    
+    ZVAL_UNDEF(&php_parallel_scheduler_yielded);
 
     return parallel;
 }
@@ -121,6 +124,10 @@ void php_parallel_scheduler_exit(php_parallel_t *parallel) {
     php_parallel_monitor_set(
         parallel->monitor, 
         PHP_PARALLEL_DONE, 1);
+        
+    if (!Z_ISUNDEF(php_parallel_scheduler_yielded)) {
+        zval_ptr_dtor(&php_parallel_scheduler_yielded);
+    }
 
     php_request_shutdown(NULL);
 
@@ -254,7 +261,7 @@ zend_bool php_parallel_scheduler_pop(php_parallel_t *parallel, php_parallel_sche
 	return 1;
 }
 
-void php_parallel_scheduler_yield(php_parallel_t *parallel, zend_execute_data *frame) {
+void php_parallel_scheduler_yield(php_parallel_t *parallel, zend_execute_data *frame, zval *value) {
     php_parallel_schedule_el_t el;
     size_t used = zend_vm_calc_used_stack(
         ZEND_CALL_NUM_ARGS(frame), frame->func);
@@ -264,6 +271,10 @@ void php_parallel_scheduler_yield(php_parallel_t *parallel, zend_execute_data *f
     php_parallel_monitor_lock(parallel->monitor);
     
     el.frame = (zend_execute_data*) ecalloc(1, used);
+	
+	if (value) {
+	    ZVAL_COPY_VALUE(&php_parallel_scheduler_yielded, value);
+	}
 	
 	memcpy(el.frame, frame, used);
 	
@@ -279,17 +290,26 @@ void php_parallel_scheduler_yield(php_parallel_t *parallel, zend_execute_data *f
 }
 
 void php_parallel_scheduler_run(php_parallel_t *parallel, zend_execute_data *frame) {
-    zval retval;
     php_parallel_monitor_t *monitor = Z_PTR(frame->This);
     
     zend_first_try {
-	    ZVAL_UNDEF(&retval);
-	    
 	    zend_try {
+	        if (UNEXPECTED(PHP_PARALLEL_CALL_YIELDED(frame))) {
+	            const zend_op *yielded = frame->opline - 1;
+	            
+	            if (yielded->result_type != IS_UNUSED) {
+	                zval *store = 
+	                    ZEND_CALL_VAR(frame, yielded->result.var);
+	                ZVAL_COPY_VALUE(store, 
+	                    &php_parallel_scheduler_yielded);
+	                ZVAL_UNDEF(&php_parallel_scheduler_yielded);
+	            }
+	        }
+	        
 	        zend_execute_ex(frame);
 		    
-		    if (EG(exception)) {
-		        if (!EG(current_execute_data)) {
+		    if (UNEXPECTED(EG(exception))) {
+		        if (UNEXPECTED(!EG(current_execute_data))) {
 		            zend_throw_exception_internal(NULL);
 		        } else if (EG(current_execute_data)->func &&
 		                   ZEND_USER_CODE(EG(current_execute_data)->func->common.type)) {
