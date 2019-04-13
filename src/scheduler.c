@@ -297,15 +297,15 @@ void php_parallel_scheduler_run(php_parallel_t *parallel, zend_execute_data *fra
     zend_first_try {
 	    zend_try {
 	        if (UNEXPECTED(PHP_PARALLEL_CALL_YIELDED(frame))) {
-	            const zend_op *yielded = frame->opline - 1;
+	            const zend_op *target = frame->opline - 1;
 	            
-	            if (UNEXPECTED(yielded->result_type != IS_UNUSED)) {
+	            if (UNEXPECTED(target->result_type != IS_UNUSED)) {
 	                if (zend_llist_count(&php_parallel_scheduler_yielded)) {
 	                    zval *head = zend_llist_get_first(
 	                        &php_parallel_scheduler_yielded);
 	                    
 	                    ZVAL_COPY(
-	                        ZEND_CALL_VAR(frame, yielded->result.var), 
+	                        ZEND_CALL_VAR(frame, target->result.var), 
 	                        head);
 	                        
 	                    zend_llist_del_element(
