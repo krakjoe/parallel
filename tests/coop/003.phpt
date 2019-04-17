@@ -24,6 +24,7 @@ $parallel->run(function($a){
     }
     
     echo "leave\n";
+    
 }, [1]);
 ?>
 --EXPECT--

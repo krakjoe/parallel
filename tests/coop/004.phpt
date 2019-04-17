@@ -19,6 +19,7 @@ $parallel->run(function(){
         var_dump($e->getMessage());
     }
 });
+
 ?>
 --EXPECT--
 string(22) "cannot yield from here"

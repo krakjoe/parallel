@@ -21,6 +21,7 @@ $parallel->run(function($a, $b){
         Runtime::yield();
     }
 }, ["Hello", "World"]);
+
 ?>
 --EXPECT--
 string(5) "Hello"

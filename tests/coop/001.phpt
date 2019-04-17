@@ -31,7 +31,6 @@ $parallel->run(function(){
         Runtime::yield();
     }
 });
-
 ?>
 --EXPECT--
 first
