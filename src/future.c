@@ -19,10 +19,9 @@
 #define HAVE_PARALLEL_FUTURE
 
 #include "parallel.h"
+#include "handlers.h"
 #include "copy.h"
 #include "future.h"
-
-#include "zend_exceptions.h"
 
 #define php_parallel_timeout_exception(m, ...) zend_throw_exception_ex(php_parallel_timeout_exception_ce, 0, m, ##__VA_ARGS__)
 
@@ -330,7 +329,7 @@ void php_parallel_future_destroy(zend_object *o) {
 void php_parallel_future_startup() {
 	zend_class_entry ce;
 
-	memcpy(&php_parallel_future_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	memcpy(&php_parallel_future_handlers, php_parallel_standard_handlers(), sizeof(zend_object_handlers));
 
 	php_parallel_future_handlers.offset = XtOffsetOf(php_parallel_future_t, std);
 	php_parallel_future_handlers.free_obj = php_parallel_future_destroy;

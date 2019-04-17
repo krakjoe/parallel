@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_PARALLEL
 
 #include "parallel.h"
+#include "handlers.h"
 #include "scheduler.h"
 #include "future.h"
 #include "copy.h"
@@ -28,7 +29,6 @@
 #include "TSRM.h"
 
 #include "zend_closures.h"
-#include "zend_exceptions.h"
 
 typedef int (*php_sapi_deactivate_t)(void);
 
@@ -325,7 +325,7 @@ void php_parallel_destroy(zend_object *o) {
 void php_parallel_startup(void) {
 	zend_class_entry ce;
 
-	memcpy(&php_parallel_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	memcpy(&php_parallel_handlers, php_parallel_standard_handlers(), sizeof(zend_object_handlers));
 
 	php_parallel_handlers.offset = XtOffsetOf(php_parallel_t, std);
 	php_parallel_handlers.free_obj = php_parallel_destroy;

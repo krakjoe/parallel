@@ -25,6 +25,7 @@
 #include "php_parallel.h"
 
 #include "src/parallel.h"
+#include "src/handlers.h"
 #include "src/future.h"
 #include "src/channel.h"
 #include "src/copy.h"
@@ -32,6 +33,8 @@
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
 {
+    php_parallel_handlers_startup();
+
 	php_parallel_startup();
 	php_parallel_future_startup();
 	php_parallel_channel_startup();

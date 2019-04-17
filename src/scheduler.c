@@ -26,7 +26,6 @@
 
 #include "php_main.h"
 
-#include "zend_exceptions.h"
 #include "zend_vm.h"
 
 TSRM_TLS php_parallel_t* php_parallel_scheduler_context = NULL;

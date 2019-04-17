@@ -22,6 +22,8 @@
 #include "monitor.h"
 #include "pthread.h"
 
+#include "zend_exceptions.h"
+
 #define php_parallel_exception_ex(type, m, ...) zend_throw_exception_ex(type, 0, m, ##__VA_ARGS__)
 #define php_parallel_exception(m, ...) php_parallel_exception_ex(php_parallel_exception_ce, m, ##__VA_ARGS__)
 

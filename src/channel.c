@@ -19,10 +19,9 @@
 #define HAVE_PARALLEL_CHANNEL
 
 #include "parallel.h"
+#include "handlers.h"
 #include "copy.h"
 #include "channel.h"
-
-#include "zend_exceptions.h"
 
 typedef struct _php_parallel_channels_t {
 	php_parallel_monitor_t *monitor;
@@ -249,7 +248,7 @@ void php_parallel_channel_startup() {
 
 	memcpy(
 	    &php_parallel_channel_handlers, 
-	    zend_get_std_object_handlers(), 
+	    php_parallel_standard_handlers(), 
 	    sizeof(zend_object_handlers));
 
 	php_parallel_channel_handlers.offset = XtOffsetOf(php_parallel_channel_t, std);
