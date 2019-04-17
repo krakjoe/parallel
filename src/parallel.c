@@ -259,58 +259,11 @@ PHP_METHOD(Parallel, kill)
 	pthread_join(parallel->thread, NULL);
 }
 
-PHP_METHOD(Parallel, yield)
-{
-    zend_bool schedule = 1;
-    zval *value = NULL;
-    zend_execute_data *yielding;
-    php_parallel_t *parallel;
-    
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_ZVAL(value)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
-            "expected optional argument");
-        return;
-    );
-    
-    if (value) {
-        switch (Z_TYPE_P(value)) {
-            case IS_FALSE:
-                schedule = 0;
-            case IS_TRUE:
-                value = NULL;
-                break;
-                
-            default:
-                if (!zend_is_iterable(value)) {
-                    php_parallel_exception(
-                        "expected boolean, or iterable");
-                    return;
-                }
-        }
-    }
-    
-    if (!(yielding = php_parallel_scheduler_may_yield(execute_data, &parallel))) {
-        php_parallel_exception(
-            "cannot yield from here");
-        return;
-    }
-    
-    if (schedule) {
-        php_parallel_scheduler_yield(parallel, yielding, value);
-    }
-    
-    zend_bailout();
-}
-
 zend_function_entry php_parallel_methods[] = {
 	PHP_ME(Parallel, __construct, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(Parallel, run, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(Parallel, close, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(Parallel, kill, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Parallel, yield, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_FE_END
 };
 
