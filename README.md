@@ -63,21 +63,6 @@ final class parallel\Runtime {
 	* @throws \parallel\Exception if \parallel\Runtime was already closed
 	*/
 	public function kill() : void;
-	
-	/*
-	* Shall yield control to the scheduler for this Runtime
-	* @param $reschedule shall control rescheduling
-	* @return the last value yielded to the scheduler
-	* Note: The currently executing task shall return control to the scheduler 
-	*       to allow other tasks scheduled for the current Runtime to execute.
-	*/
-	public static function yield(bool $reschedule = true) : mixed;
-	
-	/*
-	* Shall yield control and the given value to the scheduler for this Runtime
-	* @return the last value yielded to the scheduler
-	*/
-	public static function yield(iterable $value) : mixed;
 }
 
 final class parallel\Future {
