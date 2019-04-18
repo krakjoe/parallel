@@ -28,4 +28,9 @@ zend_bool            php_parallel_link_recv(php_parallel_link_t *link, zval *val
 zend_bool            php_parallel_link_close(php_parallel_link_t *link);
 zend_bool            php_parallel_link_closed(php_parallel_link_t *link);
 void                 php_parallel_link_destroy(php_parallel_link_t *link);
+
+zend_bool            php_parallel_link_lock(php_parallel_link_t *link);
+zend_bool            php_parallel_link_writable(php_parallel_link_t *link);
+zend_bool            php_parallel_link_readable(php_parallel_link_t *link);
+zend_bool            php_parallel_link_unlock(php_parallel_link_t *link);
 #endif

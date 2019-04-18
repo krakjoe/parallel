@@ -92,34 +92,9 @@ final class parallel\Future {
 	* @returns bool
 	*/
 	public function done() : bool;
-
-	/*
-	* Shall perform a select on the Future objects in $resolving,
-	*	returning upon the first successful resolve
-	* @param array $resolving array of Future objects
-	* @param array $resolved  shall be filled with resolved Future objects
-	* @param array $errored   shall be filled with Future objects that errored
-	* @return number of resolved and errored Future objects
-	* @throws \parallel\Exception if the arguments are invalid
-	*/
-	public static function select(array &$resolving, array &$resolved, array &$errored) : int;
-
-	/*
-	* Shall perform a select on the Future objects in $resolving, 
-	*	returning upon the first successful resolve, 
-	*	with the given timeout in microseconds
-	* @param array $resolving array of Future objects
-	* @param array $resolved  shall be filled with resolved Future objects
-	* @param array $errored   shall be filled with Future objects that errored
-	* @param array $timedout  shall be filled with Future objects that timedout
-	* @param int   $timeout   timeout in microseconds
-	* @return number of resolved, errored, and timedout Future objects
-	* @throws \parallel\Exception if the arguments are invalid
-	*/
-	public static function select(array &$resolving, array &$resolved, array &$errored, array &$timedout, int $timeout) : int;
 }
 
-final class Channel {
+final class parallel\Channel {
     
     /*
     * Shall make an unbuffered channel with the given name
@@ -165,6 +140,80 @@ final class Channel {
     public function close() : void;
     
     public const Infinite;
+}
+
+final class parallel\Group {
+    /*
+    * Shall construct a new Group
+    */
+    public function __construct();
+    
+    /*
+    * Shall construct a new group from the given array
+    * Note: Elements of $group should be in the form:
+    *       string $name => Future|Channel $object
+    */
+    public function __construct(array $group);
+    
+    /*
+    * Shall add the given Channel to this Group
+    * @throws \parallel\Exception if the Channel was already added
+    */
+    public function add(Channel $channel) : void;
+    
+    /*
+    * Shall add the given Future to this Group
+    * @throws \parallel\Exception is the Future was already added
+    */
+    public function add(string $name, Future $future) : void;
+    
+    /*
+    * Shall remove the object with the given name from this Group
+    * @throws \parallel\Exception if the object was not found
+    */
+    public function remove(string $name);
+
+    /*
+    * Shall perform non-blocking reads on this Group
+    * Note: returns Result for the first succesful operation, returns
+    *       false when there are no operations left to perform 
+    */
+    public function perform() : Result|false;
+    
+    /*
+    * Shall perform non-blocking reads and writes on this Group
+    * Note: Elements of $payloads should be in the form:
+    *       string $name => $value
+    *       Where an object is included in this Group and named
+    *       in payloads, a non-blocking write is performed.
+    *       Where an object is not included payloads, a non-blocking
+    *       read is performed.
+    *       Where a write succeeds, it is removed from payloads and this Group.
+    *       Where a read succeeds, it is removed from this Group.
+    */
+    public function perform(array &$payloads) : Result|false;
+}
+
+final class parallel\Group\Result {
+    /*
+    * Shall be either Result::Read or Result::Write
+    */
+    public int     $type;
+    /*
+    * Shall be the name $object had in Group
+    */
+    public string  $source;
+    /*
+    * Shall be either Future or Channel
+    */
+    public object  $object;
+    /*
+    * Shall be set for Read
+    */
+    public         $value;
+    
+    const Read;
+    const Write;
 }
 ```
 

@@ -22,14 +22,21 @@
 #include "monitor.h"
 
 php_parallel_monitor_t* php_parallel_monitor_create(void) {
-	pthread_mutexattr_t at;
+	pthread_mutexattr_t attributes;
 	php_parallel_monitor_t *monitor = 
 		(php_parallel_monitor_t*) 
 			calloc(1, sizeof(php_parallel_monitor_t));
 
-	pthread_mutexattr_init(&at);
-	pthread_mutex_init(&monitor->mutex, &at);
-	pthread_mutexattr_destroy(&at);
+	pthread_mutexattr_init(&attributes);
+
+#if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
+     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
+#else
+     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
+#endif
+
+	pthread_mutex_init(&monitor->mutex, &attributes);
+	pthread_mutexattr_destroy(&attributes);
 
 	pthread_cond_init(&monitor->condition, NULL);
 

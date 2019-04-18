@@ -70,12 +70,10 @@ static zend_always_inline int32_t php_parallel_link_mutex_init(php_parallel_link
     
     pthread_mutexattr_init(&attributes);
 
-#if ZEND_DEBUG
-# if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
+#if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
      pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
-# else
+#else
      pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
-# endif
 #endif
 
     if (pthread_mutex_init(&mutex->m, &attributes) != SUCCESS) {
@@ -335,5 +333,37 @@ zend_bool php_parallel_link_closed(php_parallel_link_t *link) {
 
 zend_string* php_parallel_link_name(php_parallel_link_t *link) {
     return link->name;
+}
+
+zend_bool php_parallel_link_lock(php_parallel_link_t *link) {
+    return pthread_mutex_lock(&link->m.m) == SUCCESS;
+}
+
+zend_bool php_parallel_link_writable(php_parallel_link_t *link) {
+    switch (link->type) {
+        case PHP_PARALLEL_LINK_UNBUFFERED:
+            return link->s.r > 0;
+        
+        case PHP_PARALLEL_LINK_BUFFERED:
+            return zend_llist_count(&link->port.q.l) < link->port.q.c;
+    }
+    
+    return 0;
+}
+
+zend_bool php_parallel_link_readable(php_parallel_link_t *link) {
+    switch (link->type) {
+        case PHP_PARALLEL_LINK_UNBUFFERED:
+            return link->s.w > 0;
+        
+        case PHP_PARALLEL_LINK_BUFFERED:
+            return zend_llist_count(&link->port.q.l) > 0;
+    }
+    
+    return 0; 
+}
+
+zend_bool php_parallel_link_unlock(php_parallel_link_t *link) {
+    return pthread_mutex_unlock(&link->m.m) == SUCCESS;
 }
 #endif
