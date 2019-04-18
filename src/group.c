@@ -427,7 +427,7 @@ static zend_always_inline void php_parallel_group_result_set_value(zval *result,
         
         ZVAL_STR(&key, php_parallel_group_result_value);
         
-        zend_std_write_property(result, &key, &tmp, NULL);
+        zend_std_write_property(result, &key, value, NULL);
     }
 #endif
     Z_TRY_DELREF_P(value);
