@@ -372,7 +372,13 @@ static zend_always_inline void php_parallel_group_result_set_type(zval *result, 
 #if PHP_VERSION_ID >= 80000
     zend_std_write_property(Z_OBJ_P(result), php_parallel_group_result_type, &tmp, NULL);
 #else
-    zend_std_write_property(result, php_parallel_group_result_type, &tmp, NULL);
+    {
+        zval key;
+        
+        ZVAL_STR(&key, php_parallel_group_result_type);
+        
+        zend_std_write_property(result, &key, &tmp, NULL);
+    }
 #endif
 }
 
@@ -384,7 +390,13 @@ static zend_always_inline void php_parallel_group_result_set_source(zval *result
 #if PHP_VERSION_ID >= 80000
     zend_std_write_property(Z_OBJ_P(result), php_parallel_group_result_source, &tmp, NULL);
 #else
-    zend_std_write_property(result, php_parallel_group_result_source, &tmp, NULL);
+    {
+        zval key;
+        
+        ZVAL_STR(&key, php_parallel_group_result_source);
+        
+        zend_std_write_property(result, &key, &tmp, NULL);
+    }
 #endif
 }
 
@@ -396,7 +408,13 @@ static zend_always_inline void php_parallel_group_result_set_object(zval *result
 #if PHP_VERSION_ID >= 80000
     zend_std_write_property(Z_OBJ_P(result), php_parallel_group_result_object, &tmp, NULL);
 #else
-    zend_std_write_property(result, php_parallel_group_result_object, &tmp, NULL);
+    {
+        zval key;
+        
+        ZVAL_STR(&key, php_parallel_group_result_object);
+        
+        zend_std_write_property(result, &key, &tmp, NULL);
+    }
 #endif
 }
 
@@ -404,7 +422,13 @@ static zend_always_inline void php_parallel_group_result_set_value(zval *result,
 #if PHP_VERSION_ID >= 80000
     zend_std_write_property(Z_OBJ_P(result), php_parallel_group_result_value, value, NULL);
 #else
-    zend_std_write_property(result, php_parallel_group_result_value, value, NULL);
+    {
+        zval key;
+        
+        ZVAL_STR(&key, php_parallel_group_result_value);
+        
+        zend_std_write_property(result, &key, &tmp, NULL);
+    }
 #endif
     Z_TRY_DELREF_P(value);
 }
