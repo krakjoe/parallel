@@ -143,11 +143,7 @@ final class parallel\Channel {
 }
 
 final class parallel\Group {
-    /*
-    * Shall construct a new Group
-    */
-    public function __construct();
-    
+
     /*
     * Shall add the given Channel to this Group
     * @throws \parallel\Exception if the Channel was already added

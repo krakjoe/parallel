@@ -360,16 +360,6 @@ static void php_parallel_group_destroy(zend_object *zo) {
     zend_object_std_dtor(zo);
 }
 
-PHP_METHOD(Group, __construct)
-{    
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
-            "no parameters expected");
-        return;
-    );
-}
-
 PHP_METHOD(Group, add)
 {
     php_parallel_group_t *group = php_parallel_group_from(getThis());
@@ -488,7 +478,6 @@ PHP_METHOD(Group, perform)
 }
 
 zend_function_entry php_parallel_group_methods[] = {
-    PHP_ME(Group, __construct, NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Group, add, NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Group, remove, NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Group, setTimeout, php_parallel_group_set_timeout_arginfo, ZEND_ACC_PUBLIC)
