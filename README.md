@@ -203,16 +203,21 @@ final class parallel\Group {
 
 final class parallel\Group\Payloads {
     /*
-    * Shall set the payload for the given target
+    * Shall set payload for the given target
     * Note: target should be the name of a Channel or Future
     */
     public function add(string $target, $value) : void;
     
     /*
-    * Shall remove the payload for the given target
+    * Shall remove payload for the given target
     * Note: target should be the name of a Channel or Future
     */
     public function remove(string $target) : void;
+    
+    /*
+    * Shall remove payloads for all targets
+    */
+    public function clear() : void;
 }
 
 final class parallel\Group\Result {

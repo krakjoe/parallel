@@ -107,8 +107,25 @@ PHP_METHOD(Payloads, remove)
     }
 }
 
+PHP_METHOD(Payloads, clear)
+{
+    php_parallel_group_payloads_t *payloads =
+        php_parallel_group_payloads_from(getThis());
+
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
+    ZEND_PARSE_PARAMETERS_END_EX(
+        php_parallel_exception(
+            "no parameters expected");
+        return;
+    );
+    
+    zend_hash_clean(&payloads->table);   
+}
+
 zend_function_entry php_parallel_group_payloads_methods[] = {
     PHP_ME(Payloads, add, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Payloads, remove, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Payloads, clear, NULL, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
