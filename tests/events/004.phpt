@@ -1,5 +1,5 @@
 --TEST--
-Check group add non-future
+Check events remove non-existent
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -8,16 +8,15 @@ if (!extension_loaded('parallel')) {
 ?>
 --FILE--
 <?php
-$group = new \parallel\Group();
+$events = new \parallel\Events();
 
 try {
-    $group->add("future", new stdClass);
+    $events->removeTarget("nothing");
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }
 ?>
 --EXPECT--
-string(36) "expected string and \parallel\Future"
-
+string(32) "target named "nothing" not found"
 
 

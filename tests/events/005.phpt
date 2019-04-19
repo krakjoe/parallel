@@ -1,5 +1,5 @@
 --TEST--
-Check group remove
+Check events remove
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -8,20 +8,20 @@ if (!extension_loaded('parallel')) {
 ?>
 --FILE--
 <?php
-$group = new \parallel\Group();
+$events = new \parallel\Events();
 $channel = 
     \parallel\Channel::make("buffer");
-$group->add($channel);
+$events->addTargetChannel($channel);
 
 try {
-    $group->remove("buffer");
-    $group->remove("buffer");
+    $events->removeTarget("buffer");
+    $events->removeTarget("buffer");
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage(), $ex->getLine());
 }
 ?>
 --EXPECT--
-string(31) "object named "buffer" not found"
+string(31) "target named "buffer" not found"
 int(9)
 
 

@@ -13,7 +13,7 @@ if (PHP_PARALLEL != 'no') {
 			EXTENSION("parallel", "php_parallel.c", PHP_PARALLEL_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /I" + configure_module_dirname);
 			ADD_SOURCES(
 				configure_module_dirname + "/src",
-				"copy.c monitor.c parallel.c scheduler.c future.c channel.c link.c handlers.c group.c result.c payloads.c", 
+				"copy.c monitor.c parallel.c scheduler.c future.c channel.c link.c handlers.c events.c event.c payloads.c", 
 				"parallel"
 			);
 		} else {

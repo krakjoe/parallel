@@ -29,7 +29,7 @@
 #include "src/future.h"
 #include "src/channel.h"
 #include "src/copy.h"
-#include "src/group.h"
+#include "src/events.h"
 
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
@@ -40,7 +40,7 @@ PHP_MINIT_FUNCTION(parallel)
 	php_parallel_future_startup();
 	php_parallel_channel_startup();
 	
-	php_parallel_group_startup();
+	php_parallel_events_startup();
 
 	return SUCCESS;
 } /* }}} */
@@ -51,7 +51,7 @@ PHP_MSHUTDOWN_FUNCTION(parallel)
 	php_parallel_channel_shutdown();
 	php_parallel_shutdown();
 	
-	php_parallel_group_shutdown();
+	php_parallel_events_shutdown();
 
 	return SUCCESS;
 } /* }}} */

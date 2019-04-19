@@ -142,55 +142,47 @@ final class parallel\Channel {
     public const Infinite;
 }
 
-final class parallel\Group {
+final class parallel\Events {
 
     /*
-    * Shall add the given Channel to this Group
+    * Shall watch for events on the given Channel
     * @throws \parallel\Exception if the Channel was already added
     */
-    public function add(Channel $channel) : void;
+    public function addTargetChannel(Channel $channel) : void;
     
     /*
-    * Shall add the given Future to this Group
+    * Shall watch for events on the given Future
     * @throws \parallel\Exception is the Future was already added
     */
-    public function add(string $name, Future $future) : void;
+    public function addTargetFuture(string $name, Future $future) : void;
     
     /*
-    * Shall remove the object with the given name from this Group
+    * Shall remove the given target by name
     * @throws \parallel\Exception if the object was not found
     */
-    public function remove(string $name) : void;
+    public function removeTarget(string $target) : void;
     
     /*
-    * Shall set the timeout for performs on this Group
+    * Shall set the wait timeout
     * @param non-negative timeout in microseconds
     * Note: timeouts are not enabled by default
     */
-    public function setTimeout(int $timeout) : void;
+    public function setWaitTimeout(int $timeout) : void;
 
     /*
-    * Shall perform non-blocking reads on this Group
+    * Shall wait for a Read event
     * @throws \parallel\Group\Timeout if timeout is reached
-    * Note: returns Result for the first succesful operation, returns
-    *       false when there are no operations left to perform 
     */
-    public function perform() : Result|false;
+    public function wait() : Event|false;
     
     /*
-    * Shall perform non-blocking reads and writes on this Group
+    * Shall wait for a Read or Write event
     * @throws \parallel\Group\Timeout if timeout is reached
-    * Note: Where an object is included in this Group and targetted
-    *       by payloads, a non-blocking write is performed.
-    *       Where an object is not targetted by payloads, a non-blocking
-    *       read is performed.
-    *       Where a write succeeds, it is removed from payloads and this Group.
-    *       Where a read succeeds, it is removed from this Group.
     */
-    public function perform(Payloads $payloads) : Result|false;
+    public function wait(Payloads $payloads) : Event|false;
 }
 
-final class parallel\Group\Payloads {
+final class parallel\Events\Payloads {
     /*
     * Shall set payload for the given target
     * Note: target should be the name of a Channel or Future
@@ -209,13 +201,13 @@ final class parallel\Group\Payloads {
     public function clear() : void;
 }
 
-final class parallel\Group\Result {
+final class parallel\Events\Event {
     /*
-    * Shall be either Result::Read or Result::Write
+    * Event::Read or Event::Write
     */
     public int     $type;
     /*
-    * Shall be the name $object had in Group
+    * Shall be the name of $object
     */
     public string  $source;
     /*

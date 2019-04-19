@@ -1,5 +1,5 @@
 --TEST--
-Check group remove non-existent
+Check events add non-channel
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -8,15 +8,15 @@ if (!extension_loaded('parallel')) {
 ?>
 --FILE--
 <?php
-$group = new \parallel\Group();
+$events = new \parallel\Events();
 
 try {
-    $group->remove("nothing");
+    $events->addTargetChannel(new stdClass);
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }
 ?>
 --EXPECT--
-string(32) "object named "nothing" not found"
+string(26) "expected \parallel\Channel"
 
 

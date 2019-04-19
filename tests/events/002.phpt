@@ -1,5 +1,5 @@
 --TEST--
-Check group add bad arguments
+Check events add non-future
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -8,17 +8,16 @@ if (!extension_loaded('parallel')) {
 ?>
 --FILE--
 <?php
-$group = new \parallel\Group();
+$events = new \parallel\Events();
 
 try {
-    $group->add(1,2,3);
+    $events->addTargetFuture("future", new stdClass);
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }
 ?>
 --EXPECT--
-string(58) "expected string and \parallel\Future, or \parallel\Channel"
-
+string(41) "expected target name and \parallel\Future"
 
 
 

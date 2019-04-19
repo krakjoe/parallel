@@ -1,5 +1,5 @@
 --TEST--
-Check group add duplicate
+Check events add duplicate
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -8,18 +8,18 @@ if (!extension_loaded('parallel')) {
 ?>
 --FILE--
 <?php
-$group = new \parallel\Group();
+$events = new \parallel\Events();
 $channel = \parallel\Channel::make("buffer");
 
 try {
-    $group->add($channel);
-    $group->add($channel);
+    $events->addTargetChannel($channel);
+    $events->addTargetChannel($channel);
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }
 ?>
 --EXPECT--
-string(35) "object named "buffer" already added"
+string(35) "target named "buffer" already added"
 
 
 

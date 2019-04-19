@@ -15,15 +15,15 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_GROUP_PAYLOADS_H
-#define HAVE_PARALLEL_GROUP_PAYLOADS_H
+#ifndef HAVE_PARALLEL_EVENTS_PAYLOADS_H
+#define HAVE_PARALLEL_EVENTS_PAYLOADS_H
 
-extern zend_class_entry* php_parallel_group_payloads_ce;
+extern zend_class_entry* php_parallel_events_payloads_ce;
 
-void php_parallel_group_payloads_startup(void);
-void php_parallel_group_payloads_shutdown(void);
+void php_parallel_events_payloads_startup(void);
+void php_parallel_events_payloads_shutdown(void);
 
-zend_bool php_parallel_group_payloads_exists(zval *zv, zend_string *target);
-zval*     php_parallel_group_payloads_find(zval *payloads, zend_string *target);
-zend_bool php_parallel_group_payloads_remove(zval *payloads, zend_string *target);
+zend_bool php_parallel_events_payloads_exists(zval *zv, zend_string *target);
+zval*     php_parallel_events_payloads_find(zval *payloads, zend_string *target);
+zend_bool php_parallel_events_payloads_remove(zval *payloads, zend_string *target);
 #endif

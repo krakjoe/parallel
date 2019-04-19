@@ -15,25 +15,25 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_GROUP_H
-#define HAVE_PARALLEL_GROUP_H
+#ifndef HAVE_PARALLEL_EVENTS_EVENT_H
+#define HAVE_PARALLEL_EVENTS_EVENT_H
 
-typedef struct _php_parallel_group_t {
-    HashTable   set;
-    HashTable   state;
-    zend_long   timeout;
-    zend_object std;
-} php_parallel_group_t;
+#include "events.h"
 
-static zend_always_inline php_parallel_group_t* php_parallel_group_fetch(zend_object *o) {
-	return (php_parallel_group_t*) (((char*) o) - XtOffsetOf(php_parallel_group_t, std));
-}
+typedef enum {
+    PHP_PARALLEL_EVENTS_EVENT_READ = 1,
+    PHP_PARALLEL_EVENTS_EVENT_WRITE
+} php_parallel_events_event_type_t;
 
-static zend_always_inline php_parallel_group_t* php_parallel_group_from(zval *z) {
-	return php_parallel_group_fetch(Z_OBJ_P(z));
-}
+void php_parallel_events_event_startup(void);
+void php_parallel_events_event_shutdown(void);
 
-void php_parallel_group_startup(void);
-void php_parallel_group_shutdown(void);
+void php_parallel_events_event_construct(
+        php_parallel_events_t *events,
+        php_parallel_events_event_type_t type, 
+        zend_string *source,
+        zend_object *object,
+        zval *value,
+        zval *return_value);
 
 #endif

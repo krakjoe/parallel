@@ -1,5 +1,5 @@
 --TEST--
-Check group perform basic
+Check events wait basic
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -9,26 +9,26 @@ if (!extension_loaded('parallel')) {
 --FILE--
 <?php
 use \parallel\Channel;
-use \parallel\Group;
-use \parallel\Group\Result;
-use \parallel\Group\Payloads;
+use \parallel\Events;
+use \parallel\Events\Event;
+use \parallel\Events\Payloads;
 
 $channel = Channel::make("buffer", Channel::Infinite);
 
-$group = new Group();
-$group->add($channel);
+$events = new Events();
+$events->addTargetChannel($channel);
 
 $payloads = new Payloads();
 $payloads->add("buffer", "input");
 
-while (($result = $group->perform($payloads))) {
+while (($result = $events->wait($payloads))) {
     switch ($result->type) {
-        case Result::Read:
+        case Event::Read:
             var_dump($result->value);
             return;
         
-        case Result::Write:
-            $group->add($channel);
+        case Event::Write:
+            $events->addTargetChannel($channel);
         break;
     }
 }
