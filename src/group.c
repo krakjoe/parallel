@@ -22,20 +22,13 @@
 #include "handlers.h"
 #include "channel.h"
 #include "future.h"
+#include "result.h"
 
 #include "ext/standard/php_mt_rand.h"
 
 zend_class_entry* php_parallel_group_ce;
 zend_class_entry* php_parallel_group_timeout_ce;
 zend_object_handlers php_parallel_group_handlers;
-
-zend_class_entry* php_parallel_group_result_ce;
-zend_object_handlers php_parallel_group_result_handlers;
-
-static zend_string *php_parallel_group_result_type;
-static zend_string *php_parallel_group_result_source;
-static zend_string *php_parallel_group_result_object;
-static zend_string *php_parallel_group_result_value;
 
 typedef enum {
     PHP_PARALLEL_GROUP_OK = 0,
@@ -50,13 +43,6 @@ typedef enum {
     PHP_PARALLEL_GROUP_FUTURE
 } php_parallel_group_type_t;
 
-typedef struct _php_parallel_group_t {
-    HashTable   set;
-    HashTable   state;
-    zend_long   timeout;
-    zend_object std;
-} php_parallel_group_t;
-
 typedef struct _php_parallel_group_state_t {
     php_parallel_group_type_t type;
     zend_string *name;
@@ -66,27 +52,6 @@ typedef struct _php_parallel_group_state_t {
 } php_parallel_group_state_t;
 
 #define php_parallel_group_state_initializer {0, NULL, 0, 0, NULL}
-
-typedef enum {
-    PHP_PARALLEL_GROUP_RESULT_READ = 1,
-    PHP_PARALLEL_GROUP_RESULT_WRITE
-} php_parallel_group_result_type_t;
-
-static zend_always_inline php_parallel_group_t* php_parallel_group_fetch(zend_object *o) {
-	return (php_parallel_group_t*) (((char*) o) - XtOffsetOf(php_parallel_group_t, std));
-}
-
-static zend_always_inline php_parallel_group_t* php_parallel_group_from(zval *z) {
-	return php_parallel_group_fetch(Z_OBJ_P(z));
-}
-
-static void php_parallel_group_result_construct(
-                php_parallel_group_t *group,
-                php_parallel_group_result_type_t type, 
-                zend_string *source,
-                zend_object *object,
-                zval *value,
-                zval *return_value);
 
 void php_parallel_group_state_free(zval *zv) {
     efree(Z_PTR_P(zv));
@@ -395,95 +360,6 @@ static void php_parallel_group_destroy(zend_object *zo) {
     zend_object_std_dtor(zo);
 }
 
-static zend_always_inline void php_parallel_group_result_set_type(zval *result, php_parallel_group_result_type_t type) {
-    zval tmp;
-    
-    ZVAL_LONG(&tmp, type);
-    
-#if PHP_VERSION_ID >= 80000
-    zend_std_write_property(Z_OBJ_P(result), php_parallel_group_result_type, &tmp, NULL);
-#else
-    {
-        zval key;
-        
-        ZVAL_STR(&key, php_parallel_group_result_type);
-        
-        zend_std_write_property(result, &key, &tmp, NULL);
-    }
-#endif
-}
-
-static zend_always_inline void php_parallel_group_result_set_source(zval *result, zend_string *source) {
-    zval tmp;
-    
-    ZVAL_STR(&tmp, source);
-    
-#if PHP_VERSION_ID >= 80000
-    zend_std_write_property(Z_OBJ_P(result), php_parallel_group_result_source, &tmp, NULL);
-#else
-    {
-        zval key;
-        
-        ZVAL_STR(&key, php_parallel_group_result_source);
-        
-        zend_std_write_property(result, &key, &tmp, NULL);
-    }
-#endif
-}
-
-static zend_always_inline void php_parallel_group_result_set_object(zval *result, zend_object *object) {
-    zval tmp;
-    
-    ZVAL_OBJ(&tmp, object);
-    
-#if PHP_VERSION_ID >= 80000
-    zend_std_write_property(Z_OBJ_P(result), php_parallel_group_result_object, &tmp, NULL);
-#else
-    {
-        zval key;
-        
-        ZVAL_STR(&key, php_parallel_group_result_object);
-        
-        zend_std_write_property(result, &key, &tmp, NULL);
-    }
-#endif
-}
-
-static zend_always_inline void php_parallel_group_result_set_value(zval *result, zval *value) {    
-#if PHP_VERSION_ID >= 80000
-    zend_std_write_property(Z_OBJ_P(result), php_parallel_group_result_value, value, NULL);
-#else
-    {
-        zval key;
-        
-        ZVAL_STR(&key, php_parallel_group_result_value);
-        
-        zend_std_write_property(result, &key, value, NULL);
-    }
-#endif
-    Z_TRY_DELREF_P(value);
-}
-
-static void php_parallel_group_result_construct(
-                php_parallel_group_t *group,
-                php_parallel_group_result_type_t type, 
-                zend_string *source,
-                zend_object *object,
-                zval *value,
-                zval *return_value) {
-    object_init_ex(return_value, php_parallel_group_result_ce);
-    
-    php_parallel_group_result_set_type(return_value, type);
-    php_parallel_group_result_set_source(return_value, source);
-    php_parallel_group_result_set_object(return_value, object);
-    
-    if (type == PHP_PARALLEL_GROUP_RESULT_READ) {
-        php_parallel_group_result_set_value(return_value, value);
-    }
-    
-    zend_hash_del(&group->set, source);
-}
-
 PHP_METHOD(Group, __construct)
 {
     php_parallel_group_t *group = php_parallel_group_from(getThis());
@@ -659,17 +535,6 @@ zend_function_entry php_parallel_group_methods[] = {
     PHP_FE_END
 };
 
-PHP_METHOD(Result, __construct)
-{
-    php_parallel_exception(
-        "construction of Group\\Result objects is not allowed");
-}
-
-zend_function_entry php_parallel_group_result_methods[] = {
-    PHP_ME(Result, __construct, NULL, ZEND_ACC_PUBLIC)
-    PHP_FE_END
-};
-
 void php_parallel_group_startup(void) {
     zend_class_entry ce;
     
@@ -687,41 +552,15 @@ void php_parallel_group_startup(void) {
 	php_parallel_group_ce->create_object = php_parallel_group_create;
 	php_parallel_group_ce->ce_flags |= ZEND_ACC_FINAL;
 	
-	INIT_NS_CLASS_ENTRY(ce, "parallel\\Group", "Result", php_parallel_group_result_methods);
-	
-	php_parallel_group_result_ce = zend_register_internal_class(&ce);
-	
-	zend_declare_class_constant_long(php_parallel_group_result_ce, ZEND_STRL("Read"), PHP_PARALLEL_GROUP_RESULT_READ);
-	zend_declare_class_constant_long(php_parallel_group_result_ce, ZEND_STRL("Write"), PHP_PARALLEL_GROUP_RESULT_WRITE);
-	
-	php_parallel_group_result_type = 
-	    zend_new_interned_string(
-	        zend_string_init(ZEND_STRL("type"), 1));
-	php_parallel_group_result_source = 
-	    zend_new_interned_string(
-	        zend_string_init(ZEND_STRL("source"), 1));
-	php_parallel_group_result_object = 
-	    zend_new_interned_string(
-	        zend_string_init(ZEND_STRL("object"), 1));
-	php_parallel_group_result_value = 
-	    zend_new_interned_string(
-	        zend_string_init(ZEND_STRL("value"), 1));
-	        
-	zend_declare_property_null(php_parallel_group_result_ce, ZEND_STRL("type"), ZEND_ACC_PUBLIC);
-	zend_declare_property_null(php_parallel_group_result_ce, ZEND_STRL("source"), ZEND_ACC_PUBLIC);
-	zend_declare_property_null(php_parallel_group_result_ce, ZEND_STRL("object"), ZEND_ACC_PUBLIC);
-	zend_declare_property_null(php_parallel_group_result_ce, ZEND_STRL("value"), ZEND_ACC_PUBLIC);
-	
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Group", "Timeout", NULL);
 	
 	php_parallel_group_timeout_ce = zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
 	php_parallel_group_timeout_ce->ce_flags |= ZEND_ACC_FINAL;
+	
+	php_parallel_group_result_startup();
 }
 
 void php_parallel_group_shutdown(void) {
-    zend_string_release(php_parallel_group_result_type);
-    zend_string_release(php_parallel_group_result_source);
-    zend_string_release(php_parallel_group_result_object);
-    zend_string_release(php_parallel_group_result_value);
+    php_parallel_group_result_shutdown();
 }
 #endif
