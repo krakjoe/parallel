@@ -10,23 +10,24 @@ if (!extension_loaded('parallel')) {
 <?php
 use \parallel\Channel;
 use \parallel\Group;
+use \parallel\Group\Result;
+use \parallel\Group\Payloads;
 
 $channel = Channel::make("buffer", Channel::Infinite);
 
 $group = new Group();
 $group->add($channel);
 
-$payloads = [
-    "buffer" => "input"
-];
+$payloads = new Payloads();
+$payloads->add("buffer", "input");
 
 while (($result = $group->perform($payloads))) {
     switch ($result->type) {
-        case Group\Result::Read:
+        case Result::Read:
             var_dump($result->value);
             return;
         
-        case Group\Result::Write:
+        case Result::Write:
             $group->add($channel);
         break;
     }

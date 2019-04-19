@@ -12,6 +12,8 @@ use \parallel\Runtime;
 use \parallel\Channel;
 use \parallel\Future;
 use \parallel\Group;
+use \parallel\Group\Result;
+use \parallel\Group\Payloads;
 
 $parallel = new \parallel\Runtime();
 
@@ -24,13 +26,12 @@ $group->add("future", $parallel->run(function(){
     return [42];
 }));
 
-$payloads = [
-    "channel" => "input"
-];
+$payloads = new Payloads();
+$payloads->add("channel", "input");
 
 while (($result = $group->perform($payloads))) {
     switch ($result->type) {
-        case Group\Result::Read:
+        case Result::Read:
             if ($result->object instanceof Future &&
                 $result->value == [42]) {
                 echo "OK\n";
@@ -42,7 +43,7 @@ while (($result = $group->perform($payloads))) {
             }
         break;
         
-        case Group\Result::Write:
+        case Result::Write:
             $group->add($channel);
         break;
     }

@@ -171,14 +171,14 @@ final class parallel\Group {
     * Shall remove the object with the given name from this Group
     * @throws \parallel\Exception if the object was not found
     */
-    public function remove(string $name);
+    public function remove(string $name) : void;
     
     /*
     * Shall set the timeout for performs on this Group
     * @param non-negative timeout in microseconds
     * Note: timeouts are not enabled by default
     */
-    public function setTimeout(int $timeout);
+    public function setTimeout(int $timeout) : void;
 
     /*
     * Shall perform non-blocking reads on this Group
@@ -191,16 +191,28 @@ final class parallel\Group {
     /*
     * Shall perform non-blocking reads and writes on this Group
     * @throws \parallel\Group\Timeout if timeout is reached
-    * Note: Elements of $payloads should be in the form:
-    *       string $name => $value
-    *       Where an object is included in this Group and named
-    *       in payloads, a non-blocking write is performed.
-    *       Where an object is not included payloads, a non-blocking
+    * Note: Where an object is included in this Group and targetted
+    *       by payloads, a non-blocking write is performed.
+    *       Where an object is not targetted by payloads, a non-blocking
     *       read is performed.
     *       Where a write succeeds, it is removed from payloads and this Group.
     *       Where a read succeeds, it is removed from this Group.
     */
-    public function perform(array &$payloads) : Result|false;
+    public function perform(Payloads $payloads) : Result|false;
+}
+
+final class parallel\Group\Payloads {
+    /*
+    * Shall set the payload for the given target
+    * Note: target should be the name of a Channel or Future
+    */
+    public function add(string $target, $value) : void;
+    
+    /*
+    * Shall remove the payload for the given target
+    * Note: target should be the name of a Channel or Future
+    */
+    public function remove(string $target) : void;
 }
 
 final class parallel\Group\Result {

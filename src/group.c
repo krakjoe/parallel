@@ -23,6 +23,7 @@
 #include "channel.h"
 #include "future.h"
 #include "result.h"
+#include "payloads.h"
 
 #include "ext/standard/php_mt_rand.h"
 
@@ -139,7 +140,7 @@ static zend_always_inline zend_ulong php_parallel_group_perform_begin(php_parall
             state.type     = PHP_PARALLEL_GROUP_LINK;
             state.name     = name;
             
-            if (payloads && zend_hash_exists(Z_ARRVAL_P(payloads), name)) {
+            if (php_parallel_group_payloads_exists(payloads, name)) {
                 state.writable = php_parallel_link_writable(channel->link);   
             } else {
                 state.readable = php_parallel_link_readable(channel->link);
@@ -209,7 +210,7 @@ static zend_always_inline zend_bool php_parallel_group_perform_link(
         php_parallel_channel_fetch(state->object);
     zval *payload;
 
-    if (payloads && (payload = zend_hash_find(Z_ARRVAL_P(payloads), state->name))) {
+    if ((payload = php_parallel_group_payloads_find(payloads, state->name))) {
         
         if (state->writable) {
         
@@ -223,9 +224,8 @@ static zend_always_inline zend_bool php_parallel_group_perform_link(
                     NULL,
                     retval);
                 
-                zend_hash_del(
-                    Z_ARRVAL_P(payloads), state->name);
-                    
+                php_parallel_group_payloads_remove(payloads, state->name);
+                
                 return 1;
             }
         }
@@ -502,7 +502,7 @@ PHP_METHOD(Group, setTimeout)
 }
 
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_group_perform_arginfo, 0, 0, 0)
-	ZEND_ARG_TYPE_INFO(1, payloads, IS_ARRAY, 0)
+	ZEND_ARG_OBJ_INFO(0, payloads, \\parallel\\Group\\Payloads, 0)
 ZEND_END_ARG_INFO()
 
 PHP_METHOD(Group, perform)
@@ -512,7 +512,7 @@ PHP_METHOD(Group, perform)
     
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
         Z_PARAM_OPTIONAL
-        Z_PARAM_ARRAY_EX2(payloads, 1, 1, 1)
+        Z_PARAM_OBJECT_OF_CLASS(payloads, php_parallel_group_payloads_ce)
     ZEND_PARSE_PARAMETERS_END_EX(
         php_parallel_exception(
             "expected optional payloads");
@@ -558,9 +558,11 @@ void php_parallel_group_startup(void) {
 	php_parallel_group_timeout_ce->ce_flags |= ZEND_ACC_FINAL;
 	
 	php_parallel_group_result_startup();
+	php_parallel_group_payloads_startup();
 }
 
 void php_parallel_group_shutdown(void) {
     php_parallel_group_result_shutdown();
+    php_parallel_group_payloads_shutdown();
 }
 #endif

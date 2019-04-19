@@ -28,7 +28,7 @@ if test "$PHP_PARALLEL" != "no"; then
     AX_CHECK_COMPILE_FLAG(-fstack-protector-strong, _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fstack-protector-strong")
   fi
 
-  PHP_NEW_EXTENSION(parallel, php_parallel.c src/monitor.c src/parallel.c src/scheduler.c src/future.c src/copy.c src/channel.c src/link.c src/handlers.c src/group.c src/result.c, $ext_shared,, "-Wall -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 $_MAINTAINER_CFLAGS")
+  PHP_NEW_EXTENSION(parallel, php_parallel.c src/monitor.c src/parallel.c src/scheduler.c src/future.c src/copy.c src/channel.c src/link.c src/handlers.c src/group.c src/result.c src/payloads.c, $ext_shared,, "-Wall -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 $_MAINTAINER_CFLAGS")
 
   PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
   PHP_ADD_INCLUDE($ext_srcdir)
