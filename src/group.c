@@ -53,6 +53,7 @@ typedef enum {
 typedef struct _php_parallel_group_t {
     HashTable   set;
     HashTable   state;
+    zend_long   timeout;
     zend_object std;
 } php_parallel_group_t;
 
@@ -101,6 +102,8 @@ static zend_object* php_parallel_group_create(zend_class_entry *type) {
     group->std.handlers = &php_parallel_group_handlers;
     
     zend_hash_init(&group->set, 32, NULL, ZVAL_PTR_DTOR, 0);
+    
+    group->timeout = -1;
     
     return &group->std;
 }
@@ -308,7 +311,7 @@ static zend_always_inline zend_bool php_parallel_group_perform_future(
     return 0;
 }
 
-static void php_parallel_group_perform(php_parallel_group_t *group, zval *payloads, zval *retval, zend_long timeout) {
+static void php_parallel_group_perform(php_parallel_group_t *group, zval *payloads, zval *retval) {
     struct timeval  now,
                     stop;
     
@@ -317,10 +320,10 @@ static void php_parallel_group_perform(php_parallel_group_t *group, zval *payloa
         return;
     }
     
-    if (timeout > -1 && gettimeofday(&stop, NULL) == SUCCESS) {
-        stop.tv_sec += (timeout / 1000000L);
-	    stop.tv_sec += (stop.tv_usec + (timeout % 1000000L)) / 1000000L;
-	    stop.tv_usec = (stop.tv_usec + (timeout % 1000000L)) % 1000000L;
+    if (group->timeout > -1 && gettimeofday(&stop, NULL) == SUCCESS) {
+        stop.tv_sec += (group->timeout / 1000000L);
+	    stop.tv_sec += (stop.tv_usec + (group->timeout % 1000000L)) / 1000000L;
+	    stop.tv_usec = (stop.tv_usec + (group->timeout % 1000000L)) % 1000000L;
     }
 
     do {
@@ -331,7 +334,7 @@ static void php_parallel_group_perform(php_parallel_group_t *group, zval *payloa
             php_parallel_group_perform_begin(group, payloads);
 
         if (size == 0) {
-            if (timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
+            if (group->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
                  if (now.tv_sec >= stop.tv_sec &&
                      now.tv_usec >= stop.tv_usec) {
                         php_parallel_exception_ex(
@@ -340,7 +343,7 @@ static void php_parallel_group_perform(php_parallel_group_t *group, zval *payloa
                         break;
                  }
                  
-                 usleep(timeout / 1000);
+                 usleep(group->timeout / 1000);
             }
             
 _php_parallel_group_perform_continue:
@@ -602,69 +605,56 @@ PHP_METHOD(Group, remove)
     }
 }
 
+ZEND_BEGIN_ARG_INFO_EX(php_parallel_group_set_timeout_arginfo, 0, 0, 1)
+    ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Group, setTimeout)
+{
+    php_parallel_group_t *group = php_parallel_group_from(getThis());
+    zend_long timeout = -1;
+    
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+        Z_PARAM_LONG(timeout)
+    ZEND_PARSE_PARAMETERS_END_EX(
+        php_parallel_exception(
+            "expected timeout");
+        return;
+    );
+    
+    group->timeout = timeout;
+}
+
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_group_perform_arginfo, 0, 0, 0)
-	ZEND_ARG_INFO(ZEND_SEND_PREFER_REF, payloads)
+	ZEND_ARG_TYPE_INFO(1, payloads, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
 PHP_METHOD(Group, perform)
 {
     php_parallel_group_t *group = php_parallel_group_from(getThis());
     zval *payloads = NULL;
-    zend_long timeout = -1;
     
-    switch (ZEND_NUM_ARGS()) {
-        case 0:
-            break;
-        
-        case 1:
-            ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
-	            Z_PARAM_ARRAY_EX2(payloads, 1, 1, 1)
-            ZEND_PARSE_PARAMETERS_END_EX(
-                ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
-	                Z_PARAM_LONG(timeout)
-                ZEND_PARSE_PARAMETERS_END_EX(
-                    php_parallel_exception(
-                        "expected payloads or timeout");
-                    return;
-                );
-                
-                if (timeout < 0) {
-                    php_parallel_exception(
-                        "timeout must be positive");
-                    return;
-                }
-            );
-        break;
-        
-        case 2:
-            ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 2, 2)
-	            Z_PARAM_ARRAY_EX2(payloads, 1, 1, 1)
-	            Z_PARAM_LONG(timeout)
-            ZEND_PARSE_PARAMETERS_END_EX(
-                php_parallel_exception(
-                    "expected payloads and timeout");
-                return;
-            );
-            
-            if (timeout < 0) {
-                php_parallel_exception(
-                    "timeout must be positive");
-                return;
-            }
-        break;
-    }
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY_EX2(payloads, 1, 1, 1)
+    ZEND_PARSE_PARAMETERS_END_EX(
+        php_parallel_exception(
+            "expected optional payloads");
+        return;
+    );
     
     if (zend_hash_num_elements(&group->set) == 0) {
         RETURN_FALSE;
     }
     
-    php_parallel_group_perform(group, payloads, return_value, timeout);
+    php_parallel_group_perform(group, payloads, return_value);
 }
 
 zend_function_entry php_parallel_group_methods[] = {
     PHP_ME(Group, __construct, NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Group, add, NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Group, remove, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Group, setTimeout, php_parallel_group_set_timeout_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Group, perform, php_parallel_group_perform_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };

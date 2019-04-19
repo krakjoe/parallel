@@ -172,40 +172,24 @@ final class parallel\Group {
     * @throws \parallel\Exception if the object was not found
     */
     public function remove(string $name);
+    
+    /*
+    * Shall set the timeout for performs on this Group
+    * @param non-negative timeout in microseconds
+    * Note: timeouts are not enabled by default
+    */
+    public function setTimeout(int $timeout);
 
     /*
     * Shall perform non-blocking reads on this Group
+    * @throws \parallel\Group\Timeout if timeout is reached
     * Note: returns Result for the first succesful operation, returns
     *       false when there are no operations left to perform 
     */
     public function perform() : Result|false;
-
-    /*
-    * Shall perform non-blocking reads on this Group
-    * @param non-negative timeout in microseconds
-    * @throws \parallel\Group\Timeout if timeout is reached 
-    * Note: returns Result for the first succesful operation, returns
-    *       false when there are no operations left to perform
-    */
-    public function perform(int $timeout) : Result|false;
     
     /*
     * Shall perform non-blocking reads and writes on this Group
-    * Note: Elements of $payloads should be in the form:
-    *       string $name => $value
-    *       Where an object is included in this Group and named
-    *       in payloads, a non-blocking write is performed.
-    *       Where an object is not included payloads, a non-blocking
-    *       read is performed.
-    *       Where a write succeeds, it is removed from payloads and this Group.
-    *       Where a read succeeds, it is removed from this Group.
-    */
-    public function perform(array &$payloads) : Result|false;
-    
-    /*
-    * Shall perform non-blocking reads and writes on this Group
-    * @param payloads
-    * @param non-negative timeout in microseconds
     * @throws \parallel\Group\Timeout if timeout is reached
     * Note: Elements of $payloads should be in the form:
     *       string $name => $value
@@ -216,7 +200,7 @@ final class parallel\Group {
     *       Where a write succeeds, it is removed from payloads and this Group.
     *       Where a read succeeds, it is removed from this Group.
     */
-    public function perform(array &$payloads, int $timeout) : Result|false;
+    public function perform(array &$payloads) : Result|false;
 }
 
 final class parallel\Group\Result {
