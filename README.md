@@ -149,13 +149,6 @@ final class parallel\Group {
     public function __construct();
     
     /*
-    * Shall construct a new group from the given array
-    * Note: Elements of $group should be in the form:
-    *       string $name => Future|Channel $object
-    */
-    public function __construct(array $group);
-    
-    /*
     * Shall add the given Channel to this Group
     * @throws \parallel\Exception if the Channel was already added
     */

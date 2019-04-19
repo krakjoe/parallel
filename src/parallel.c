@@ -290,7 +290,6 @@ void php_parallel_destroy(zend_object *o) {
 
 	php_parallel_monitor_lock(parallel->monitor);
 
-
 	if (!php_parallel_monitor_check(parallel->monitor, PHP_PARALLEL_CLOSED|PHP_PARALLEL_ERROR)) {
 		php_parallel_monitor_set(
 			parallel->monitor,

@@ -361,52 +361,13 @@ static void php_parallel_group_destroy(zend_object *zo) {
 }
 
 PHP_METHOD(Group, __construct)
-{
-    php_parallel_group_t *group = php_parallel_group_from(getThis());
-    zval *set = NULL;
-    zend_string *name = NULL;
-    zval *object = NULL;
-    
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_ARRAY(set)
+{    
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception("expected optional array of objects");
+        php_parallel_exception(
+            "no parameters expected");
         return;
     );
-    
-    if (!set) {
-        return;
-    }
-    
-    ZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL_P(set), name, object) {
-        zend_string *key;
-        
-        switch (php_parallel_group_add(group, name, object, &key)) {
-            case PHP_PARALLEL_GROUP_OK:
-                break;
-            
-            case PHP_PARALLEL_GROUP_NOT_OK:
-                php_parallel_exception(
-                    "object of class %s cannot be added to \\parallel\\Group", 
-                    ZSTR_VAL(Z_OBJCE_P(object)->name));
-                return;
-                
-            case PHP_PARALLEL_GROUP_NOT_NAMED:
-                php_parallel_exception(
-                    "encountered \\parallel\\Future without name");
-                return;
-                
-            case PHP_PARALLEL_GROUP_NOT_UNIQUE:
-                php_parallel_exception(
-                    "object named \"%s\" already added", 
-                    ZSTR_VAL(key));
-                return;
-            
-            EMPTY_SWITCH_DEFAULT_CASE();
-                
-        }
-    } ZEND_HASH_FOREACH_END();
 }
 
 PHP_METHOD(Group, add)
