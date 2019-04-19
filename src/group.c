@@ -26,6 +26,7 @@
 #include "ext/standard/php_mt_rand.h"
 
 zend_class_entry* php_parallel_group_ce;
+zend_class_entry* php_parallel_group_timeout_ce;
 zend_object_handlers php_parallel_group_handlers;
 
 zend_class_entry* php_parallel_group_result_ce;
@@ -62,6 +63,8 @@ typedef struct _php_parallel_group_state_t {
     zend_bool writable;
     zend_object *object;
 } php_parallel_group_state_t;
+
+#define php_parallel_group_state_initializer {0, NULL, 0, 0, NULL}
 
 typedef enum {
     PHP_PARALLEL_GROUP_RESULT_READ = 1,
@@ -146,7 +149,7 @@ static php_parallel_group_return php_parallel_group_remove(php_parallel_group_t 
     return PHP_PARALLEL_GROUP_OK;
 }
 
-static zend_always_inline zend_ulong php_parallel_group_perform_begin(php_parallel_group_t *group) {
+static zend_always_inline zend_ulong php_parallel_group_perform_begin(php_parallel_group_t *group, zval *payloads) {
     zend_string *name;
     zval *object;
     
@@ -157,7 +160,7 @@ static zend_always_inline zend_ulong php_parallel_group_perform_begin(php_parall
         php_parallel_group_state_free, 0);
     
     ZEND_HASH_FOREACH_STR_KEY_VAL(&group->set, name, object) {
-        php_parallel_group_state_t state;
+        php_parallel_group_state_t state = php_parallel_group_state_initializer;
         
         if (instanceof_function(Z_OBJCE_P(object), php_parallel_channel_ce)) {
             php_parallel_channel_t *channel = 
@@ -167,8 +170,13 @@ static zend_always_inline zend_ulong php_parallel_group_perform_begin(php_parall
             
             state.type     = PHP_PARALLEL_GROUP_LINK;
             state.name     = name;
-            state.readable = php_parallel_link_readable(channel->link);
-            state.writable = php_parallel_link_writable(channel->link);
+            
+            if (payloads && zend_hash_exists(Z_ARRVAL_P(payloads), name)) {
+                state.writable = php_parallel_link_writable(channel->link);   
+            } else {
+                state.readable = php_parallel_link_readable(channel->link);
+            }
+            
             state.object   = Z_OBJ_P(object);
             
             if (state.readable || state.writable) {
@@ -300,10 +308,19 @@ static zend_always_inline zend_bool php_parallel_group_perform_future(
     return 0;
 }
 
-static void php_parallel_group_perform(php_parallel_group_t *group, zval *payloads, zval *retval) {
+static void php_parallel_group_perform(php_parallel_group_t *group, zval *payloads, zval *retval, zend_long timeout) {
+    struct timeval  now,
+                    stop;
+    
     if (zend_hash_num_elements(&group->set) == 0) {
         ZVAL_FALSE(retval);
         return;
+    }
+    
+    if (timeout > -1 && gettimeofday(&stop, NULL) == SUCCESS) {
+        stop.tv_sec += (timeout / 1000000L);
+	    stop.tv_sec += (stop.tv_usec + (timeout % 1000000L)) / 1000000L;
+	    stop.tv_usec = (stop.tv_usec + (timeout % 1000000L)) % 1000000L;
     }
 
     do {
@@ -311,10 +328,21 @@ static void php_parallel_group_perform(php_parallel_group_t *group, zval *payloa
         php_parallel_group_state_t *state;
         zend_long selected;
         zend_long size = 
-            php_parallel_group_perform_begin(group);
+            php_parallel_group_perform_begin(group, payloads);
 
         if (size == 0) {
-            /* todo timeout */
+            if (timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
+                 if (now.tv_sec >= stop.tv_sec &&
+                     now.tv_usec >= stop.tv_usec) {
+                        php_parallel_exception_ex(
+                            php_parallel_group_timeout_ce, 
+                            "timeout occured");
+                        break;
+                 }
+                 
+                 usleep(timeout / 1000);
+            }
+            
 _php_parallel_group_perform_continue:
             php_parallel_group_perform_end(group);
             continue;
@@ -575,28 +603,62 @@ PHP_METHOD(Group, remove)
 }
 
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_group_perform_arginfo, 0, 0, 0)
-	ZEND_ARG_TYPE_INFO(1, payloads, IS_ARRAY, 0)
+	ZEND_ARG_INFO(ZEND_SEND_PREFER_REF, payloads)
 ZEND_END_ARG_INFO()
 
 PHP_METHOD(Group, perform)
 {
     php_parallel_group_t *group = php_parallel_group_from(getThis());
     zval *payloads = NULL;
+    zend_long timeout = -1;
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
-        Z_PARAM_OPTIONAL
-	    Z_PARAM_ARRAY_EX2(payloads, 1, 1, 1)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
-            "expected optional payloads array");
-        return;
-    );
+    switch (ZEND_NUM_ARGS()) {
+        case 0:
+            break;
+        
+        case 1:
+            ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+	            Z_PARAM_ARRAY_EX2(payloads, 1, 1, 1)
+            ZEND_PARSE_PARAMETERS_END_EX(
+                ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+	                Z_PARAM_LONG(timeout)
+                ZEND_PARSE_PARAMETERS_END_EX(
+                    php_parallel_exception(
+                        "expected payloads or timeout");
+                    return;
+                );
+                
+                if (timeout < 0) {
+                    php_parallel_exception(
+                        "timeout must be positive");
+                    return;
+                }
+            );
+        break;
+        
+        case 2:
+            ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 2, 2)
+	            Z_PARAM_ARRAY_EX2(payloads, 1, 1, 1)
+	            Z_PARAM_LONG(timeout)
+            ZEND_PARSE_PARAMETERS_END_EX(
+                php_parallel_exception(
+                    "expected payloads and timeout");
+                return;
+            );
+            
+            if (timeout < 0) {
+                php_parallel_exception(
+                    "timeout must be positive");
+                return;
+            }
+        break;
+    }
     
     if (zend_hash_num_elements(&group->set) == 0) {
         RETURN_FALSE;
     }
     
-    php_parallel_group_perform(group, payloads, return_value);
+    php_parallel_group_perform(group, payloads, return_value, timeout);
 }
 
 zend_function_entry php_parallel_group_methods[] = {
@@ -659,6 +721,11 @@ void php_parallel_group_startup(void) {
 	zend_declare_property_null(php_parallel_group_result_ce, ZEND_STRL("source"), ZEND_ACC_PUBLIC);
 	zend_declare_property_null(php_parallel_group_result_ce, ZEND_STRL("object"), ZEND_ACC_PUBLIC);
 	zend_declare_property_null(php_parallel_group_result_ce, ZEND_STRL("value"), ZEND_ACC_PUBLIC);
+	
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Group", "Timeout", NULL);
+	
+	php_parallel_group_timeout_ce = zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
+	php_parallel_group_timeout_ce->ce_flags |= ZEND_ACC_FINAL;
 }
 
 void php_parallel_group_shutdown(void) {

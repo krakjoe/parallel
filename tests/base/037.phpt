@@ -19,7 +19,7 @@ $future = $parallel->run(function(){
 
 try {
 	$future->value(100000);
-} catch (\parallel\TimeoutException $ex) {
+} catch (\parallel\Future\Timeout $ex) {
 	var_dump($ex->getMessage());
 }
 

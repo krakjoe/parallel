@@ -83,7 +83,7 @@ final class parallel\Future {
 	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
 	* @throws \parallel\Exception if task suffered a fatal error or exception
 	* @throws \parallel\Exception if timeout is negative
-	* @throws \parallel\TimeoutException if timeout is reached
+	* @throws \parallel\Future\Timeout if timeout is reached
 	*/
 	public function value(int $timeout) : mixed;
 
@@ -179,6 +179,15 @@ final class parallel\Group {
     *       false when there are no operations left to perform 
     */
     public function perform() : Result|false;
+
+    /*
+    * Shall perform non-blocking reads on this Group
+    * @param non-negative timeout in microseconds
+    * @throws \parallel\Group\Timeout if timeout is reached 
+    * Note: returns Result for the first succesful operation, returns
+    *       false when there are no operations left to perform
+    */
+    public function perform(int $timeout) : Result|false;
     
     /*
     * Shall perform non-blocking reads and writes on this Group
@@ -192,6 +201,22 @@ final class parallel\Group {
     *       Where a read succeeds, it is removed from this Group.
     */
     public function perform(array &$payloads) : Result|false;
+    
+    /*
+    * Shall perform non-blocking reads and writes on this Group
+    * @param payloads
+    * @param non-negative timeout in microseconds
+    * @throws \parallel\Group\Timeout if timeout is reached
+    * Note: Elements of $payloads should be in the form:
+    *       string $name => $value
+    *       Where an object is included in this Group and named
+    *       in payloads, a non-blocking write is performed.
+    *       Where an object is not included payloads, a non-blocking
+    *       read is performed.
+    *       Where a write succeeds, it is removed from payloads and this Group.
+    *       Where a read succeeds, it is removed from this Group.
+    */
+    public function perform(array &$payloads, int $timeout) : Result|false;
 }
 
 final class parallel\Group\Result {
