@@ -67,7 +67,7 @@ static zend_object* php_parallel_events_create(zend_class_entry *type) {
     
     events->std.handlers = &php_parallel_events_handlers;
     
-    zend_hash_init(&events->set, 32, NULL, ZVAL_PTR_DTOR, 0);
+    zend_hash_init(&events->targets, 32, NULL, ZVAL_PTR_DTOR, 0);
     
     events->timeout = -1;
     
@@ -96,7 +96,7 @@ static php_parallel_events_return php_parallel_events_add(php_parallel_events_t 
     
     *key = name;
     
-    if (!zend_hash_add(&events->set, name, object)) {
+    if (!zend_hash_add(&events->targets, name, object)) {
         return PHP_PARALLEL_EVENTS_NOT_UNIQUE;
     }
     
@@ -107,11 +107,11 @@ static php_parallel_events_return php_parallel_events_add(php_parallel_events_t 
 
 static php_parallel_events_return php_parallel_events_remove(php_parallel_events_t *events, zend_string *name) {
     zend_long size = 
-        zend_hash_num_elements(&events->set);
+        zend_hash_num_elements(&events->targets);
     
-    zend_hash_del(&events->set, name);
+    zend_hash_del(&events->targets, name);
     
-    if (size == zend_hash_num_elements(&events->set)) {
+    if (size == zend_hash_num_elements(&events->targets)) {
         return PHP_PARALLEL_EVENTS_NOT_FOUND;
     }
     
@@ -124,11 +124,11 @@ static zend_always_inline zend_ulong php_parallel_events_wait_begin(php_parallel
     
     zend_hash_init(
         &events->state, 
-        zend_hash_num_elements(&events->set), 
+        zend_hash_num_elements(&events->targets), 
         NULL, 
         php_parallel_events_state_free, 0);
     
-    ZEND_HASH_FOREACH_STR_KEY_VAL(&events->set, name, object) {
+    ZEND_HASH_FOREACH_STR_KEY_VAL(&events->targets, name, object) {
         php_parallel_events_state_t state = php_parallel_events_state_initializer;
         
         if (instanceof_function(Z_OBJCE_P(object), php_parallel_channel_ce)) {
@@ -280,7 +280,7 @@ static void php_parallel_events_wait(php_parallel_events_t *events, zval *payloa
     struct timeval  now,
                     stop;
     
-    if (zend_hash_num_elements(&events->set) == 0) {
+    if (zend_hash_num_elements(&events->targets) == 0) {
         ZVAL_FALSE(retval);
         return;
     }
@@ -355,7 +355,7 @@ static void php_parallel_events_destroy(zend_object *zo) {
     php_parallel_events_t *events =
         php_parallel_events_fetch(zo);
         
-    zend_hash_destroy(&events->set);
+    zend_hash_destroy(&events->targets);
     
     zend_object_std_dtor(zo);
 }
@@ -477,7 +477,7 @@ PHP_METHOD(Events, wait)
         return;
     );
     
-    if (zend_hash_num_elements(&events->set) == 0) {
+    if (zend_hash_num_elements(&events->targets) == 0) {
         RETURN_FALSE;
     }
     

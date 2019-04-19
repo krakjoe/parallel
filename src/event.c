@@ -117,7 +117,7 @@ void php_parallel_events_event_construct(
         php_parallel_events_event_set_value(return_value, value);
     }
     
-    zend_hash_del(&events->set, source);
+    zend_hash_del(&events->targets, source);
 }
 
 PHP_METHOD(Event, __construct)

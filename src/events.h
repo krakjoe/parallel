@@ -19,7 +19,7 @@
 #define HAVE_PARALLEL_EVENTS_H
 
 typedef struct _php_parallel_events_t {
-    HashTable   set;
+    HashTable   targets;
     HashTable   state;
     zend_long   timeout;
     zend_object std;
