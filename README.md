@@ -173,6 +173,11 @@ final class parallel\Events implements \Traversable {
     * Note: timeouts are not enabled by default
     */
     public function setTimeout(int $timeout) : void;
+    
+    /*
+    * Shall poll for the next event
+    */
+    public function poll() : Event|false;
 }
 
 final class parallel\Events\Input {
