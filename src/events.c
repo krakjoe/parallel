@@ -185,9 +185,32 @@ static zend_always_inline zend_ulong php_parallel_events_poll_begin(php_parallel
     return zend_hash_num_elements(&events->state);
 }
 
+static int php_parallel_events_poll_unlock(zval *zv, void *arg) {
+    php_parallel_events_state_t *state = Z_PTR_P(zv),
+                                *selected = arg;
+
+    if (selected && state == selected) {
+        return ZEND_HASH_APPLY_KEEP;
+    }
+    
+    if (state->type == PHP_PARALLEL_EVENTS_LINK) {
+        php_parallel_channel_t *channel = 
+            php_parallel_channel_fetch(state->object);
+
+        php_parallel_link_unlock(channel->link);
+    } else {
+        php_parallel_future_t *future = 
+            php_parallel_future_fetch(state->object);
+        
+        php_parallel_future_unlock(future);
+    }
+    
+    return ZEND_HASH_APPLY_REMOVE;
+}
+
 static zend_always_inline php_parallel_events_state_t* php_parallel_events_poll_select(php_parallel_events_t *events) {
-    php_parallel_events_state_t *state, 
-                                *selected;
+    php_parallel_events_state_t *selected;
+    
     zend_long idx = php_mt_rand_range(
         0, 
         zend_hash_num_elements(&events->state) - 1);
@@ -195,44 +218,18 @@ static zend_always_inline php_parallel_events_state_t* php_parallel_events_poll_
     selected = 
         (php_parallel_events_state_t*)
             zend_hash_index_find_ptr(&events->state, idx);
-        
-    ZEND_HASH_FOREACH_PTR(&events->state, state) {
-        if (state == selected) {
-            continue;
-        }
-        
-        if (state->type == PHP_PARALLEL_EVENTS_LINK) {
-            php_parallel_channel_t *channel = 
-                php_parallel_channel_fetch(state->object);
-
-            php_parallel_link_unlock(channel->link);
-        } else {
-            php_parallel_future_t *future = 
-                php_parallel_future_fetch(state->object);
-            
-            php_parallel_future_unlock(future);
-        }
-    } ZEND_HASH_FOREACH_END();
+    
+    zend_hash_apply_with_argument(
+        &events->state, 
+        php_parallel_events_poll_unlock, selected);
         
     return selected;
 }
 
 static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_t *events) {
-    php_parallel_events_state_t *state;
-    
-    ZEND_HASH_FOREACH_PTR(&events->state, state) {
-        if (state->type == PHP_PARALLEL_EVENTS_LINK) {
-            php_parallel_channel_t *channel = 
-                php_parallel_channel_fetch(state->object);
-
-            php_parallel_link_unlock(channel->link);
-        } else {
-            php_parallel_future_t *future = 
-                php_parallel_future_fetch(state->object);
-            
-            php_parallel_future_unlock(future);
-        }
-    } ZEND_HASH_FOREACH_END();
+    zend_hash_apply_with_argument(
+        &events->state, 
+        php_parallel_events_poll_unlock, NULL);
     
     zend_hash_destroy(&events->state);
 }
