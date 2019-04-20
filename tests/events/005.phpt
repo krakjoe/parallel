@@ -11,11 +11,11 @@ if (!extension_loaded('parallel')) {
 $events = new \parallel\Events();
 $channel = 
     \parallel\Channel::make("buffer");
-$events->addTargetChannel($channel);
+$events->addChannel($channel);
 
 try {
-    $events->removeTarget("buffer");
-    $events->removeTarget("buffer");
+    $events->remove("buffer");
+    $events->remove("buffer");
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage(), $ex->getLine());
 }

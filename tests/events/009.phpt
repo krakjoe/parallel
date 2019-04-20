@@ -1,5 +1,5 @@
 --TEST--
-Check events remove non-existent
+Check Event constructor disallowed
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -8,15 +8,13 @@ if (!extension_loaded('parallel')) {
 ?>
 --FILE--
 <?php
-$events = new \parallel\Events();
-
 try {
-    $events->remove("nothing");
+    new \parallel\Events\Event();
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }
 ?>
 --EXPECT--
-string(32) "target named "nothing" not found"
+string(51) "construction of Events\Event objects is not allowed"
 
 

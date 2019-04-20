@@ -1,5 +1,5 @@
 --TEST--
-Check events wait basic
+Check events loop basic
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -11,28 +11,27 @@ if (!extension_loaded('parallel')) {
 use \parallel\Channel;
 use \parallel\Events;
 use \parallel\Events\Event;
-use \parallel\Events\Payloads;
+use \parallel\Events\Input;
 
 $channel = Channel::make("buffer", Channel::Infinite);
 
-$events = new Events();
-$events->addTargetChannel($channel);
+$input = new Input();
+$input->add("buffer", "input");
 
-$payloads = new Payloads();
-$payloads->add("buffer", "input");
+$events = new Events($input);
+$events->addChannel($channel);
 
-while (($result = $events->wait($payloads))) {
-    switch ($result->type) {
+foreach ($events as $event) {
+    switch ($event->type) {
         case Event::Read:
-            var_dump($result->value);
+            var_dump($event->value);
             return;
         
         case Event::Write:
-            $events->addTargetChannel($channel);
+            $events->addChannel($channel);
         break;
     }
 }
-
 ?>
 --EXPECT--
 string(5) "input"

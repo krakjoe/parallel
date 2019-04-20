@@ -11,7 +11,7 @@ if (!extension_loaded('parallel')) {
 $events = new \parallel\Events();
 
 try {
-    $events->addTargetChannel(new stdClass);
+    $events->addChannel(new stdClass);
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }

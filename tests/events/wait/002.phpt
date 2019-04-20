@@ -13,23 +13,23 @@ use \parallel\Channel;
 use \parallel\Future;
 use \parallel\Events;
 use \parallel\Events\Event;
-use \parallel\Events\Payloads;
+use \parallel\Events\Input;
 
 $parallel = new \parallel\Runtime();
 
 $channel = Channel::make("channel", Channel::Infinite);
 
-$events = new Events();
+$input = new Input();
+$input->add("channel", "input");
 
-$events->addTargetChannel($channel);
-$events->addTargetFuture("future", $parallel->run(function(){
+$events = new Events($input);
+
+$events->addChannel($channel);
+$events->addFuture("future", $parallel->run(function(){
     return [42];
 }));
 
-$payloads = new Payloads();
-$payloads->add("channel", "input");
-
-while (($event = $events->wait($payloads))) {
+foreach ($events as $event) {
     switch ($event->type) {
         case Event::Read:
             if ($event->object instanceof Future &&
@@ -44,7 +44,7 @@ while (($event = $events->wait($payloads))) {
         break;
         
         case Event::Write:
-            $events->addTargetChannel($channel);
+            $events->addChannel($channel);
         break;
     }
 }

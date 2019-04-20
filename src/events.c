@@ -23,7 +23,9 @@
 #include "channel.h"
 #include "future.h"
 #include "event.h"
-#include "payloads.h"
+#include "input.h"
+
+#include "zend_interfaces.h"
 
 #include "ext/standard/php_mt_rand.h"
 
@@ -54,7 +56,7 @@ typedef struct _php_parallel_events_state_t {
 
 #define php_parallel_events_state_initializer {0, NULL, 0, 0, NULL}
 
-void php_parallel_events_state_free(zval *zv) {
+static void php_parallel_events_state_free(zval *zv) {
     efree(Z_PTR_P(zv));
 }
 
@@ -71,10 +73,12 @@ static zend_object* php_parallel_events_create(zend_class_entry *type) {
     
     events->timeout = -1;
     
+    ZVAL_UNDEF(&events->input);
+    
     return &events->std;
 }
 
-static php_parallel_events_return php_parallel_events_add(php_parallel_events_t *events, zend_string *name, zval *object, zend_string **key) {
+static zend_always_inline php_parallel_events_return php_parallel_events_add(php_parallel_events_t *events, zend_string *name, zval *object, zend_string **key) {
     if (Z_TYPE_P(object) != IS_OBJECT) {
         /* ignore noise */
         return PHP_PARALLEL_EVENTS_OK;
@@ -105,7 +109,7 @@ static php_parallel_events_return php_parallel_events_add(php_parallel_events_t 
     return PHP_PARALLEL_EVENTS_OK;
 }
 
-static php_parallel_events_return php_parallel_events_remove(php_parallel_events_t *events, zend_string *name) {
+static zend_always_inline php_parallel_events_return php_parallel_events_remove(php_parallel_events_t *events, zend_string *name) {
     zend_long size = 
         zend_hash_num_elements(&events->targets);
     
@@ -118,7 +122,7 @@ static php_parallel_events_return php_parallel_events_remove(php_parallel_events
     return PHP_PARALLEL_EVENTS_OK;
 }
 
-static zend_always_inline zend_ulong php_parallel_events_wait_begin(php_parallel_events_t *events, zval *payloads) {
+static zend_always_inline zend_ulong php_parallel_events_wait_begin(php_parallel_events_t *events) {
     zend_string *name;
     zval *object;
     
@@ -140,7 +144,7 @@ static zend_always_inline zend_ulong php_parallel_events_wait_begin(php_parallel
             state.type     = PHP_PARALLEL_EVENTS_LINK;
             state.name     = name;
             
-            if (php_parallel_events_payloads_exists(payloads, name)) {
+            if (php_parallel_events_input_exists(&events->input, name)) {
                 state.writable = php_parallel_link_writable(channel->link);   
             } else {
                 state.readable = php_parallel_link_readable(channel->link);
@@ -204,17 +208,16 @@ static zend_always_inline void php_parallel_events_wait_end(php_parallel_events_
 static zend_always_inline zend_bool php_parallel_events_wait_link(
                             php_parallel_events_t *events, 
                             php_parallel_events_state_t *state, 
-                            zval *payloads,
                             zval *retval) {
     php_parallel_channel_t *channel = 
         php_parallel_channel_fetch(state->object);
-    zval *payload;
+    zval *input;
 
-    if ((payload = php_parallel_events_payloads_find(payloads, state->name))) {
+    if ((input = php_parallel_events_input_find(&events->input, state->name))) {
         
         if (state->writable) {
         
-            if (php_parallel_link_send(channel->link, payload)) {
+            if (php_parallel_link_send(channel->link, input)) {
                 
                 php_parallel_events_event_construct(
                     events,
@@ -224,7 +227,7 @@ static zend_always_inline zend_bool php_parallel_events_wait_link(
                     NULL,
                     retval);
                 
-                php_parallel_events_payloads_remove(payloads, state->name);
+                php_parallel_events_input_remove(&events->input, state->name);
                 
                 return 1;
             }
@@ -276,7 +279,7 @@ static zend_always_inline zend_bool php_parallel_events_wait_future(
     return 0;
 }
 
-static void php_parallel_events_wait(php_parallel_events_t *events, zval *payloads, zval *retval) {
+static zend_always_inline void php_parallel_events_wait(php_parallel_events_t *events, zval *retval) {
     struct timeval  now,
                     stop;
     
@@ -296,7 +299,7 @@ static void php_parallel_events_wait(php_parallel_events_t *events, zval *payloa
         php_parallel_events_state_t *state;
         zend_long selected;
         zend_long size = 
-            php_parallel_events_wait_begin(events, payloads);
+            php_parallel_events_wait_begin(events);
 
         if (size == 0) {
             if (events->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
@@ -332,7 +335,6 @@ _php_parallel_events_wait_continue:
             if (php_parallel_events_wait_link(
                     events, 
                     state,
-                    payloads,
                     retval)) {
                 break;        
             }
@@ -355,12 +357,55 @@ static void php_parallel_events_destroy(zend_object *zo) {
     php_parallel_events_t *events =
         php_parallel_events_fetch(zo);
         
+    if (!Z_ISUNDEF(events->input)) {
+        zval_ptr_dtor(&events->input);
+    }
+    
     zend_hash_destroy(&events->targets);
     
     zend_object_std_dtor(zo);
 }
 
-PHP_METHOD(Events, addTargetChannel)
+PHP_METHOD(Events, __construct)
+{
+    php_parallel_events_t *events = php_parallel_events_from(getThis());
+    zval *input = NULL;
+    
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_OBJECT_OF_CLASS(input, php_parallel_events_input_ce)
+    ZEND_PARSE_PARAMETERS_END_EX(
+        php_parallel_exception(
+            "expected optional Input");
+        return;
+    );
+    
+    if (input) {
+        ZVAL_COPY(&events->input, input);
+    }
+}
+
+PHP_METHOD(Events, setInput)
+{
+    php_parallel_events_t *events = php_parallel_events_from(getThis());
+    zval *input;
+    
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+        Z_PARAM_OBJECT_OF_CLASS(input, php_parallel_events_input_ce);
+    ZEND_PARSE_PARAMETERS_END_EX(
+        php_parallel_exception(
+            "expected Input");
+        return;
+    );
+    
+    if (Z_TYPE(events->input) == IS_OBJECT) {
+        zval_ptr_dtor(&events->input);
+    }
+    
+    ZVAL_COPY(&events->input, input);
+}
+
+PHP_METHOD(Events, addChannel)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
     zval *target = NULL;
@@ -386,7 +431,7 @@ PHP_METHOD(Events, addTargetChannel)
     }
 }
 
-PHP_METHOD(Events, addTargetFuture)
+PHP_METHOD(Events, addFuture)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
     zval *target = NULL;
@@ -414,7 +459,7 @@ PHP_METHOD(Events, addTargetFuture)
     }
 }
 
-PHP_METHOD(Events, removeTarget)
+PHP_METHOD(Events, remove)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
     zend_string *name = NULL;
@@ -422,7 +467,7 @@ PHP_METHOD(Events, removeTarget)
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
         Z_PARAM_STR(name)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception("expected string");
+        php_parallel_exception("expected target name");
         return;
     );
     
@@ -439,11 +484,7 @@ PHP_METHOD(Events, removeTarget)
     }
 }
 
-ZEND_BEGIN_ARG_INFO_EX(php_parallel_events_set_wait_timeout_arginfo, 0, 0, 1)
-    ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
-PHP_METHOD(Events, setWaitTimeout)
+PHP_METHOD(Events, setTimeout)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
     zend_long timeout = -1;
@@ -459,39 +500,85 @@ PHP_METHOD(Events, setWaitTimeout)
     events->timeout = timeout;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(php_parallel_events_wait_arginfo, 0, 0, 0)
-	ZEND_ARG_OBJ_INFO(0, payloads, \\parallel\\Events\\Payloads, 0)
-ZEND_END_ARG_INFO()
-
-PHP_METHOD(Events, wait)
-{
-    php_parallel_events_t *events = php_parallel_events_from(getThis());
-    zval *payloads = NULL;
-    
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_OBJECT_OF_CLASS(payloads, php_parallel_events_payloads_ce)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
-            "expected optional payloads");
-        return;
-    );
-    
-    if (zend_hash_num_elements(&events->targets) == 0) {
-        RETURN_FALSE;
-    }
-    
-    php_parallel_events_wait(events, payloads, return_value);
-}
-
 zend_function_entry php_parallel_events_methods[] = {
-    PHP_ME(Events, addTargetChannel, NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, addTargetFuture, NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, removeTarget, NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, setWaitTimeout, php_parallel_events_set_wait_timeout_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, wait, php_parallel_events_wait_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, __construct, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, setInput,    NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, addChannel,  NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, addFuture,   NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, remove,      NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, setTimeout,  NULL, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
+
+typedef struct _php_parallel_events_iterator_t {
+    zend_object_iterator it;
+    zval events;
+    zval event;
+} php_parallel_events_iterator_t;
+
+static void php_parallel_events_iterator_destroy(zend_object_iterator *zo) {
+    php_parallel_events_iterator_t *iterator =
+        (php_parallel_events_iterator_t*) zo;
+    
+    if (!Z_ISUNDEF(iterator->event)) {
+        zval_ptr_dtor(&iterator->event);
+    }
+    
+    zval_ptr_dtor(&iterator->events);
+}
+
+static int php_parallel_events_iterator_valid(zend_object_iterator *zo) {
+    php_parallel_events_iterator_t *iterator =
+        (php_parallel_events_iterator_t*) zo;
+
+    return Z_TYPE(iterator->event) == IS_OBJECT ? SUCCESS : FAILURE;
+}
+
+static void php_parallel_events_iterator_wait(zend_object_iterator *zo) {
+    php_parallel_events_iterator_t *iterator =
+        (php_parallel_events_iterator_t*) zo;
+    php_parallel_events_t *events =
+        php_parallel_events_from(&iterator->events);
+
+    if (Z_TYPE(iterator->event) == IS_OBJECT) {
+        zval_ptr_dtor(&iterator->event);
+    }
+
+    php_parallel_events_wait(events, &iterator->event);
+}
+
+static zval* php_parallel_events_iterator_current(zend_object_iterator *zo) {
+    php_parallel_events_iterator_t *iterator =
+        (php_parallel_events_iterator_t*) zo;
+    
+    return &iterator->event;
+}
+
+zend_object_iterator_funcs php_parallel_events_iterator_functions = {
+    .dtor               = php_parallel_events_iterator_destroy,
+    .valid              = php_parallel_events_iterator_valid,
+    .move_forward       = php_parallel_events_iterator_wait,
+    .get_current_data   = php_parallel_events_iterator_current,
+    .rewind             = php_parallel_events_iterator_wait,
+    .invalidate_current = NULL,
+    .get_current_key    = NULL,
+};
+
+zend_object_iterator* php_parallel_events_iterator_create(zend_class_entry *type, zval *events, int by_ref) {
+    php_parallel_events_iterator_t *iterator = 
+        (php_parallel_events_iterator_t*) 
+            ecalloc(1, sizeof(php_parallel_events_iterator_t) + zend_object_properties_size(type));
+    
+    zend_iterator_init(&iterator->it);
+    
+    iterator->it.funcs = &php_parallel_events_iterator_functions;
+    
+    ZVAL_COPY(&iterator->events, events);
+    
+    ZVAL_UNDEF(&iterator->event);
+    
+    return (zend_object_iterator*) iterator;
+}
 
 void php_parallel_events_startup(void) {
     zend_class_entry ce;
@@ -508,7 +595,10 @@ void php_parallel_events_startup(void) {
 
 	php_parallel_events_ce = zend_register_internal_class(&ce);
 	php_parallel_events_ce->create_object = php_parallel_events_create;
+	php_parallel_events_ce->get_iterator  = php_parallel_events_iterator_create;
 	php_parallel_events_ce->ce_flags |= ZEND_ACC_FINAL;
+	
+    zend_class_implements(php_parallel_events_ce, 1, zend_ce_traversable);
 	
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events", "Timeout", NULL);
 	
@@ -516,11 +606,11 @@ void php_parallel_events_startup(void) {
 	php_parallel_events_timeout_ce->ce_flags |= ZEND_ACC_FINAL;
 	
 	php_parallel_events_event_startup();
-	php_parallel_events_payloads_startup();
+	php_parallel_events_input_startup();
 }
 
 void php_parallel_events_shutdown(void) {
     php_parallel_events_event_shutdown();
-    php_parallel_events_payloads_shutdown();
+    php_parallel_events_input_shutdown();
 }
 #endif

@@ -11,13 +11,27 @@ if (!extension_loaded('parallel')) {
 $events = new \parallel\Events();
 
 try {
-    $events->addTargetFuture("future", new stdClass);
+    $events->addFuture("future", new stdClass);
+} catch (\parallel\Exception $ex) {
+    var_dump($ex->getMessage());
+}
+
+$parallel = new \parallel\Runtime();
+$future = $parallel->run(function(){
+    return true;
+});
+
+$events->addFuture("future", $future);
+
+try {
+    $events->addFuture("future", $future);
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }
 ?>
 --EXPECT--
 string(41) "expected target name and \parallel\Future"
+string(35) "target named "future" already added"
 
 
 

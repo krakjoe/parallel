@@ -11,13 +11,13 @@ if (!extension_loaded('parallel')) {
 $events = new \parallel\Events();
 
 try {
-    $events->addTargetChannel(1,2,3);
+    $events->addChannel(1,2,3);
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }
 
 try {
-    $events->addTargetFuture(1,2,3);
+    $events->addFuture(1,2,3);
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }

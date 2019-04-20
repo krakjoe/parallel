@@ -142,61 +142,54 @@ final class parallel\Channel {
     public const Infinite;
 }
 
-final class parallel\Events {
+final class parallel\Events implements \Traversable {
+
+    /*
+    * Shall construct a new Event loop
+    */
+    public function __construct(Input $input = null);
 
     /*
     * Shall watch for events on the given Channel
     * @throws \parallel\Exception if the Channel was already added
     */
-    public function addTargetChannel(Channel $channel) : void;
+    public function addChannel(Channel $channel) : void;
     
     /*
     * Shall watch for events on the given Future
-    * @throws \parallel\Exception is the Future was already added
+    * @throws \parallel\Exception if the Future was already added
     */
-    public function addTargetFuture(string $name, Future $future) : void;
+    public function addFuture(string $name, Future $future) : void;
     
     /*
     * Shall remove the given target by name
     * @throws \parallel\Exception if the object was not found
     */
-    public function removeTarget(string $target) : void;
+    public function remove(string $target) : void;
     
     /*
-    * Shall set the wait timeout
+    * Shall set the timeout
     * @param non-negative timeout in microseconds
     * Note: timeouts are not enabled by default
     */
-    public function setWaitTimeout(int $timeout) : void;
-
-    /*
-    * Shall wait for a Read event
-    * @throws \parallel\Group\Timeout if timeout is reached
-    */
-    public function wait() : Event|false;
-    
-    /*
-    * Shall wait for a Read or Write event
-    * @throws \parallel\Group\Timeout if timeout is reached
-    */
-    public function wait(Payloads $payloads) : Event|false;
+    public function setTimeout(int $timeout) : void;
 }
 
-final class parallel\Events\Payloads {
+final class parallel\Events\Input {
     /*
-    * Shall set payload for the given target
+    * Shall set input for the given target
     * Note: target should be the name of a Channel or Future
     */
     public function add(string $target, $value) : void;
     
     /*
-    * Shall remove payload for the given target
+    * Shall remove input for the given target
     * Note: target should be the name of a Channel or Future
     */
     public function remove(string $target) : void;
     
     /*
-    * Shall remove payloads for all targets
+    * Shall remove inputs for all targets
     */
     public function clear() : void;
 }

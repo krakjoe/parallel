@@ -12,8 +12,8 @@ $events = new \parallel\Events();
 $channel = \parallel\Channel::make("buffer");
 
 try {
-    $events->addTargetChannel($channel);
-    $events->addTargetChannel($channel);
+    $events->addChannel($channel);
+    $events->addChannel($channel);
 } catch (\parallel\Exception $ex) {
     var_dump($ex->getMessage());
 }
