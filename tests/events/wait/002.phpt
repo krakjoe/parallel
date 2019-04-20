@@ -1,5 +1,5 @@
 --TEST--
-Check events wait future
+Check events loop future
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -22,8 +22,8 @@ $channel = Channel::make("channel", Channel::Infinite);
 $input = new Input();
 $input->add("channel", "input");
 
-$events = new Events($input);
-
+$events = new Events();
+$events->setInput($input);
 $events->addChannel($channel);
 $events->addFuture("future", $parallel->run(function(){
     return [42];

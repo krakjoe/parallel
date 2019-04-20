@@ -366,25 +366,6 @@ static void php_parallel_events_destroy(zend_object *zo) {
     zend_object_std_dtor(zo);
 }
 
-PHP_METHOD(Events, __construct)
-{
-    php_parallel_events_t *events = php_parallel_events_from(getThis());
-    zval *input = NULL;
-    
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_OBJECT_OF_CLASS(input, php_parallel_events_input_ce)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
-            "expected optional Input");
-        return;
-    );
-    
-    if (input) {
-        ZVAL_COPY(&events->input, input);
-    }
-}
-
 PHP_METHOD(Events, setInput)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
@@ -501,7 +482,6 @@ PHP_METHOD(Events, setTimeout)
 }
 
 zend_function_entry php_parallel_events_methods[] = {
-    PHP_ME(Events, __construct, NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Events, setInput,    NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Events, addChannel,  NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Events, addFuture,   NULL, ZEND_ACC_PUBLIC)

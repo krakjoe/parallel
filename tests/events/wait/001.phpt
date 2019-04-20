@@ -1,5 +1,5 @@
 --TEST--
-Check events loop basic
+Check events loop channel
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -15,11 +15,13 @@ use \parallel\Events\Input;
 
 $channel = Channel::make("buffer", Channel::Infinite);
 
+$events = new Events();
+$events->addChannel($channel);
+
 $input = new Input();
 $input->add("buffer", "input");
 
-$events = new Events($input);
-$events->addChannel($channel);
+$events->setInput($input);
 
 foreach ($events as $event) {
     switch ($event->type) {

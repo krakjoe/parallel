@@ -145,12 +145,7 @@ final class parallel\Channel {
 final class parallel\Events implements \Traversable {
 
     /*
-    * Shall construct a new Event loop
-    */
-    public function __construct(Input $input = null);
-    
-    /*
-    * Shall set a new Input for this event loop
+    * Shall set Input for this event loop
     */
     public function setInput(Input $input) : void;
 
