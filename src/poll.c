@@ -27,79 +27,88 @@
 
 #include "ext/standard/php_mt_rand.h"
 
-static void php_parallel_events_state_free(zval *zv) {
-    efree(Z_PTR_P(zv));
-}
-
-static zend_always_inline zend_ulong php_parallel_events_poll_begin(php_parallel_events_t *events) {
-    zend_string *name;
-    zval *object;
+static zend_always_inline zend_bool php_parallel_events_poll_random(php_parallel_events_t *events, zend_string **name, zend_object **object) {
+    uint32_t  size = events->targets.nNumUsed;
+    zend_long  random;
     
-    zend_hash_init(
-        &events->state, 
-        zend_hash_num_elements(&events->targets), 
-        NULL, 
-        php_parallel_events_state_free, 0);
+    if (size == 0) {
+        return 0;
+    }
     
-    ZEND_HASH_FOREACH_STR_KEY_VAL(&events->targets, name, object) {
-        php_parallel_events_state_t state = php_parallel_events_state_initializer;
+    random = php_mt_rand_range(0, (zend_long) size - 1);
+    
+    do {
+        Bucket *bucket = &events->targets.arData[random];
         
-        if (instanceof_function(Z_OBJCE_P(object), php_parallel_channel_ce)) {
-            php_parallel_channel_t *channel = 
-                php_parallel_channel_from(object);
-            
-            php_parallel_link_lock(channel->link);
-            
-            state.type     = PHP_PARALLEL_EVENTS_LINK;
-            state.name     = name;
-            
-            if (php_parallel_events_input_exists(&events->input, name)) {
-                state.writable = php_parallel_link_writable(channel->link);   
-            } else {
-                state.readable = php_parallel_link_readable(channel->link);
-            }
-            
-            state.object   = Z_OBJ_P(object);
-            
-            if (state.readable || state.writable) {
-                zend_hash_next_index_insert_mem(
-                    &events->state,
-                    &state, 
-                    sizeof(php_parallel_events_state_t));
-            } else {
-                php_parallel_link_unlock(channel->link);
-            }
-        } else {
-            php_parallel_future_t *future = 
-                php_parallel_future_from(object);
-            
-            php_parallel_future_lock(future);
-            
-            state.type     = PHP_PARALLEL_EVENTS_FUTURE;
-            state.name     = name;
-            state.readable = php_parallel_future_readable(future);
-            state.object   = Z_OBJ_P(object);
-            
-            if (state.readable) {
-                zend_hash_next_index_insert_mem(
-                    &events->state,
-                    &state, 
-                    sizeof(php_parallel_events_state_t));
-            } else {
-                php_parallel_future_unlock(future);
-            }
+        if (!Z_ISUNDEF(bucket->val)) {
+            *name   = bucket->key;
+            *object = Z_OBJ(bucket->val);
+
+            return 1;
         }
-    } ZEND_HASH_FOREACH_END();
+        
+        random = php_mt_rand_range(0, (zend_long) size - 1);
+    } while(1);
     
-    return zend_hash_num_elements(&events->state);
+    return 0;
 }
 
-static int php_parallel_events_poll_unlock(zval *zv, void *arg) {
-    php_parallel_events_state_t *state = Z_PTR_P(zv),
-                                *selected = arg;
+static zend_always_inline php_parallel_events_state_t* php_parallel_events_poll_begin(php_parallel_events_t *events, php_parallel_events_state_t *state) {
+    zend_string *name;
+    zend_object *object;
+    
+    if (!php_parallel_events_poll_random(events, &name, &object)) {
+        return NULL;
+    }
+    
+    memset(state, 0, sizeof(php_parallel_events_state_t));
+    
+    if (instanceof_function(object->ce, php_parallel_channel_ce)) {
+        php_parallel_channel_t *channel = 
+            php_parallel_channel_fetch(object);
+        
+        php_parallel_link_lock(channel->link);
+        
+        state->type     = PHP_PARALLEL_EVENTS_LINK;
+        state->name     = name;
+        
+        if (php_parallel_events_input_exists(&events->input, name)) {
+            state->writable = php_parallel_link_writable(channel->link);   
+        } else {
+            state->readable = php_parallel_link_readable(channel->link);
+        }
+        
+        state->object   = object;
+        
+        if (state->readable || state->writable) {
+            return state;
+        } else {
+            php_parallel_link_unlock(channel->link);
+        }
+    } else {
+        php_parallel_future_t *future = 
+            php_parallel_future_fetch(object);
+        
+        php_parallel_future_lock(future);
+        
+        state->type     = PHP_PARALLEL_EVENTS_FUTURE;
+        state->name     = name;
+        state->readable = php_parallel_future_readable(future);
+        state->object   = object;
+        
+        if (state->readable) {
+            return state;
+        } else {
+            php_parallel_future_unlock(future);
+        }
+    }
+    
+    return NULL;
+}
 
-    if (selected && state == selected) {
-        return ZEND_HASH_APPLY_KEEP;
+static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_state_t *state) {
+    if (!state) {
+        return;
     }
     
     if (state->type == PHP_PARALLEL_EVENTS_LINK) {
@@ -113,34 +122,6 @@ static int php_parallel_events_poll_unlock(zval *zv, void *arg) {
         
         php_parallel_future_unlock(future);
     }
-    
-    return ZEND_HASH_APPLY_REMOVE;
-}
-
-static zend_always_inline php_parallel_events_state_t* php_parallel_events_poll_select(php_parallel_events_t *events) {
-    php_parallel_events_state_t *selected;
-    
-    zend_long idx = php_mt_rand_range(
-        0, 
-        zend_hash_num_elements(&events->state) - 1);
-
-    selected = 
-        (php_parallel_events_state_t*)
-            zend_hash_index_find_ptr(&events->state, idx);
-    
-    zend_hash_apply_with_argument(
-        &events->state, 
-        php_parallel_events_poll_unlock, selected);
-        
-    return selected;
-}
-
-static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_t *events) {
-    zend_hash_apply_with_argument(
-        &events->state, 
-        php_parallel_events_poll_unlock, NULL);
-    
-    zend_hash_destroy(&events->state);
 }
 
 static zend_always_inline zend_bool php_parallel_events_poll_link(
@@ -217,6 +198,8 @@ static zend_always_inline zend_bool php_parallel_events_poll_future(
 }
 
 void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
+    php_parallel_events_state_t stack, 
+                               *selected;
     struct timeval  now,
                     stop;
     
@@ -232,28 +215,20 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
     }
 
     do {
-        php_parallel_events_state_t *selected;
-        zend_long size = 
-            php_parallel_events_poll_begin(events);
-
-        if (size == 0) {
+        selected = php_parallel_events_poll_begin(events, &stack);
+        
+        if (selected == NULL) {
             if (events->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
                  if (now.tv_sec >= stop.tv_sec &&
                      now.tv_usec >= stop.tv_usec) {
-                        php_parallel_exception_ex(
-                            php_parallel_events_timeout_ce, 
-                            "timeout occured");
-                        break;
+                        goto _php_parallel_events_poll_timeout;
                  }
                  
                  usleep(events->timeout / 1000);
             }
-            
-            php_parallel_events_poll_end(events);
+
             continue;
         }
-        
-        selected = php_parallel_events_poll_select(events);
         
         if (selected->type == PHP_PARALLEL_EVENTS_LINK) {
             if (php_parallel_events_poll_link(
@@ -271,9 +246,13 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
             }
         }
         
-        php_parallel_events_poll_end(events);  
+        php_parallel_events_poll_end(selected);  
     } while (1);
-    
-    php_parallel_events_poll_end(events);  
+
+    php_parallel_events_poll_end(selected);
+    return;
+
+_php_parallel_events_poll_timeout:
+    php_parallel_exception_ex(php_parallel_events_timeout_ce, "timeout occured");
 }
 #endif
