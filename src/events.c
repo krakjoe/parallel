@@ -567,7 +567,7 @@ zend_object_iterator_funcs php_parallel_events_iterator_functions = {
 zend_object_iterator* php_parallel_events_iterator_create(zend_class_entry *type, zval *events, int by_ref) {
     php_parallel_events_iterator_t *iterator = 
         (php_parallel_events_iterator_t*) 
-            ecalloc(1, sizeof(php_parallel_events_iterator_t) + zend_object_properties_size(type));
+            ecalloc(1, sizeof(php_parallel_events_iterator_t));
     
     zend_iterator_init(&iterator->it);
     
@@ -577,7 +577,7 @@ zend_object_iterator* php_parallel_events_iterator_create(zend_class_entry *type
     
     ZVAL_UNDEF(&iterator->event);
     
-    return (zend_object_iterator*) iterator;
+    return &iterator->it;
 }
 
 void php_parallel_events_startup(void) {
