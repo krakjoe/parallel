@@ -122,7 +122,7 @@ static zend_always_inline php_parallel_events_return php_parallel_events_remove(
     return PHP_PARALLEL_EVENTS_OK;
 }
 
-static zend_always_inline zend_ulong php_parallel_events_wait_begin(php_parallel_events_t *events) {
+static zend_always_inline zend_ulong php_parallel_events_poll_begin(php_parallel_events_t *events) {
     zend_string *name;
     zval *object;
     
@@ -185,7 +185,39 @@ static zend_always_inline zend_ulong php_parallel_events_wait_begin(php_parallel
     return zend_hash_num_elements(&events->state);
 }
 
-static zend_always_inline void php_parallel_events_wait_end(php_parallel_events_t *events) {
+static zend_always_inline php_parallel_events_state_t* php_parallel_events_poll_select(php_parallel_events_t *events) {
+    php_parallel_events_state_t *state, 
+                                *selected;
+    zend_long idx = php_mt_rand_range(
+        0, 
+        zend_hash_num_elements(&events->state) - 1);
+
+    selected = 
+        (php_parallel_events_state_t*)
+            zend_hash_index_find_ptr(&events->state, idx);
+        
+    ZEND_HASH_FOREACH_PTR(&events->state, state) {
+        if (state == selected) {
+            continue;
+        }
+        
+        if (state->type == PHP_PARALLEL_EVENTS_LINK) {
+            php_parallel_channel_t *channel = 
+                php_parallel_channel_fetch(state->object);
+
+            php_parallel_link_unlock(channel->link);
+        } else {
+            php_parallel_future_t *future = 
+                php_parallel_future_fetch(state->object);
+            
+            php_parallel_future_unlock(future);
+        }
+    } ZEND_HASH_FOREACH_END();
+        
+    return selected;
+}
+
+static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_t *events) {
     php_parallel_events_state_t *state;
     
     ZEND_HASH_FOREACH_PTR(&events->state, state) {
@@ -205,7 +237,7 @@ static zend_always_inline void php_parallel_events_wait_end(php_parallel_events_
     zend_hash_destroy(&events->state);
 }
 
-static zend_always_inline zend_bool php_parallel_events_wait_link(
+static zend_always_inline zend_bool php_parallel_events_poll_link(
                             php_parallel_events_t *events, 
                             php_parallel_events_state_t *state, 
                             zval *retval) {
@@ -218,7 +250,7 @@ static zend_always_inline zend_bool php_parallel_events_wait_link(
         if (state->writable) {
         
             if (php_parallel_link_send(channel->link, input)) {
-                
+
                 php_parallel_events_event_construct(
                     events,
                     PHP_PARALLEL_EVENTS_EVENT_WRITE,
@@ -226,8 +258,6 @@ static zend_always_inline zend_bool php_parallel_events_wait_link(
                     state->object,
                     NULL,
                     retval);
-                
-                php_parallel_events_input_remove(&events->input, state->name);
                 
                 return 1;
             }
@@ -237,6 +267,7 @@ static zend_always_inline zend_bool php_parallel_events_wait_link(
             zval read;
             
             if (php_parallel_link_recv(channel->link, &read)) {
+            
                 php_parallel_events_event_construct(
                     events,
                     PHP_PARALLEL_EVENTS_EVENT_READ,
@@ -253,7 +284,7 @@ static zend_always_inline zend_bool php_parallel_events_wait_link(
     return 0;
 }
 
-static zend_always_inline zend_bool php_parallel_events_wait_future(
+static zend_always_inline zend_bool php_parallel_events_poll_future(
                             php_parallel_events_t *events, 
                             php_parallel_events_state_t *state, 
                             zval *retval) {
@@ -279,7 +310,7 @@ static zend_always_inline zend_bool php_parallel_events_wait_future(
     return 0;
 }
 
-static zend_always_inline void php_parallel_events_wait(php_parallel_events_t *events, zval *retval) {
+static zend_always_inline void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
     struct timeval  now,
                     stop;
     
@@ -295,11 +326,9 @@ static zend_always_inline void php_parallel_events_wait(php_parallel_events_t *e
     }
 
     do {
-        zval *zv;
-        php_parallel_events_state_t *state;
-        zend_long selected;
+        php_parallel_events_state_t *selected;
         zend_long size = 
-            php_parallel_events_wait_begin(events);
+            php_parallel_events_poll_begin(events);
 
         if (size == 0) {
             if (events->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
@@ -314,43 +343,32 @@ static zend_always_inline void php_parallel_events_wait(php_parallel_events_t *e
                  usleep(events->timeout / 1000);
             }
             
-_php_parallel_events_wait_continue:
-            php_parallel_events_wait_end(events);
+            php_parallel_events_poll_end(events);
             continue;
         }
         
-        selected = php_mt_rand_range(
-            0, 
-            size - 1);
-            
-        ZEND_HASH_INDEX_FIND(
-            (&events->state), 
-            (selected), 
-            (zv), 
-            _php_parallel_events_wait_continue);
+        selected = php_parallel_events_poll_select(events);
         
-        state = Z_PTR_P(zv);
-        
-        if (state->type == PHP_PARALLEL_EVENTS_LINK) {
-            if (php_parallel_events_wait_link(
+        if (selected->type == PHP_PARALLEL_EVENTS_LINK) {
+            if (php_parallel_events_poll_link(
                     events, 
-                    state,
+                    selected,
                     retval)) {
                 break;        
             }
         } else {
-            if (php_parallel_events_wait_future(
+            if (php_parallel_events_poll_future(
                     events, 
-                    state, 
+                    selected, 
                     retval)) {
                 break;        
             }
         }
         
-        php_parallel_events_wait_end(events);  
+        php_parallel_events_poll_end(events);  
     } while (1);
     
-    php_parallel_events_wait_end(events);  
+    php_parallel_events_poll_end(events);  
 }
 
 static void php_parallel_events_destroy(zend_object *zo) {
@@ -514,7 +532,7 @@ static int php_parallel_events_iterator_valid(zend_object_iterator *zo) {
     return Z_TYPE(iterator->event) == IS_OBJECT ? SUCCESS : FAILURE;
 }
 
-static void php_parallel_events_iterator_wait(zend_object_iterator *zo) {
+static void php_parallel_events_iterator_poll(zend_object_iterator *zo) {
     php_parallel_events_iterator_t *iterator =
         (php_parallel_events_iterator_t*) zo;
     php_parallel_events_t *events =
@@ -524,7 +542,7 @@ static void php_parallel_events_iterator_wait(zend_object_iterator *zo) {
         zval_ptr_dtor(&iterator->event);
     }
 
-    php_parallel_events_wait(events, &iterator->event);
+    php_parallel_events_poll(events, &iterator->event);
 }
 
 static zval* php_parallel_events_iterator_current(zend_object_iterator *zo) {
@@ -537,9 +555,9 @@ static zval* php_parallel_events_iterator_current(zend_object_iterator *zo) {
 zend_object_iterator_funcs php_parallel_events_iterator_functions = {
     .dtor               = php_parallel_events_iterator_destroy,
     .valid              = php_parallel_events_iterator_valid,
-    .move_forward       = php_parallel_events_iterator_wait,
+    .move_forward       = php_parallel_events_iterator_poll,
     .get_current_data   = php_parallel_events_iterator_current,
-    .rewind             = php_parallel_events_iterator_wait,
+    .rewind             = php_parallel_events_iterator_poll,
     .invalidate_current = NULL,
     .get_current_key    = NULL,
 };

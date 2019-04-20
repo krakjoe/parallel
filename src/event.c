@@ -22,6 +22,7 @@
 #include "handlers.h"
 #include "event.h"
 #include "events.h"
+#include "input.h"
 
 zend_class_entry* php_parallel_events_event_ce;
 zend_object_handlers php_parallel_events_event_handlers;
@@ -115,6 +116,8 @@ void php_parallel_events_event_construct(
     
     if (type == PHP_PARALLEL_EVENTS_EVENT_READ) {
         php_parallel_events_event_set_value(return_value, value);
+    } else {
+        php_parallel_events_input_remove(&events->input, source);
     }
     
     zend_hash_del(&events->targets, source);
