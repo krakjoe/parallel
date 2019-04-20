@@ -20,6 +20,7 @@
 
 #include "parallel.h"
 #include "handlers.h"
+#include "channel.h"
 #include "event.h"
 #include "events.h"
 #include "input.h"
@@ -118,6 +119,10 @@ void php_parallel_events_event_construct(
         php_parallel_events_event_set_value(return_value, value);
     } else {
         php_parallel_events_input_remove(&events->input, source);
+    }
+    
+    if (instanceof_function(object->ce, php_parallel_channel_ce)) {
+        zend_string_addref(source);
     }
     
     zend_hash_del(&events->targets, source);
