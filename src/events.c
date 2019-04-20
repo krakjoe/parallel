@@ -42,7 +42,8 @@ static zend_object* php_parallel_events_create(zend_class_entry *type) {
     
     events->std.handlers = &php_parallel_events_handlers;
     
-    zend_hash_init(&events->targets, 32, NULL, ZVAL_PTR_DTOR, 0);
+    zend_hash_init(
+        &events->targets, 32, NULL, ZVAL_PTR_DTOR, 0);
     
     events->timeout = -1;
     
@@ -51,48 +52,28 @@ static zend_object* php_parallel_events_create(zend_class_entry *type) {
     return &events->std;
 }
 
-static zend_always_inline php_parallel_events_return php_parallel_events_add(php_parallel_events_t *events, zend_string *name, zval *object, zend_string **key) {
-    if (Z_TYPE_P(object) != IS_OBJECT) {
-        /* ignore noise */
-        return PHP_PARALLEL_EVENTS_OK;
-    }
-    
-    if (instanceof_function(Z_OBJCE_P(object), php_parallel_future_ce)) {
-        if (!name) {
-            return PHP_PARALLEL_EVENTS_NOT_NAMED;
-        }
-    } else if(instanceof_function(Z_OBJCE_P(object), php_parallel_channel_ce)) {
+static zend_always_inline zend_bool php_parallel_events_add(php_parallel_events_t *events, zend_string *name, zval *object, zend_string **key) {    
+    if(instanceof_function(Z_OBJCE_P(object), php_parallel_channel_ce)) {
         php_parallel_channel_t *channel = 
             (php_parallel_channel_t*)
                  php_parallel_channel_from(object);
             
         name = php_parallel_link_name(channel->link);
-    } else {
-        return PHP_PARALLEL_EVENTS_NOT_OK;
     }
     
     *key = name;
     
     if (!zend_hash_add(&events->targets, name, object)) {
-        return PHP_PARALLEL_EVENTS_NOT_UNIQUE;
+        return 0;
     }
     
     Z_ADDREF_P(object);
     
-    return PHP_PARALLEL_EVENTS_OK;
+    return 1;
 }
 
-static zend_always_inline php_parallel_events_return php_parallel_events_remove(php_parallel_events_t *events, zend_string *name) {
-    zend_long size = 
-        zend_hash_num_elements(&events->targets);
-    
-    zend_hash_del(&events->targets, name);
-    
-    if (size == zend_hash_num_elements(&events->targets)) {
-        return PHP_PARALLEL_EVENTS_NOT_FOUND;
-    }
-    
-    return PHP_PARALLEL_EVENTS_OK;
+static zend_always_inline zend_bool php_parallel_events_remove(php_parallel_events_t *events, zend_string *name) {
+    return zend_hash_del(&events->targets, name) == SUCCESS;
 }
 
 static void php_parallel_events_destroy(zend_object *zo) {
@@ -142,15 +123,10 @@ PHP_METHOD(Events, addChannel)
         return;
     );
     
-    switch (php_parallel_events_add(events, NULL, target, &key)) {
-        case PHP_PARALLEL_EVENTS_NOT_UNIQUE:
-            php_parallel_exception("target named \"%s\" already added", ZSTR_VAL(key));
-            return;
-        
-        case PHP_PARALLEL_EVENTS_OK:
-            break;
-     
-        EMPTY_SWITCH_DEFAULT_CASE();     
+    if (!php_parallel_events_add(events, NULL, target, &key)) {
+        php_parallel_exception(
+            "target named \"%s\" already added", 
+            ZSTR_VAL(key));
     }
 }
 
@@ -170,15 +146,10 @@ PHP_METHOD(Events, addFuture)
         return;
     );
     
-    switch (php_parallel_events_add(events, name, target, &key)) {
-        case PHP_PARALLEL_EVENTS_NOT_UNIQUE:
-            php_parallel_exception("target named \"%s\" already added", ZSTR_VAL(key));
-            return;
-        
-        case PHP_PARALLEL_EVENTS_OK:
-            break;
-     
-        EMPTY_SWITCH_DEFAULT_CASE();
+    if (!php_parallel_events_add(events, name, target, &key)) {
+        php_parallel_exception(
+            "target named \"%s\" already added", 
+            ZSTR_VAL(key));
     }
 }
 
@@ -194,16 +165,10 @@ PHP_METHOD(Events, remove)
         return;
     );
     
-    switch (php_parallel_events_remove(events, name)) {
-        case PHP_PARALLEL_EVENTS_OK:
-            break;
-            
-        case PHP_PARALLEL_EVENTS_NOT_FOUND:
-            php_parallel_exception(
-                "target named \"%s\" not found", ZSTR_VAL(name));
-            return;
-            
-        EMPTY_SWITCH_DEFAULT_CASE();
+    if (!php_parallel_events_remove(events, name)) {
+        php_parallel_exception(
+            "target named \"%s\" not found", 
+            ZSTR_VAL(name));
     }
 }
 

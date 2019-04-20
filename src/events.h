@@ -21,18 +21,9 @@
 typedef struct _php_parallel_events_t {
     zval        input;
     HashTable   targets;
-    HashTable   state;
     zend_long   timeout;
     zend_object std;
 } php_parallel_events_t;
-
-typedef enum {
-    PHP_PARALLEL_EVENTS_OK = 0,
-    PHP_PARALLEL_EVENTS_NOT_OK,
-    PHP_PARALLEL_EVENTS_NOT_FOUND,
-    PHP_PARALLEL_EVENTS_NOT_NAMED,
-    PHP_PARALLEL_EVENTS_NOT_UNIQUE
-} php_parallel_events_return;
 
 typedef enum {
     PHP_PARALLEL_EVENTS_LINK = 1,

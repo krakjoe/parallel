@@ -221,7 +221,10 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
             if (events->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
                  if (now.tv_sec >= stop.tv_sec &&
                      now.tv_usec >= stop.tv_usec) {
-                        goto _php_parallel_events_poll_timeout;
+                    php_parallel_exception_ex(
+                        php_parallel_events_timeout_ce, 
+                            "timeout occured");
+                    return;
                  }
                  
                  usleep(events->timeout / 1000);
@@ -250,9 +253,5 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
     } while (1);
 
     php_parallel_events_poll_end(selected);
-    return;
-
-_php_parallel_events_poll_timeout:
-    php_parallel_exception_ex(php_parallel_events_timeout_ce, "timeout occured");
 }
 #endif
