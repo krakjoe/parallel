@@ -46,7 +46,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_random(php_parallel
 
             return 1;
         }
-        
+
         random = php_mt_rand_range(0, (zend_long) size - 1);
     } while(1);
     
@@ -202,6 +202,7 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
                                *selected;
     struct timeval  now,
                     stop;
+    uint32_t        try = 1;
     
     if (zend_hash_num_elements(&events->targets) == 0) {
         ZVAL_FALSE(retval);
@@ -221,15 +222,16 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
             if (events->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
                  if (now.tv_sec >= stop.tv_sec &&
                      now.tv_usec >= stop.tv_usec) {
-                    php_parallel_exception_ex(
+                     php_parallel_exception_ex(
                         php_parallel_events_timeout_ce, 
                             "timeout occured");
                     return;
                  }
-                 
-                 usleep(events->timeout / 1000);
             }
-
+            
+            if ((try++ % 10) == 0) {
+                usleep(1);
+            }
             continue;
         }
         
