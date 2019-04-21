@@ -63,23 +63,21 @@ static zend_always_inline zend_bool php_parallel_events_poll_begin_link(
     
     php_parallel_link_lock(channel->link);
     
-    state->type     = PHP_PARALLEL_EVENTS_LINK;
-    state->name     = name;
-    
     if (php_parallel_events_input_exists(&events->input, name)) {
         state->writable = php_parallel_link_writable(channel->link);   
     } else {
         state->readable = php_parallel_link_readable(channel->link);
     }
     
-    state->object   = object;
-    
     if (state->readable || state->writable) {
-        return 1;
-    } else {
-        php_parallel_link_unlock(channel->link);
-    }
+        state->type     = PHP_PARALLEL_EVENTS_LINK;
+        state->name     = name;
+        state->object   = object;
     
+        return 1;
+    }
+
+    php_parallel_link_unlock(channel->link);
     return 0;
 }
 
@@ -93,17 +91,17 @@ static zend_always_inline zend_bool php_parallel_events_poll_begin_future(
         
     php_parallel_future_lock(future);
     
-    state->type     = PHP_PARALLEL_EVENTS_FUTURE;
-    state->name     = name;
     state->readable = php_parallel_future_readable(future);
-    state->object   = object;
     
     if (state->readable) {
+        state->type     = PHP_PARALLEL_EVENTS_FUTURE;
+        state->name     = name;
+        state->object   = object;
+    
         return 1;
-    } else {
-        php_parallel_future_unlock(future);
     }
     
+    php_parallel_future_unlock(future);
     return 0;
 }
 
@@ -115,7 +113,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_begin(php_parallel_
         return 0;
     }
     
-    memset(state, 0, sizeof(*state));
+    memset(state, 0, sizeof(php_parallel_events_state_t));
     
     if (instanceof_function(object->ce, php_parallel_channel_ce)) {
         return php_parallel_events_poll_begin_link(events, state, name, object);
@@ -127,10 +125,6 @@ static zend_always_inline zend_bool php_parallel_events_poll_begin(php_parallel_
 }
 
 static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_state_t *state) {
-    if (!state->type) {
-        return;
-    }
-    
     if (state->type == PHP_PARALLEL_EVENTS_LINK) {
         php_parallel_channel_t *channel = 
             php_parallel_channel_fetch(state->object);
@@ -268,7 +262,7 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
             }
         }
         
-        php_parallel_events_poll_end(&selected);  
+        php_parallel_events_poll_end(&selected);
     } while (1);
 
     php_parallel_events_poll_end(&selected);
