@@ -17,5 +17,5 @@ try {
 }
 ?>
 --EXPECT--
-string(50) "parallel\Runtime objects do not support properties"
+string(50) "parallel\Runtime objects do not support dimensions"
 

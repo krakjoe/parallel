@@ -29,7 +29,7 @@ zval* php_parallel_handlers_read_property(zval *zv, zval *member, int type, void
     zend_object *object = Z_OBJ_P(zv);
 #endif
     php_parallel_exception(
-        "%s objects do not support properties", 
+        "%s objects do not support properties",
         ZSTR_VAL(object->ce->name));
 
     return &EG(uninitialized_zval);
@@ -42,7 +42,7 @@ zval* php_parallel_handlers_write_property(zval *zv, zval *member, zval *value, 
     zend_object *object = Z_OBJ_P(zv);
 #endif
     php_parallel_exception(
-        "%s objects do not support properties", 
+        "%s objects do not support properties",
         ZSTR_VAL(object->ce->name));
 
     return &EG(uninitialized_zval);  
@@ -55,7 +55,7 @@ zval* php_parallel_handlers_read_dimension(zval *zv, zval *offset, int type, zva
     zend_object *object = Z_OBJ_P(zv);
 #endif
     php_parallel_exception(
-        "%s objects do not support properties", 
+        "%s objects do not support dimensions",
         ZSTR_VAL(object->ce->name));
 
     return &EG(uninitialized_zval); 
@@ -68,7 +68,7 @@ void php_parallel_handlers_write_dimension(zval *zv, zval *offset, zval *value) 
     zend_object *object = Z_OBJ_P(zv);
 #endif
     php_parallel_exception(
-        "%s objects do not support properties", 
+        "%s objects do not support dimensions", 
         ZSTR_VAL(object->ce->name));
 }
 
@@ -79,7 +79,7 @@ zval* php_parallel_handlers_get_property_ptr_ptr(zval *zv, zval *member, int typ
     zend_object *object = Z_OBJ_P(zv);
 #endif
     php_parallel_exception(
-        "%s objects do not support properties", 
+        "%s objects do not support properties",
         ZSTR_VAL(object->ce->name));
         
     return &EG(uninitialized_zval);
@@ -87,8 +87,8 @@ zval* php_parallel_handlers_get_property_ptr_ptr(zval *zv, zval *member, int typ
 
 void php_parallel_handlers_startup() {
     memcpy(
-        &_php_parallel_standard_handlers, 
-        zend_get_std_object_handlers(), 
+        &_php_parallel_standard_handlers,
+        zend_get_std_object_handlers(),
         sizeof(zend_object_handlers));
         
     _php_parallel_standard_handlers.read_property = php_parallel_handlers_read_property;

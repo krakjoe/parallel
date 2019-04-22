@@ -31,8 +31,10 @@
 #include "zend_closures.h"
 
 typedef int (*php_sapi_deactivate_t)(void);
+typedef size_t (*php_sapi_output_t)(const char*, size_t);
 
-php_sapi_deactivate_t php_sapi_deactivate_function;
+static php_sapi_deactivate_t php_sapi_deactivate_function;
+static php_sapi_output_t     php_sapi_output_function;
 
 zend_class_entry *php_parallel_exception_ce;
 zend_class_entry *php_parallel_ce;
@@ -40,7 +42,20 @@ zend_object_handlers php_parallel_handlers;
 
 zend_string *php_parallel_main;
 
-void* php_parallel_routine(void *arg);
+static void* php_parallel_routine(void *arg);
+
+static pthread_mutex_t php_parallel_output_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static size_t php_parallel_output_function(const char *str, size_t len) {
+    size_t result;
+    
+    pthread_mutex_lock(&php_parallel_output_mutex);
+    result = 
+        php_sapi_output_function(str, len);
+    pthread_mutex_unlock(&php_parallel_output_mutex);
+    
+    return result;
+}
 
 static zend_always_inline void php_parallel_configure_callback(int (*zend_callback) (char *, size_t), zval *value) {
 	if (Z_TYPE_P(value) == IS_ARRAY) {
@@ -335,7 +350,9 @@ void php_parallel_startup(void) {
 	php_parallel_ce->create_object = php_parallel_create;
 	php_parallel_ce->ce_flags |= ZEND_ACC_FINAL;
 
-	php_parallel_main = zend_string_init(ZEND_STRL("\\parallel\\Runtime::run"), 1);
+	php_parallel_main = zend_new_interned_string(
+	                        zend_string_init(ZEND_STRL(
+	                            "\\parallel\\Runtime::run"), 1));
 
 	INIT_NS_CLASS_ENTRY(ce, "parallel", "Exception", NULL);
 
@@ -343,21 +360,28 @@ void php_parallel_startup(void) {
 
 	if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
 		php_sapi_deactivate_function = sapi_module.deactivate;
-
+        
 		sapi_module.deactivate = NULL;
 	}
-
+	
+    php_sapi_output_function = sapi_module.ub_write;
+    
+    sapi_module.ub_write = php_parallel_output_function;
+    
 	php_parallel_scheduler_startup();
 }
 
 void php_parallel_shutdown(void) {
+	
+	php_parallel_scheduler_shutdown();
+	
 	if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
 		sapi_module.deactivate = php_sapi_deactivate_function;
 	}
+	
+	sapi_module.ub_write = php_sapi_output_function;
 
 	zend_string_release(php_parallel_main);
-	
-	php_parallel_scheduler_shutdown();
 }
 
 static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
@@ -403,7 +427,7 @@ static zend_always_inline int php_parallel_bootstrap(zend_string *file) {
 	return FAILURE;
 }
 
-void* php_parallel_routine(void *arg) {	
+static void* php_parallel_routine(void *arg) {	
 	int32_t state = 0;
 
 	php_parallel_t *parallel = 

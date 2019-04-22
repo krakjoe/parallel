@@ -142,8 +142,7 @@ php_parallel_link_t* php_parallel_link_init(zend_string *name, zend_bool buffere
     } else {
         link->type = PHP_PARALLEL_LINK_UNBUFFERED;
     }
-    link->name = zend_string_init(
-        ZSTR_VAL(name), ZSTR_LEN(name), 1);
+    link->name = zend_new_interned_string(name);
     link->refcount = 1;
     
     return link;
