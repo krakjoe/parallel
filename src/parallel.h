@@ -39,7 +39,6 @@ typedef struct _php_parallel_t {
 	pthread_t                   thread;
 	php_parallel_monitor_t     *monitor;
 	zend_string                *bootstrap;
-	zval                        configuration;
 	struct {
 		zend_bool          *interrupt;
 		zend_bool           yielding;

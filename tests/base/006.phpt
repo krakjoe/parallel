@@ -15,6 +15,7 @@ try {
 }
 ?>
 --EXPECT--
-string(58) "bootstrap or bootstrap and optional configuration expected"
+string(27) "optional bootstrap expected"
+
 
 

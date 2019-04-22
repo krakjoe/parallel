@@ -102,6 +102,7 @@ php_parallel_t* php_parallel_scheduler_setup(php_parallel_t *parallel) {
 #if PHP_VERSION_ID < 70400
     zend_disable_function(ZEND_STRL("putenv"));
 #endif
+    zend_disable_function(ZEND_STRL("dl"));
 
     PG(during_request_startup)  = 0;
     SG(sapi_started)            = 0;

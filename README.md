@@ -9,15 +9,6 @@ A succinct parallel concurrency API for PHP 7:
 
 ```php
 final class parallel\Runtime {
-	/*
-	* Shall construct a new Runtime
-	* @param string bootstrap (generally an autoloader)
-	* @param array  ini configuration
-	* @throws \parallel\Exception if arguments are invalid
-	* @throws \parallel\Exception if bootstrapping failed
-	* @throws \parallel\Exception the thread could not be created
-	*/
-	public function __construct(string $bootstrap, array $configuration);
 	/**
 	* Shall construct a new Runtime
 	* @param string bootstrap (generally an autoloader)
@@ -25,14 +16,7 @@ final class parallel\Runtime {
 	* @throws \parallel\Exception if bootstrapping failed
 	* @throws \parallel\Exception if the thread could not be created	
 	**/
-	public function __construct(string $bootstrap);
-	/**
-	* Shall construct a new Runtime
-	* @throws \parallel\Exception if arguments are invalid
-	* @throws \parallel\Exception if the thread could not be created
-	* @param array ini configuration
-	**/
-	public function __construct(array $configuration);
+	public function __construct(string $bootstrap = null);
 
 	/*
 	* Shall schedule a task for execution passing optional arguments
@@ -263,20 +247,6 @@ Configuring the Runtime
 =======================
 
 The optional bootstrap file passed to the constructor will be included before any code is executed, generally this will be an autoloader.
-
-The configuration array passed to the constructor will configure the Runtime using INI.
-
-The following options may be an array, or comma separated list:
-
-  * disable_functions
-  * disable_classes
-
-The following options will be ignored:
-
-  * extension - use dl()
-  * zend_extension - unsupported
-
-All other options are passed directly to zend verbatim and set as if set by system configuration file.
 
 Hello World
 ===========

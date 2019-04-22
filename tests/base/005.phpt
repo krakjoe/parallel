@@ -1,5 +1,5 @@
 --TEST--
-Check parallel configuration
+Check parallel ini
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -8,14 +8,15 @@ if (!extension_loaded('parallel')) {
 ?>
 --FILE--
 <?php
-$parallel = new parallel\Runtime([
-	"include_path" => "dummy",
-	"cast_to_string" => 2.2
-]);
+ini_set("include_path", "/none_for_the_purposes_of_this_test");
+
+$parallel = new parallel\Runtime();
 
 $parallel->run(function() {
-	var_dump(ini_get("include_path"));
+	if (ini_get("include_path") != "/none_for_the_purposes_of_this_test") {
+	    echo "OK";
+	}
 });
 ?>
 --EXPECTF--
-string(%d) "dummy"
+OK

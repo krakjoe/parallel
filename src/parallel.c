@@ -57,98 +57,24 @@ static size_t php_parallel_output_function(const char *str, size_t len) {
     return result;
 }
 
-static zend_always_inline void php_parallel_configure_callback(int (*zend_callback) (char *, size_t), zval *value) {
-	if (Z_TYPE_P(value) == IS_ARRAY) {
-		zval *val;
-		ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(value), val) {
-			if (Z_TYPE_P(val) == IS_STRING) {
-				zend_callback(Z_STRVAL_P(val), Z_STRLEN_P(val));
-			}
-		} ZEND_HASH_FOREACH_END();
-	} else if (Z_TYPE_P(value) == IS_STRING) {
-		char *start  = Z_STRVAL_P(value),
-		     *end    = Z_STRVAL_P(value) + Z_STRLEN_P(value),
-		     *next   = (char *) php_memnstr(Z_STRVAL_P(value), ZEND_STRL(","), end);
-
-		if (next == NULL) {
-			zend_callback(Z_STRVAL_P(value), Z_STRLEN_P(value));
-			return;
-		}
-
-		do {
-			zend_callback(start, next - start);
-			start = next + 1;
-			next  = (char *) php_memnstr(start, ZEND_STRL(","), end);
-		} while(next);
-
-		if (start <= end) {
-			zend_callback(start, end - start);
-		}
-	}
-}
-
-void php_parallel_configure(zval *configuration) {
-	zend_string *name;
-	zval        *value;
-
-	ZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL_P(configuration), name, value) {
-		zend_string *chars;
-		zend_string *local = zend_string_dup(name, 1);
-
-		if (zend_string_equals_literal_ci(local, "disable_functions")) {
-			php_parallel_configure_callback(zend_disable_function, value);
-		} else if (zend_string_equals_literal_ci(local, "disable_classes")) {
-			php_parallel_configure_callback(zend_disable_class, value);
-		} else if (zend_string_equals_literal_ci(local, "extension") ||
-			   zend_string_equals_literal_ci(local, "zend_extension")) {
-			/* nothing, use dl for modules and don't load zend_extensions */
-		} else {
-			switch (Z_TYPE_P(value)) {
-				case IS_STRING:
-				case IS_TRUE:
-				case IS_FALSE:
-				case IS_LONG:
-				case IS_DOUBLE:
-					chars = zval_get_string(value);
-				break;
-
-				default:
-					continue;
-			}
-
-			zend_alter_ini_entry_chars(local, 
-				ZSTR_VAL(chars), ZSTR_LEN(chars), 
-				ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE);
-
-			zend_string_release(chars);
-		}
-
-		zend_string_release(local);
-	} ZEND_HASH_FOREACH_END();
-}
-
 PHP_METHOD(Parallel, __construct)
 {
 	php_parallel_t *parallel = php_parallel_from(getThis());
 	zend_string    *bootstrap = NULL;
-	zval           *configuration = NULL;
 	int32_t        state = SUCCESS;
 
-	if (ZEND_NUM_ARGS()) {
-		if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "a", &configuration) != SUCCESS &&
-		    zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "S|a", &bootstrap, &configuration) != SUCCESS) {
-			php_parallel_monitor_set(parallel->monitor, PHP_PARALLEL_ERROR, 0);
-			php_parallel_exception("bootstrap or bootstrap and optional configuration expected");
-			return;
-		}
-	}
+	ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_STR(bootstrap)
+    ZEND_PARSE_PARAMETERS_END_EX(
+        php_parallel_monitor_set(parallel->monitor, PHP_PARALLEL_ERROR, 0);
+        php_parallel_exception(
+            "optional bootstrap expected");
+        return;
+    );
 
 	if (bootstrap) {
 		parallel->bootstrap = zend_string_dup(bootstrap, 1);
-	}
-
-	if (configuration) {
-		ZVAL_COPY(&parallel->configuration, configuration);
 	}
 
 	if (pthread_create(&parallel->thread, NULL, php_parallel_routine, parallel) != SUCCESS) {
@@ -177,10 +103,14 @@ PHP_METHOD(Parallel, run)
 	zval *argv = NULL;
 	zend_bool returns = 0;
 
-	if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "O|a", &closure, zend_ce_closure, &argv) != SUCCESS) {
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 2)
+        Z_PARAM_OBJECT_OF_CLASS(closure, zend_ce_closure)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(argv)
+    ZEND_PARSE_PARAMETERS_END_EX(
 		php_parallel_exception("Closure, or Closure and args expected");
 		return;
-	}
+    );
 
 	php_parallel_monitor_lock(parallel->monitor);
 
@@ -327,10 +257,6 @@ void php_parallel_destroy(zend_object *o) {
 		zend_string_release(parallel->bootstrap);
 	}
 
-	if (!Z_ISUNDEF(parallel->configuration)) {
-		zval_ptr_dtor(&parallel->configuration);
-	}
-
     php_parallel_scheduler_destroy(parallel);
 	
 	zend_object_std_dtor(o);
@@ -433,10 +359,6 @@ static void* php_parallel_routine(void *arg) {
 	php_parallel_t *parallel = 
 	    php_parallel_scheduler_setup(
 	        (php_parallel_t*) arg);
-
-	if (!Z_ISUNDEF(parallel->configuration)) {
-		php_parallel_configure(&parallel->configuration);
-	}
 
 	if (parallel->bootstrap && php_parallel_bootstrap(parallel->bootstrap) != SUCCESS) {
 		php_parallel_monitor_set(
