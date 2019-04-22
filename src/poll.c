@@ -27,15 +27,47 @@
 
 #include "ext/standard/php_mt_rand.h"
 
-static zend_always_inline zend_bool php_parallel_events_poll_random(php_parallel_events_t *events, zend_string **name, zend_object **object) {
-    uint32_t  size = events->targets.nNumUsed;
-    zend_long  random;
-    
-    if (size == 0) {
+typedef struct _php_parallel_events_poll_t {
+    struct timeval stop;
+} php_parallel_events_poll_t;
+
+static zend_always_inline zend_bool php_parallel_events_poll_init(php_parallel_events_poll_t *poll, php_parallel_events_t *events) {
+    if (events->targets.nNumUsed == 0) {
         return 0;
     }
     
-    random = php_mt_rand_range(0, (zend_long) size - 1);
+    if (events->timeout > -1) {
+        if (gettimeofday(&poll->stop, NULL) == SUCCESS) {
+            poll->stop.tv_sec += (events->timeout / 1000000L);
+	        poll->stop.tv_sec += (poll->stop.tv_usec + (events->timeout % 1000000L)) / 1000000L;
+	        poll->stop.tv_usec = (poll->stop.tv_usec + (events->timeout % 1000000L)) % 1000000L;
+        }
+        /* return 0 ? */
+    }
+    
+    return 1;
+}
+
+static zend_always_inline zend_bool php_parallel_events_poll_timeout(php_parallel_events_poll_t *poll, php_parallel_events_t *events) {
+    struct timeval now;
+    
+    if (events->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
+         if (now.tv_sec >= poll->stop.tv_sec &&
+             now.tv_usec >= poll->stop.tv_usec) {
+             php_parallel_exception_ex(
+                php_parallel_events_timeout_ce,
+                    "timeout occured");
+            return 1;
+         }
+    }
+    
+    return 0;
+}
+
+static zend_always_inline zend_bool php_parallel_events_poll_random(php_parallel_events_t *events, zend_string **name, zend_object **object) {
+    uint32_t  size = events->targets.nNumUsed;
+    zend_long random = 
+        php_mt_rand_range(0, (zend_long) size - 1);
     
     do {
         Bucket *bucket = &events->targets.arData[random];
@@ -212,37 +244,25 @@ static zend_always_inline zend_bool php_parallel_events_poll_future(
 }
 
 void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
+    php_parallel_events_poll_t  poll;
     php_parallel_events_state_t selected;
-    struct timeval  now,
-                    stop;
     uint32_t        try = 1;
     
-    if (zend_hash_num_elements(&events->targets) == 0) {
+    if (!php_parallel_events_poll_init(&poll, events)) {
         ZVAL_FALSE(retval);
         return;
-    }
-    
-    if (events->timeout > -1 && gettimeofday(&stop, NULL) == SUCCESS) {
-        stop.tv_sec += (events->timeout / 1000000L);
-	    stop.tv_sec += (stop.tv_usec + (events->timeout % 1000000L)) / 1000000L;
-	    stop.tv_usec = (stop.tv_usec + (events->timeout % 1000000L)) % 1000000L;
     }
 
     do {
         if (!php_parallel_events_poll_begin(events, &selected)) {
-            if (events->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
-                 if (now.tv_sec >= stop.tv_sec &&
-                     now.tv_usec >= stop.tv_usec) {
-                     php_parallel_exception_ex(
-                        php_parallel_events_timeout_ce,
-                            "timeout occured");
-                    return;
-                 }
+            if (php_parallel_events_poll_timeout(&poll, events)) {
+                return;
             }
             
             if ((try++ % 10) == 0) {
                 usleep(1);
             }
+            
             continue;
         }
         
