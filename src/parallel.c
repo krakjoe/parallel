@@ -276,9 +276,7 @@ void php_parallel_startup(void) {
 	php_parallel_ce->create_object = php_parallel_create;
 	php_parallel_ce->ce_flags |= ZEND_ACC_FINAL;
 
-	php_parallel_main = zend_new_interned_string(
-	                        zend_string_init(ZEND_STRL(
-	                            "\\parallel\\Runtime::run"), 1));
+	php_parallel_main = zend_string_init(ZEND_STRL("\\parallel\\Runtime::run"), 1);
 
 	INIT_NS_CLASS_ENTRY(ce, "parallel", "Exception", NULL);
 
