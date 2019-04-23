@@ -36,7 +36,7 @@ PHP_METHOD(Future, value)
 	);
 
     if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
-        goto _php_parallel_future_done;
+        goto _php_parallel_future_value;
     } else {
         state = php_parallel_monitor_wait(future->monitor, 
 				    PHP_PARALLEL_READY|
@@ -54,7 +54,7 @@ PHP_METHOD(Future, value)
 		return;
 	}
 
-	if (state & PHP_PARALLEL_KILLED) {
+	if ((state & PHP_PARALLEL_KILLED)) {
 		php_parallel_exception_ex(
 		    php_parallel_future_error_killed_ce,
 			"cannot retrieve value");
@@ -63,7 +63,7 @@ PHP_METHOD(Future, value)
 		return;
 	}
 
-	if (state & PHP_PARALLEL_ERROR) {
+	if ((state & PHP_PARALLEL_ERROR)) {
 		php_parallel_exception_ex(
 		    php_parallel_future_error_uncaught_ce,
 			"cannot retrieve value");
@@ -71,8 +71,11 @@ PHP_METHOD(Future, value)
 		    PHP_PARALLEL_READY|PHP_PARALLEL_ERROR, 0);
 		return;
 	}
+	
+	php_parallel_monitor_set(
+	    future->monitor, PHP_PARALLEL_READY, 0);
 
-_php_parallel_future_done:
+_php_parallel_future_value:
 	php_parallel_future_value(future, return_value);
 }
 
@@ -81,7 +84,7 @@ PHP_METHOD(Future, done)
 	php_parallel_future_t *future = 
 		php_parallel_future_from(getThis());
 
-	RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_DONE));
+	RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY));
 }
 
 zend_function_entry php_parallel_future_methods[] = {
@@ -107,7 +110,7 @@ void php_parallel_future_destroy(zend_object *o) {
 	php_parallel_future_t *future = 
 		php_parallel_future_fetch(o);
 
-	if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED)) {
+	if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
 		php_parallel_monitor_wait(future->monitor, PHP_PARALLEL_READY);
 		
 		if (Z_REFCOUNTED(future->value)) {
@@ -128,7 +131,7 @@ zend_bool php_parallel_future_lock(php_parallel_future_t *future) {
 }
 
 zend_bool php_parallel_future_readable(php_parallel_future_t *future) {
-    return php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_DONE);
+    return php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY);
 }
 
 void php_parallel_future_value(php_parallel_future_t *future, zval *return_value) {
