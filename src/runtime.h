@@ -15,24 +15,34 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_SCHEDULER_H
-#define HAVE_PARALLEL_SCHEDULER_H
+#ifndef HAVE_PARALLEL_RUNTIME_H
+#define HAVE_PARALLEL_RUNTIME_H
 
-typedef struct _php_parallel_schedule_el_t {
-	zend_execute_data          *frame;
-} php_parallel_schedule_el_t;
+typedef struct _php_parallel_runtime_t {
+	pthread_t                   thread;
+	php_parallel_monitor_t     *monitor;
+	zend_string                *bootstrap;
+	struct {
+		zend_bool              *interrupt;
+	} child;
+	struct {
+		void                   *server;
+	} parent;
+	zend_llist                  schedule;
+	zend_object                 std;
+} php_parallel_runtime_t;
 
-void php_parallel_scheduler_startup(void);
-void php_parallel_scheduler_shutdown(void);
+static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_fetch(zend_object *o) {
+	return (php_parallel_runtime_t*) (((char*) o) - XtOffsetOf(php_parallel_runtime_t, std));
+}
 
-void               php_parallel_scheduler_init(php_parallel_runtime_t *runtime);
-void               php_parallel_scheduler_push(php_parallel_runtime_t *runtime, php_parallel_monitor_t *monitor, zend_function *function, zval *argv, zval *future);
-void               php_parallel_scheduler_destroy(php_parallel_runtime_t *runtime);
+static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_from(zval *z) {
+	return php_parallel_runtime_fetch(Z_OBJ_P(z));
+}
 
-php_parallel_runtime_t* php_parallel_scheduler_setup(php_parallel_runtime_t *runtime);
-zend_bool       php_parallel_scheduler_empty(php_parallel_runtime_t *runtime);
-zend_bool       php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parallel_schedule_el_t *el);
-void            php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame);
-void            php_parallel_scheduler_kill(php_parallel_runtime_t *runtime);
-void            php_parallel_scheduler_exit(php_parallel_runtime_t *runtime);
+void         php_parallel_runtime_startup();
+void         php_parallel_runtime_shutdown();
+
+extern zend_class_entry* php_parallel_runtime_ce;
+extern zend_string*      php_parallel_runtime_main;
 #endif

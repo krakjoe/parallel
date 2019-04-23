@@ -19,11 +19,6 @@
 #define HAVE_PARALLEL_EVENTS_POLL
 
 #include "parallel.h"
-#include "future.h"
-#include "channel.h"
-#include "events.h"
-#include "input.h"
-#include "event.h"
 
 #include "ext/standard/php_mt_rand.h"
 

@@ -19,15 +19,8 @@
 #define HAVE_PARALLEL_EVENTS
 
 #include "parallel.h"
-#include "handlers.h"
-#include "future.h"
-#include "channel.h"
-#include "input.h"
-#include "event.h"
 #include "poll.h"
 #include "loop.h"
-
-#include "zend_interfaces.h"
 
 zend_class_entry* php_parallel_events_ce;
 zend_class_entry* php_parallel_events_timeout_ce;

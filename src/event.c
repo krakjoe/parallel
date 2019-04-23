@@ -19,11 +19,6 @@
 #define HAVE_PARALLEL_EVENTS_EVENT
 
 #include "parallel.h"
-#include "handlers.h"
-#include "channel.h"
-#include "event.h"
-#include "events.h"
-#include "input.h"
 
 zend_class_entry* php_parallel_events_event_ce;
 zend_object_handlers php_parallel_events_event_handlers;

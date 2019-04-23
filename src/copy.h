@@ -58,6 +58,4 @@ static zend_always_inline void php_parallel_zval_dtor(zval *zv) {
 	}
 }
 
-void php_parallel_copy_shutdown(void);
-void php_parallel_copy_startup(void);
 #endif

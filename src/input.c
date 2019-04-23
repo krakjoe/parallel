@@ -19,8 +19,6 @@
 #define HAVE_PARALLEL_EVENTS_INPUT
 
 #include "parallel.h"
-#include "handlers.h"
-#include "input.h"
 
 zend_class_entry* php_parallel_events_input_ce;
 zend_object_handlers php_parallel_events_input_handlers;

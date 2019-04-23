@@ -19,7 +19,6 @@
 #define HAVE_PARALLEL_LINK
 
 #include "parallel.h"
-#include "copy.h"
 #include "link.h"
 
 typedef enum {

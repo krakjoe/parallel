@@ -19,9 +19,6 @@
 #define HAVE_PARALLEL_FUTURE
 
 #include "parallel.h"
-#include "handlers.h"
-#include "copy.h"
-#include "future.h"
 
 #define php_parallel_timeout_exception(m, ...) zend_throw_exception_ex(php_parallel_future_timeout_exception_ce, 0, m, ##__VA_ARGS__)
 

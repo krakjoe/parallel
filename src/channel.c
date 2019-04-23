@@ -19,9 +19,6 @@
 #define HAVE_PARALLEL_CHANNEL
 
 #include "parallel.h"
-#include "handlers.h"
-#include "copy.h"
-#include "channel.h"
 
 typedef struct _php_parallel_channels_t {
 	php_parallel_monitor_t *monitor;

@@ -18,31 +18,18 @@
 #ifndef HAVE_PARALLEL_COPY
 #define HAVE_PARALLEL_COPY
 
-#include "php.h"
 #include "parallel.h"
-
-#include "copy.h"
 
 #include "php_streams.h"
 #include "php_network.h"
-
-#include <Zend/zend_vm.h>
 
 #ifndef GC_SET_REFCOUNT
 # define GC_SET_REFCOUNT(ref, rc) (GC_REFCOUNT(ref) = (rc))
 #endif
 
-extern zend_string* php_parallel_main;
+extern zend_string* php_parallel_runtime_main;
 
 static const uint32_t uninitialized_bucket[-HT_MIN_MASK] = {HT_INVALID_IDX, HT_INVALID_IDX};
-
-void php_parallel_copy_startup(void) {
-
-}
-
-void php_parallel_copy_shutdown(void) {
-
-}
 
 static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) {
 	void *destination = (void*) pemalloc(size, persistent);
@@ -567,7 +554,7 @@ zend_function* php_parallel_copy(const zend_function *function, zend_bool persis
 	literals = op_array->literals;
 	arg_info = op_array->arg_info;
 
-	op_array->function_name = zend_string_copy(php_parallel_main);
+	op_array->function_name = zend_string_copy(php_parallel_runtime_main);
 	op_array->refcount = (uint32_t*) pemalloc(sizeof(uint32_t), persistent);
 	(*op_array->refcount) = 1;
 

@@ -25,22 +25,11 @@
 #include "php_parallel.h"
 
 #include "src/parallel.h"
-#include "src/handlers.h"
-#include "src/future.h"
-#include "src/channel.h"
-#include "src/copy.h"
-#include "src/events.h"
 
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
 {
-    php_parallel_handlers_startup();
-
 	php_parallel_startup();
-	php_parallel_future_startup();
-	php_parallel_channel_startup();
-	
-	php_parallel_events_startup();
 
 	return SUCCESS;
 } /* }}} */
@@ -48,10 +37,7 @@ PHP_MINIT_FUNCTION(parallel)
 /* {{{ PHP_MSHUTDOWN_FUNCTION */
 PHP_MSHUTDOWN_FUNCTION(parallel)
 {
-	php_parallel_channel_shutdown();
 	php_parallel_shutdown();
-	
-	php_parallel_events_shutdown();
 
 	return SUCCESS;
 } /* }}} */
@@ -64,8 +50,6 @@ PHP_RINIT_FUNCTION(parallel)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 
-    php_parallel_copy_startup();
-
 	return SUCCESS;
 }
 /* }}} */
@@ -74,8 +58,6 @@ PHP_RINIT_FUNCTION(parallel)
  */
 PHP_RSHUTDOWN_FUNCTION(parallel)
 {
-    php_parallel_copy_shutdown();
-
 	return SUCCESS;
 }
 /* }}} */
