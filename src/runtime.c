@@ -82,7 +82,7 @@ static void* php_parallel_runtime(void *arg) {
 
 	if (php_parallel_runtime_bootstrap(runtime->bootstrap) != SUCCESS) {
 		php_parallel_monitor_set(
-			runtime->monitor, PHP_PARALLEL_ERROR, 1);
+			runtime->monitor, PHP_PARALLEL_FAILURE, 1);
 
 		goto _php_parallel_exit;
 	}
@@ -134,6 +134,42 @@ _php_parallel_exit:
 	return NULL;
 }
 
+static void php_parallel_runtime_stop(php_parallel_runtime_t *runtime) {
+    if (!runtime->monitor) {
+        return;
+    }
+    
+    php_parallel_monitor_lock(runtime->monitor);
+
+	if (!php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
+		php_parallel_monitor_set(
+			runtime->monitor,
+			PHP_PARALLEL_CLOSE, 0);
+
+		if (!php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_FAILURE)) {
+		    php_parallel_monitor_wait_locked(
+			    runtime->monitor,
+			    PHP_PARALLEL_DONE);
+		}
+
+		php_parallel_monitor_unlock(runtime->monitor);
+
+		pthread_join(runtime->thread, NULL);
+	} else {
+		php_parallel_monitor_unlock(runtime->monitor);
+	}
+
+	php_parallel_monitor_destroy(runtime->monitor);
+
+	if (runtime->bootstrap) {
+		zend_string_release(runtime->bootstrap);
+	}
+
+    php_parallel_scheduler_destroy(runtime);
+    
+    runtime->monitor = NULL;
+}
+
 PHP_METHOD(Runtime, __construct)
 {
 	php_parallel_runtime_t *runtime = php_parallel_runtime_from(getThis());
@@ -144,9 +180,10 @@ PHP_METHOD(Runtime, __construct)
         Z_PARAM_OPTIONAL
         Z_PARAM_STR(bootstrap)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_ERROR, 0);
         php_parallel_exception(
             "optional bootstrap expected");
+        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE, 0);
+        php_parallel_runtime_stop(runtime);
         return;
     );
 
@@ -158,19 +195,18 @@ PHP_METHOD(Runtime, __construct)
 		php_parallel_exception_ex(
 		    php_parallel_runtime_error_ce, 
 		    "cannot create thread %s", strerror(errno));
-		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_ERROR, 0);
+		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE, 0);
+		php_parallel_runtime_stop(runtime);
 		return;
 	}
 
-	state = php_parallel_monitor_wait(runtime->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_ERROR);
+	state = php_parallel_monitor_wait(runtime->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_FAILURE);
 
-	if (state & PHP_PARALLEL_ERROR) {
+	if ((state == FAILURE) || (state & PHP_PARALLEL_FAILURE)) {
 		php_parallel_exception_ex(
 		    php_parallel_runtime_error_bootstrap_ce,
 			"bootstrapping failed with %s", ZSTR_VAL(runtime->bootstrap));
-		php_parallel_monitor_wait(runtime->monitor, PHP_PARALLEL_DONE);
-		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_ERROR, 0);
-		pthread_join(runtime->thread, NULL);
+		php_parallel_runtime_stop(runtime);
 	}
 }
 
@@ -191,24 +227,22 @@ PHP_METHOD(Runtime, run)
 		php_parallel_exception("Closure, or Closure and args expected");
 		return;
     );
-
-	php_parallel_monitor_lock(runtime->monitor);
-
-	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_ERROR)) {
-		php_parallel_monitor_unlock(runtime->monitor);
-		php_parallel_exception_ex(
+    
+    if (!runtime->monitor) {
+        php_parallel_exception_ex(
 		    php_parallel_runtime_error_ce, 
 		    "Runtime unusable");
 		return;
-	}
-  
-	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
-		php_parallel_monitor_unlock(runtime->monitor);
+    }
+    
+    if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
 		php_parallel_exception_ex(
 		    php_parallel_runtime_error_closed_ce, 
 		    "Runtime closed");
 		return;
 	}
+
+	php_parallel_monitor_lock(runtime->monitor);
 	
 	function = (zend_function*) zend_get_closure_method_def(closure);
 
@@ -243,14 +277,22 @@ PHP_METHOD(Runtime, close)
 {
 	php_parallel_runtime_t *runtime = 
 		php_parallel_runtime_from(getThis());
+		
+	if (!runtime->monitor) {
+	    php_parallel_exception_ex(
+	        php_parallel_runtime_error_ce, 
+	        "Runtime unusable");
+	    return;
+	}
+	
+	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
+	    php_parallel_exception_ex(
+	        php_parallel_runtime_error_closed_ce, 
+	        "Runtime closed");
+	    return;
+	}
 
 	php_parallel_monitor_lock(runtime->monitor);
-
-	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED|PHP_PARALLEL_ERROR)) {
-		php_parallel_exception("Runtime unusable");
-		php_parallel_monitor_unlock(runtime->monitor);
-		return;
-	}
 
 	php_parallel_monitor_set(
 		runtime->monitor, PHP_PARALLEL_CLOSE, 0);
@@ -270,13 +312,21 @@ PHP_METHOD(Runtime, kill)
 	php_parallel_runtime_t *runtime = 
 		php_parallel_runtime_from(getThis());
 
-	php_parallel_monitor_lock(runtime->monitor);
-
-	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED|PHP_PARALLEL_ERROR)) {
-		php_parallel_exception("Runtime unusable");
-		php_parallel_monitor_unlock(runtime->monitor);
-		return;
+	if (!runtime->monitor) {
+	    php_parallel_exception_ex(
+	        php_parallel_runtime_error_ce, 
+	        "Runtime unusable");
+	    return;
 	}
+	
+	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
+	    php_parallel_exception_ex(
+	        php_parallel_runtime_error_closed_ce, 
+	        "Runtime closed");
+	    return;
+	}
+
+	php_parallel_monitor_lock(runtime->monitor);
 
 	php_parallel_monitor_set(
 		runtime->monitor, PHP_PARALLEL_KILLED, 0);
@@ -323,31 +373,7 @@ void php_parallel_runtime_destroy(zend_object *o) {
 	php_parallel_runtime_t *runtime = 
 		php_parallel_runtime_fetch(o);
 
-	php_parallel_monitor_lock(runtime->monitor);
-
-	if (!php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED|PHP_PARALLEL_ERROR)) {
-		php_parallel_monitor_set(
-			runtime->monitor,
-			PHP_PARALLEL_CLOSE, 0);
-
-		php_parallel_monitor_wait_locked(
-			runtime->monitor,
-			PHP_PARALLEL_DONE);
-
-		php_parallel_monitor_unlock(runtime->monitor);
-
-		pthread_join(runtime->thread, NULL);
-	} else {
-		php_parallel_monitor_unlock(runtime->monitor);
-	}
-
-	php_parallel_monitor_destroy(runtime->monitor);
-
-	if (runtime->bootstrap) {
-		zend_string_release(runtime->bootstrap);
-	}
-
-    php_parallel_scheduler_destroy(runtime);
+	php_parallel_runtime_stop(runtime);
 	
 	zend_object_std_dtor(o);
 }

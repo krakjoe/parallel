@@ -39,14 +39,18 @@ PHP_METHOD(Future, value)
         goto _php_parallel_future_done;
     } else {
         state = php_parallel_monitor_wait(future->monitor, 
-				    PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED);
+				    PHP_PARALLEL_READY|
+				    PHP_PARALLEL_FAILURE|
+				    PHP_PARALLEL_KILLED|
+				    PHP_PARALLEL_ERROR);
     }
 
-	if (state == FAILURE) {
+	if ((state == FAILURE) || (state & PHP_PARALLEL_FAILURE)) {
 		php_parallel_exception_ex(
 		    php_parallel_future_error_ce,
 			"cannot retrieve value");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR, 0);
+		php_parallel_monitor_set(future->monitor, 
+		    PHP_PARALLEL_READY|PHP_PARALLEL_FAILURE, 0);
 		return;
 	}
 
@@ -54,7 +58,8 @@ PHP_METHOD(Future, value)
 		php_parallel_exception_ex(
 		    php_parallel_future_error_killed_ce,
 			"cannot retrieve value");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_KILLED, 0);
+		php_parallel_monitor_set(future->monitor, 
+		    PHP_PARALLEL_READY|PHP_PARALLEL_KILLED, 0);
 		return;
 	}
 
@@ -62,7 +67,8 @@ PHP_METHOD(Future, value)
 		php_parallel_exception_ex(
 		    php_parallel_future_error_uncaught_ce,
 			"cannot retrieve value");
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR, 0);
+		php_parallel_monitor_set(future->monitor, 
+		    PHP_PARALLEL_READY|PHP_PARALLEL_ERROR, 0);
 		return;
 	}
 
