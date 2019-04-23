@@ -26,8 +26,6 @@ typedef size_t (*php_sapi_output_t)(const char*, size_t);
 static php_sapi_deactivate_t php_sapi_deactivate_function;
 static php_sapi_output_t     php_sapi_output_function;
 
-zend_class_entry *php_parallel_exception_ce;
-
 static pthread_mutex_t php_parallel_output_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static size_t php_parallel_output_function(const char *str, size_t len) {
