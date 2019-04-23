@@ -15,7 +15,7 @@ $channel->close();
 
 try {
    $channel->recv();
-} catch (\parallel\Channel\Closed $th) {
+} catch (\parallel\Channel\Error\Closed $th) {
     var_dump($th->getMessage());
 }
 ?>

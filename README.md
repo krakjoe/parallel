@@ -13,12 +13,13 @@ final class parallel\Runtime {
     * Shall construct a new Runtime
     * @throws \parallel\Runtime\Error                       if the thread could not be created
     * @throws \parallel\Runtime\Error\Bootstrap             if bootstrapping failed
+    * Note: any Error leaves the Runtime unusable
     **/
     public function __construct(string $bootstrap = null);
 
     /**
     * Shall schedule a task for execution passing optional arguments
-    * @throws \parallel\Runtime\Error                       if Runtime is not usable
+    * @throws \parallel\Runtime\Error                       if Runtime is unusable
     * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
     * @throws \parallel\Runtime\Error\IllegalFunction       if task was created from internal function
     * @throws \parallel\Runtime\Error\IllegalInstruction    if task contains illegal instructions:
@@ -41,6 +42,7 @@ final class parallel\Runtime {
     
     /**
     * Shall request the Runtime shutdown
+    * @throws \parallel\Runtime\Error                       if Runtime is unusable
     * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
     * Note: Tasks scheduled for execution will be executed
     */
@@ -48,6 +50,7 @@ final class parallel\Runtime {
 
     /**
     * Shall kill the Runtime
+    * @throws \parallel\Runtime\Error                       if Runtime is unusable
     * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
     * Note: Tasks scheduled for execution will not be executed,
     *    currently running task will be interrupted.
@@ -77,7 +80,7 @@ final class parallel\Channel {
     /**
     * Shall make an unbuffered channel with the given name
     * @param string name
-    * @throws \parallel\Exception if channel already exists
+    * @throws \parallel\Channel\Error\Existence             if channel already exists
     */
     public static function make(string $name) : Channel;
     
@@ -85,35 +88,35 @@ final class parallel\Channel {
     * Shall make a buffered channel with the given name and capacity
     * @param string name
     * @param int capacity may be Channel::Infinite, or a positive integer
-    * @throws \parallel\Exception if arguments are invalid
-    * @throws \parallel\Exception if channel already exists
+    * @throws \parallel\Channel\Error\Existence             if channel already exists
     */
     public static function make(string $name, int $capacity) : Channel;
     
     /**
     * Shall open the channel with the given name
     * @param string name a previously made channel
-    * @throws \parallel\Exception if the channel cannot be found
+    * @throws \parallel\Channel\Error\Existence             if channel cannot be found
     */
     public static function open(string $name) : Channel;
     
     /**
     * Shall send the given value on this channel
     * @param mixed value any non-object, non-resource, non-null value
-    * @throws \parallel\Channel\Closed if this channel is closed
+    * @throws \parallel\Channel\Error\Closed                if this channel is closed
+    * @throws \parallel\Channel\Error\IllegalValue          if value is illegal (object, null)
     */
     public function send(mixed $value) : void;
     
     /**
     * Shall recv a value from this channel
     * @returns mixed
-    * @throws \parallel\Channel\Closed if this channel is closed
+    * @throws \parallel\Channel\Error\Closed                if this channel is closed
     */
     public function recv() : mixed;
     
     /**
     * Shall close the channel
-    * @throws \parallel\Channel\Closed if this channel was already closed
+    * @throws \parallel\Channel\Error\Closed                if this channel was already closed
     */
     public function close() : void;
     

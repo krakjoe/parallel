@@ -37,6 +37,11 @@ zend_class_entry *php_parallel_future_error_ce;
 zend_class_entry *php_parallel_future_error_killed_ce;
 zend_class_entry *php_parallel_future_error_uncaught_ce;
 
+zend_class_entry *php_parallel_channel_error_ce;
+zend_class_entry *php_parallel_channel_error_existence_ce;
+zend_class_entry *php_parallel_channel_error_illegal_value_ce;
+zend_class_entry *php_parallel_channel_error_closed_ce;
+
 void php_parallel_exceptions_startup() {
     zend_class_entry ce;
 
@@ -92,6 +97,25 @@ void php_parallel_exceptions_startup() {
 	    
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Future\\Error", "Uncaught", NULL);
 	php_parallel_future_error_uncaught_ce = 
-	    zend_register_internal_class_ex(&ce, php_parallel_exception_ce);	
+	    zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
+	    
+	/*
+	* Channel Exceptions
+	*/
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel", "Error", NULL);
+	php_parallel_channel_error_ce = 
+	    zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
+	    
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel\\Error", "Existence", NULL);
+	php_parallel_channel_error_existence_ce = 
+	    zend_register_internal_class_ex(&ce, php_parallel_channel_error_ce);	
+	    
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel\\Error", "IllegalValue", NULL);
+	php_parallel_channel_error_illegal_value_ce = 
+	    zend_register_internal_class_ex(&ce, php_parallel_channel_error_ce);
+	    
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel\\Error", "Closed", NULL);
+	php_parallel_channel_error_closed_ce = 
+	    zend_register_internal_class_ex(&ce, php_parallel_channel_error_ce);
 }
 #endif

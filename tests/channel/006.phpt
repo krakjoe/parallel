@@ -12,12 +12,12 @@ use \parallel\Channel;
 
 try {
     Channel::open("io");
-} catch (Throwable $th) {
+} catch (\parallel\Channel\Error\Existence $th) {
     var_dump($th->getMessage());
 }
 ?>
 --EXPECT--
-string(50) "channel named io is not available, was it closed ?"
+string(26) "channel named io not found"
 
 
 

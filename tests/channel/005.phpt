@@ -14,11 +14,11 @@ $channel  = Channel::make("io");
 
 try {
     Channel::make("io");
-} catch (Throwable $th) {
+} catch (\parallel\Channel\Error\Existence $th) {
     var_dump($th->getMessage());
 }
 ?>
 --EXPECT--
-string(51) "channel named io already exists, did you mean open?"
+string(31) "channel named io already exists"
 
 

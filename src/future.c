@@ -23,6 +23,39 @@
 zend_class_entry *php_parallel_future_ce;
 zend_object_handlers php_parallel_future_handlers;
 
+zend_bool php_parallel_future_lock(php_parallel_future_t *future) {
+    return php_parallel_monitor_lock(future->monitor);
+}
+
+zend_bool php_parallel_future_readable(php_parallel_future_t *future) {
+    return php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY);
+}
+
+void php_parallel_future_value(php_parallel_future_t *future, zval *return_value) {
+    if (!Z_ISUNDEF(future->saved)) {
+		ZVAL_COPY(return_value, &future->saved);
+		return;
+	}
+	
+    if (Z_TYPE(future->value) != IS_NULL) {
+		php_parallel_copy_zval(return_value, &future->value, 0);
+
+		if (Z_REFCOUNTED(future->value)) {
+			php_parallel_zval_dtor(&future->value);
+		}
+
+		ZVAL_COPY(&future->saved, return_value);
+	} else {
+		ZVAL_NULL(&future->saved);
+	}
+
+	php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+}
+
+zend_bool php_parallel_future_unlock(php_parallel_future_t *future) {
+    return php_parallel_monitor_unlock(future->monitor);
+}
+
 PHP_METHOD(Future, value) 
 {
 	php_parallel_future_t *future = php_parallel_future_from(getThis());
@@ -124,39 +157,6 @@ void php_parallel_future_destroy(zend_object *o) {
 	php_parallel_monitor_destroy(future->monitor);
 
 	zend_object_std_dtor(o);
-}
-
-zend_bool php_parallel_future_lock(php_parallel_future_t *future) {
-    return php_parallel_monitor_lock(future->monitor);
-}
-
-zend_bool php_parallel_future_readable(php_parallel_future_t *future) {
-    return php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY);
-}
-
-void php_parallel_future_value(php_parallel_future_t *future, zval *return_value) {
-    if (!Z_ISUNDEF(future->saved)) {
-		ZVAL_COPY(return_value, &future->saved);
-		return;
-	}
-	
-    if (Z_TYPE(future->value) != IS_NULL) {
-		php_parallel_copy_zval(return_value, &future->value, 0);
-
-		if (Z_REFCOUNTED(future->value)) {
-			php_parallel_zval_dtor(&future->value);
-		}
-
-		ZVAL_COPY(&future->saved, return_value);
-	} else {
-		ZVAL_NULL(&future->saved);
-	}
-
-	php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
-}
-
-zend_bool php_parallel_future_unlock(php_parallel_future_t *future) {
-    return php_parallel_monitor_unlock(future->monitor);
 }
 
 void php_parallel_future_startup() {
