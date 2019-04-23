@@ -23,7 +23,7 @@ try {
     foreach ($events as $event) {
         
     }
-} catch (Events\Timeout $ex) {
+} catch (\parallel\Events\Error\Timeout $ex) {
     var_dump($ex->getMessage());
 }
 ?>

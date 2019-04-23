@@ -53,5 +53,12 @@ extern zend_class_entry* php_parallel_channel_error_existence_ce;
 extern zend_class_entry* php_parallel_channel_error_illegal_value_ce;
 extern zend_class_entry* php_parallel_channel_error_closed_ce;
 
+/*
+* Events Exceptions
+*/
+extern zend_class_entry* php_parallel_events_error_ce;
+extern zend_class_entry* php_parallel_events_error_existence_ce;
+extern zend_class_entry* php_parallel_events_error_timeout_ce;
+
 void php_parallel_exceptions_startup();
 #endif

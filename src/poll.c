@@ -50,8 +50,8 @@ static zend_always_inline zend_bool php_parallel_events_poll_timeout(php_paralle
          if (now.tv_sec >= poll->stop.tv_sec &&
              now.tv_usec >= poll->stop.tv_usec) {
              php_parallel_exception_ex(
-                php_parallel_events_timeout_ce,
-                    "timeout occured");
+                php_parallel_events_error_timeout_ce,
+                "timeout occured");
             return 1;
          }
     }

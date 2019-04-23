@@ -132,31 +132,31 @@ final class parallel\Events implements \Traversable {
 
     /**
     * Shall watch for events on the given Channel
-    * @throws \parallel\Exception if the Channel was already added
+    * @throws \parallel\Events\Error\Existence              if the Channel was already added
     */
     public function addChannel(Channel $channel) : void;
     
     /**
     * Shall watch for events on the given Future
-    * @throws \parallel\Exception if the Future was already added
+    * @throws \parallel\Events\Error\Existence              if the Future was already added
     */
     public function addFuture(string $name, Future $future) : void;
     
     /**
     * Shall remove the given target by name
-    * @throws \parallel\Exception if the object was not found
+    * @throws \parallel\Events\Error\Existence              if the target was not found
     */
     public function remove(string $target) : void;
     
     /**
     * Shall set the timeout
     * @param non-negative timeout in microseconds
-    * Note: timeouts are not enabled by default
     */
     public function setTimeout(int $timeout) : void;
     
     /**
     * Shall poll for the next event
+    * @throws \parallel\Events\Error\Timeout                if timeout is used and reached
     */
     public function poll() : Event|false;
 }
