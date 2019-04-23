@@ -26,12 +26,12 @@ $parallel->kill();
 
 try {
 	$future->value();
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Future\Error\Killed $ex) {
 	var_dump($ex->getMessage());
 }
 ?>
 --EXPECTF--
-string(%d) "Runtime was killed, cannot retrieve value"
+string(%d) "cannot retrieve value"
 
 
 

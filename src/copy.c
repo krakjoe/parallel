@@ -379,14 +379,16 @@ zend_bool php_parallel_copy_arginfo_check(const zend_function *function) { /* {{
 #else
 		if (it->type_hint == IS_OBJECT || it->class_name) {
 #endif
-			zend_throw_error(NULL,
-				"illegal type (object) returned by parallel");
+			php_parallel_exception_ex(
+			    php_parallel_runtime_error_illegal_return_ce,
+				"illegal return (object) from task");
 			return 0;
 		}
 
 		if (it->pass_by_reference) {
-			zend_throw_error(NULL,
-				"illegal variable (reference) returned by parallel");
+			php_parallel_exception_ex(
+			    php_parallel_runtime_error_illegal_return_ce,
+				"illegal return (reference) from task");
 			return 0;
 		}
 	}
@@ -404,14 +406,16 @@ zend_bool php_parallel_copy_arginfo_check(const zend_function *function) { /* {{
 #else
 		if (it->type_hint == IS_OBJECT || it->class_name) {
 #endif
-			zend_throw_error(NULL,
-				"illegal type (object) accepted by parallel at argument %d", argc);
+			php_parallel_exception_ex(
+			    php_parallel_runtime_error_illegal_parameter_ce,
+				"illegal parameter (object) accepted by task at argument %d", argc);
 			return 0;
 		}
 
 		if (it->pass_by_reference) {
-			zend_throw_error(NULL,
-				"illegal variable (reference) accepted by parallel at argument %d", argc);
+			php_parallel_exception_ex(
+			    php_parallel_runtime_error_illegal_parameter_ce,
+				"illegal parameter (reference) accepted by task at argument %d", argc);
 			return 0;
 		}
 		it++;
@@ -460,8 +464,9 @@ zend_bool php_parallel_copy_check(zend_execute_data *execute_data, const zend_fu
 	zval errarg;
 	
 	if (function->type != ZEND_USER_FUNCTION) {
-	    zend_throw_error(NULL, 
-	        "illegal function type (internal) passed to parallel");
+        php_parallel_exception_ex(
+            php_parallel_runtime_error_illegal_function_ce,
+            "illegal function type (internal)");
 	    return 0;
 	}
 
@@ -470,9 +475,10 @@ zend_bool php_parallel_copy_check(zend_execute_data *execute_data, const zend_fu
 	}
 
 	if (argv && Z_TYPE_P(argv) == IS_ARRAY && !php_parallel_copy_argv_check(argv, &errat, &errarg)) {
-		zend_throw_error(NULL, 
-			"illegal variable (%s) passed to parallel at argument %d", 
-			zend_get_type_by_const(Z_TYPE(errarg)), errat);
+        php_parallel_exception_ex(
+            php_parallel_runtime_error_illegal_parameter_ce,
+            "illegal parameter (%s) passed to task at argument %d", 
+            zend_get_type_by_const(Z_TYPE(errarg)), errat);
 		return 0;
 	}
 
@@ -480,41 +486,47 @@ zend_bool php_parallel_copy_check(zend_execute_data *execute_data, const zend_fu
 		switch (it->opcode) {
 			case ZEND_YIELD:
 			case ZEND_YIELD_FROM:
-				zend_throw_error(NULL,
-					"illegal instruction (yield) on line %d of entry point",
-					it->lineno - function->op_array.line_start);
+                php_parallel_exception_ex(
+                    php_parallel_runtime_error_illegal_instruction_ce,
+                    "illegal instruction (yield) on line %d of task",
+                    it->lineno - function->op_array.line_start);
 				return 0;
 				
 			case ZEND_DECLARE_ANON_CLASS:
-				zend_throw_error(NULL,
-					"illegal instruction (new class) on line %d of entry point",
-					it->lineno - function->op_array.line_start);
+                php_parallel_exception_ex(
+                    php_parallel_runtime_error_illegal_instruction_ce,
+                    "illegal instruction (new class) on line %d of task",
+                    it->lineno - function->op_array.line_start);
 				return 0;
 
 			case ZEND_DECLARE_LAMBDA_FUNCTION:
-				zend_throw_error(NULL,
-					"illegal instruction (function) on line %d of entry point",
+				php_parallel_exception_ex(
+				    php_parallel_runtime_error_illegal_instruction_ce,
+					"illegal instruction (function) on line %d of task",
 					it->lineno - function->op_array.line_start);
 				return 0;
 
 			case ZEND_DECLARE_FUNCTION:
-				zend_throw_error(NULL,
-					"illegal instruction (function) on line %d of entry point",
-					it->lineno - function->op_array.line_start);
+				php_parallel_exception_ex(
+				    php_parallel_runtime_error_illegal_instruction_ce,
+				    "illegal instruction (function) on line %d of task",
+				    it->lineno - function->op_array.line_start);
 				return 0;
 
 			case ZEND_DECLARE_CLASS:
 			case ZEND_DECLARE_INHERITED_CLASS:
 			case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
-				zend_throw_error(NULL,
-					"illegal instruction (class) on line %d of entry point", 
-					it->lineno - function->op_array.line_start);
+				php_parallel_exception_ex(
+			        php_parallel_runtime_error_illegal_instruction_ce,
+				    "illegal instruction (class) on line %d of task", 
+				    it->lineno - function->op_array.line_start);
 				return 0;
 
 			case ZEND_BIND_STATIC:	
 				if (php_parallel_copying_lexical(execute_data, function, it)) {
-					zend_throw_error(NULL,
-						"illegal instruction (lexical) in entry point");
+				    php_parallel_exception_ex(
+					    php_parallel_runtime_error_illegal_instruction_ce,
+						"illegal instruction (lexical) in task");
 					return 0;
 				}
 			break;
@@ -522,8 +534,9 @@ zend_bool php_parallel_copy_check(zend_execute_data *execute_data, const zend_fu
 			case ZEND_RETURN:
 				if (!*returns && it->extended_value != -1) {
 					if (EX(opline)->result_type == IS_UNUSED) {
-						zend_throw_error(NULL,
-							"return on line %d of entry point ignored by caller, "
+						php_parallel_exception_ex(
+						    php_parallel_runtime_error_illegal_return_ce,
+							"return on line %d of task ignored by caller, "
 							"caller must retain reference to Future",
 							it->lineno - function->op_array.line_start);
 						return 0;

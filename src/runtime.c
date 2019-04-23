@@ -155,7 +155,9 @@ PHP_METHOD(Runtime, __construct)
 	}
 
 	if (pthread_create(&runtime->thread, NULL, php_parallel_runtime, runtime) != SUCCESS) {
-		php_parallel_exception("cannot create Runtime");
+		php_parallel_exception_ex(
+		    php_parallel_runtime_error_ce, 
+		    "cannot create thread %s", strerror(errno));
 		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_ERROR, 0);
 		return;
 	}
@@ -163,8 +165,9 @@ PHP_METHOD(Runtime, __construct)
 	state = php_parallel_monitor_wait(runtime->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_ERROR);
 
 	if (state & PHP_PARALLEL_ERROR) {
-		php_parallel_exception(
-			"bootstrapping Runtime failed with %s", ZSTR_VAL(runtime->bootstrap));
+		php_parallel_exception_ex(
+		    php_parallel_runtime_error_bootstrap_ce,
+			"bootstrapping failed with %s", ZSTR_VAL(runtime->bootstrap));
 		php_parallel_monitor_wait(runtime->monitor, PHP_PARALLEL_DONE);
 		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_ERROR, 0);
 		pthread_join(runtime->thread, NULL);
@@ -191,9 +194,19 @@ PHP_METHOD(Runtime, run)
 
 	php_parallel_monitor_lock(runtime->monitor);
 
-	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED|PHP_PARALLEL_ERROR)) {
+	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_ERROR)) {
 		php_parallel_monitor_unlock(runtime->monitor);
-		php_parallel_exception("Runtime unusable");
+		php_parallel_exception_ex(
+		    php_parallel_runtime_error_ce, 
+		    "Runtime unusable");
+		return;
+	}
+  
+	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
+		php_parallel_monitor_unlock(runtime->monitor);
+		php_parallel_exception_ex(
+		    php_parallel_runtime_error_closed_ce, 
+		    "Runtime closed");
 		return;
 	}
 	

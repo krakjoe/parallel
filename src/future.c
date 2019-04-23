@@ -20,67 +20,48 @@
 
 #include "parallel.h"
 
-#define php_parallel_timeout_exception(m, ...) zend_throw_exception_ex(php_parallel_future_timeout_exception_ce, 0, m, ##__VA_ARGS__)
-
 zend_class_entry *php_parallel_future_ce;
-zend_class_entry *php_parallel_future_timeout_exception_ce;
 zend_object_handlers php_parallel_future_handlers;
 
 PHP_METHOD(Future, value) 
 {
 	php_parallel_future_t *future = php_parallel_future_from(getThis());
 	int32_t state;
-	zend_long timeout = -1;
 
-	if (ZEND_NUM_ARGS()) {
-		if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), "l", &timeout) != SUCCESS) {
-			php_parallel_exception(
-				"expected optional timeout");
-			return;
-		}
-
-		if (timeout < 0) {
-			php_parallel_exception(
-				"expected timeout greater than or equal to 0");
-			return;
-		}
-	}
+	ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
+	ZEND_PARSE_PARAMETERS_END_EX(
+	    php_parallel_exception(
+	        "expected no arguments");
+	    return;
+	);
 
     if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
         goto _php_parallel_future_done;
     } else {
-        if (timeout > -1) {
-		    state = php_parallel_monitor_wait_timed(future->monitor, 
-				    PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED, timeout);
-	    } else {
-		    state = php_parallel_monitor_wait(future->monitor, 
+        state = php_parallel_monitor_wait(future->monitor, 
 				    PHP_PARALLEL_READY|PHP_PARALLEL_ERROR|PHP_PARALLEL_KILLED);
-	    }
     }
 
-	if (state == ETIMEDOUT) {
-		php_parallel_timeout_exception(
-			"a timeout occured waiting for value from Runtime");
-		return;
-	}
-
 	if (state == FAILURE) {
-		php_parallel_exception(
-			"an error occured while waiting for a value from Runtime");
+		php_parallel_exception_ex(
+		    php_parallel_future_error_ce,
+			"cannot retrieve value");
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR, 0);
 		return;
 	}
 
 	if (state & PHP_PARALLEL_KILLED) {
-		php_parallel_exception(
-			"Runtime was killed, cannot retrieve value");
+		php_parallel_exception_ex(
+		    php_parallel_future_error_killed_ce,
+			"cannot retrieve value");
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_KILLED, 0);
 		return;
 	}
 
 	if (state & PHP_PARALLEL_ERROR) {
-		php_parallel_exception(
-			"an exception occured in Runtime, cannot retrieve value");
+		php_parallel_exception_ex(
+		    php_parallel_future_error_uncaught_ce,
+			"cannot retrieve value");
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_ERROR, 0);
 		return;
 	}
@@ -182,9 +163,5 @@ void php_parallel_future_startup() {
 	php_parallel_future_ce = zend_register_internal_class(&ce);
 	php_parallel_future_ce->create_object = php_parallel_future_create;
 	php_parallel_future_ce->ce_flags |= ZEND_ACC_FINAL;
-
-	INIT_NS_CLASS_ENTRY(ce, "parallel\\Future", "Timeout", NULL);
-
-	php_parallel_future_timeout_exception_ce = zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
 }
 #endif

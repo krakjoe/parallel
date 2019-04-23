@@ -17,8 +17,8 @@ try {
 	var_dump($t->getMessage());
 }
 ?>
---EXPECT--
-string(56) "illegal instruction (new class) on line 1 of entry point"
+--EXPECTF--
+string(%d) "illegal instruction (new class) on line 1 of task"
 
 
 

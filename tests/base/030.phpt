@@ -17,16 +17,16 @@ $future   = $parallel->run(function(){
 
 try {
 	$future->value();
-} catch (Exception $ex) {
+} catch (\parallel\Future\Error\Uncaught $ex) {
 	var_dump($ex->getMessage());
 }
 ?>
 --EXPECTF--
-Fatal error: Uncaught Exception in %s030.php:4
+Fatal error: Uncaught Exception in %s:4
 Stack trace:
 #0 {main}
-  thrown in %s030.php on line 4
-string(54) "an exception occured in Runtime, cannot retrieve value"
+  thrown in %s on line 4
+string(21) "cannot retrieve value"
 
 
 

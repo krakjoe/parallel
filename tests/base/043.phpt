@@ -13,12 +13,12 @@ $parallel = new \parallel\Runtime();
 try {
     $parallel->run(
         Closure::fromCallable('usleep'), [0.1]);
-} catch (Error $ex) {
+} catch (\parallel\Runtime\Error\IllegalFunction $ex) {
     var_dump($ex->getMessage());
 }
 ?>
---EXPECT--
-string(51) "illegal function type (internal) passed to parallel"
+--EXPECTF--
+string(%d) "illegal function type (internal)"
 
 
 

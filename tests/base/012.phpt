@@ -13,11 +13,11 @@ $var     = null; /* avoid undefined */
 
 try {
 	$parallel->run(function() use($var) {});
-} catch (Error $ex) {
+} catch (\parallel\Runtime\Error\IllegalInstruction $ex) {
 	var_dump($ex->getMessage());
 }
 ?>
---EXPECT--
-string(44) "illegal instruction (lexical) in entry point"
+--EXPECTF--
+string(%d) "illegal instruction (lexical) in task"
 
 

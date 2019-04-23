@@ -42,12 +42,6 @@ static size_t php_parallel_output_function(const char *str, size_t len) {
 }
 
 void php_parallel_startup(void) {
-	zend_class_entry ce;
-
-	INIT_NS_CLASS_ENTRY(ce, "parallel", "Exception", NULL);
-
-	php_parallel_exception_ce = zend_register_internal_class_ex(&ce, zend_ce_error_exception);
-
 	if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
 		php_sapi_deactivate_function = sapi_module.deactivate;
         
@@ -58,6 +52,7 @@ void php_parallel_startup(void) {
     
     sapi_module.ub_write = php_parallel_output_function;
     
+    php_parallel_exceptions_startup();
     php_parallel_handlers_startup();
 	php_parallel_scheduler_startup();
 	php_parallel_runtime_startup();

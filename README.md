@@ -11,40 +11,47 @@ A succinct parallel concurrency API for PHP 7:
 final class parallel\Runtime {
 	/**
 	* Shall construct a new Runtime
-	* @param string bootstrap (generally an autoloader)
-	* @throws \parallel\Exception if arguments are invalid
-	* @throws \parallel\Exception if bootstrapping failed
-	* @throws \parallel\Exception if the thread could not be created	
+	* @throws \parallel\Runtime\Error                     if the thread could not be created
+	* @throws \parallel\Runtime\Error\Bootstrap           if bootstrapping failed
 	**/
 	public function __construct(string $bootstrap = null);
 
 	/*
 	* Shall schedule a task for execution passing optional arguments
-	* @param Closure task
-	* @param array argv
-	* @throws \parallel\Exception if \parallel\Runtime was closed
-	* @throws \parallel\Exception if \parallel\Runtime is in unusable state
-	* @throws \parallel\Exception if task contains illegal instructions
-	* @throws \parallel\Exception if return from task is ignored
+	* @throws \parallel\Runtime\Error                     if Runtime is not usable
+	* @throws \parallel\Runtime\Error\Closed              if Runtime was closed
+	* @throws \parallel\Runtime\Error\IllegalFunction     if task was created from internal function
+	* @throws \parallel\Runtime\Error\IllegalInstruction  if task contains illegal instructions:
+	*                                                       declare (anonymous) function
+    *                                                       declare (anonymous) class
+    *                                                       lexical scope access
+    *                                                       yield
+	* @throws \parallel\Runtime\Error\IllegalParameter    if task accepts or argv contains illegal variables:
+	*                                                       object
+	*                                                       resource (streams are cast to int where possible)
+	*                                                       references
+	* @throws \parallel\Runtime\Error\IllegalReturn       if task returns illegaly:
+	*                                                       object
+	*                                                       resource (streams are cast to int where possible)
+	*                                                       references
+	*                                                       caller ignored return
 	* Note: A Future shall only be returned if task contains a return statement
-	*	Should the caller ignore the return statement in task, an exception
-	*	shall be thrown
 	*/
 	public function run(Closure $task, array $argv = []) : ?\parallel\Future;
 	
 	/*
 	* Shall request the Runtime shutdown
+	* @throws \parallel\Runtime\Error\Closed              if Runtime was closed
 	* Note: Tasks scheduled for execution will be executed
-	* @throws \parallel\Exception if \parallel\Runtime was already closed
 	*/
 	public function close() : void;
 
 	/*
 	* Shall kill the Runtime
+	* @throws \parallel\Runtime\Error\Closed              if Runtime was closed
 	* Note: Tasks scheduled for execution will not be executed,
 	*	currently running task will be interrupted.
 	* Note: Cannot interrupt internal function calls in progress
-	* @throws \parallel\Exception if \parallel\Runtime was already closed
 	*/
 	public function kill() : void;
 }
@@ -52,24 +59,11 @@ final class parallel\Runtime {
 final class parallel\Future {
 	/*
 	* Shall wait until the value is resolved
-	* @throws \parallel\Exception if task was killed
-	* @throws \parallel\Exception if \parallel\Runtime was closed before execution
-	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
-	* @throws \parallel\Exception if task suffered a fatal error or exception
+	* @throws \parallel\Future\Error                       if waiting for a value failed
+	* @throws \parallel\Future\Error\Killed                if task was killed
+	* @throws \parallel\Future\Error\Uncaught              if task raised an uncaught exception
 	*/
 	public function value() : mixed;
-
-	/*
-	* Shall wait until the value is resolved or the timeout is reached
-	* @param non-negative timeout in microseconds
-	* @throws \parallel\Exception if task was killed
-	* @throws \parallel\Exception if \parallel\Runtime was closed before execution
-	* @throws \parallel\Exception if \parallel\Runtime was killed during execution
-	* @throws \parallel\Exception if task suffered a fatal error or exception
-	* @throws \parallel\Exception if timeout is negative
-	* @throws \parallel\Future\Timeout if timeout is reached
-	*/
-	public function value(int $timeout) : mixed;
 
 	/*
 	* Shall indicate if the Future value is resolved
@@ -205,37 +199,6 @@ final class parallel\Events\Event {
     const Write;
 }
 ```
-
-Implementation
-==============
-
-In PHP there was only one kind of parallel concurrency extension API, the kind that pthreads and pht try to implement:
-
-  * They are hugely complicated
-  * They are error prone
-  * They are difficult to understand
-  * They are difficult to deploy
-  * They are difficult to maintain
-
-`parallel` takes a totally different approach to these two by providing only a very small, easy to understand API that exposes the power of parallel concurrency without any of the aforementioned headaches.
-
-By placing some restrictions upon what a task intended for parallel execution can do, we remove almost all of the cognitive overhead of using threads, we hide away completely any mutual exclusion and all the things a programmer using threads must think about.
-
-In practice this means tasks intended for parallel execution must not:
-
-  * accept or return by reference
-  * accept or return objects
-  * execute a limited set of instructions
-
-Instructions prohibited directly in tasks intended for parallel execution are:
-
-  * declare (anonymous) function
-  * declare (anonymous) class
-  * lexical scope access
-  * yield
-
-__No instructions are prohibited in the files which the task may include.__
-
 
 Requirements and Installation
 =============================

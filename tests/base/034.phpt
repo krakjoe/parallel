@@ -11,12 +11,12 @@ if (!extension_loaded('parallel')) {
 
 try {
 	$parallel = new \parallel\Runtime(sprintf("%s/bootstrapc.inc", __DIR__));
-} catch (Exception $ex) {
+} catch (\parallel\Runtime\Error\Bootstrap $ex) {
 	var_dump($ex->getMessage());
 }
 ?>
 --EXPECTF--
-string(%d) "bootstrapping Runtime failed with %sbootstrapc.inc"
+string(%d) "bootstrapping failed with %sbootstrapc.inc"
 
 
 
