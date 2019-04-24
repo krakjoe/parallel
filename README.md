@@ -123,7 +123,7 @@ final class parallel\Channel {
     public const Infinite;
 }
 
-final class parallel\Events implements \Traversable {
+final class parallel\Events implements \Countable, \Traversable {
 
     /**
     * Shall set Input for this event loop

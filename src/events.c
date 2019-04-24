@@ -197,6 +197,20 @@ PHP_METHOD(Events, poll)
     php_parallel_events_poll(events, return_value);
 }
 
+PHP_METHOD(Events, count)
+{
+    php_parallel_events_t *events = php_parallel_events_from(getThis());
+    
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
+    ZEND_PARSE_PARAMETERS_END_EX(
+        php_parallel_invalid_arguments(
+            "no arguments expected");
+        return;
+    );
+    
+    RETURN_LONG(zend_hash_num_elements(&events->targets));
+}
+
 zend_function_entry php_parallel_events_methods[] = {
     PHP_ME(Events, setInput,    NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Events, addChannel,  NULL, ZEND_ACC_PUBLIC)
@@ -204,6 +218,7 @@ zend_function_entry php_parallel_events_methods[] = {
     PHP_ME(Events, remove,      NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Events, setTimeout,  NULL, ZEND_ACC_PUBLIC)
     PHP_ME(Events, poll,        NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, count,       NULL, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -225,7 +240,7 @@ void php_parallel_events_startup(void) {
 	php_parallel_events_ce->get_iterator  = php_parallel_events_loop_create;
 	php_parallel_events_ce->ce_flags |= ZEND_ACC_FINAL;
 	
-    zend_class_implements(php_parallel_events_ce, 1, zend_ce_traversable);
+    zend_class_implements(php_parallel_events_ce, 2, zend_ce_countable, zend_ce_traversable);
 	
 	php_parallel_events_event_startup();
 	php_parallel_events_input_startup();
