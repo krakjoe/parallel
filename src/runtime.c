@@ -180,7 +180,7 @@ PHP_METHOD(Runtime, __construct)
         Z_PARAM_OPTIONAL
         Z_PARAM_STR(bootstrap)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
+        php_parallel_invalid_arguments(
             "optional bootstrap expected");
         php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE, 0);
         php_parallel_runtime_stop(runtime);
@@ -224,7 +224,7 @@ PHP_METHOD(Runtime, run)
         Z_PARAM_OPTIONAL
         Z_PARAM_ARRAY(argv)
     ZEND_PARSE_PARAMETERS_END_EX(
-		php_parallel_exception("Closure, or Closure and args expected");
+		php_parallel_invalid_arguments("Closure, or Closure and args expected");
 		return;
     );
     

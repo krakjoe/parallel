@@ -12,7 +12,7 @@ $events = new \parallel\Events();
 
 try {
     $events->remove("nothing");
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Events\Error\Existence $ex) {
     var_dump($ex->getMessage());
 }
 ?>

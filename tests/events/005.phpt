@@ -16,7 +16,7 @@ $events->addChannel($channel);
 try {
     $events->remove("buffer");
     $events->remove("buffer");
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Events\Error\Existence $ex) {
     var_dump($ex->getMessage(), $ex->getLine());
 }
 ?>

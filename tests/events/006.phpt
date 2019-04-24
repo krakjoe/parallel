@@ -12,13 +12,13 @@ $events = new \parallel\Events();
 
 try {
     $events->addChannel(1,2,3);
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Error\InvalidArguments $ex) {
     var_dump($ex->getMessage());
 }
 
 try {
     $events->addFuture(1,2,3);
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Error\InvalidArguments $ex) {
     var_dump($ex->getMessage());
 }
 ?>

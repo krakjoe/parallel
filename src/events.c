@@ -23,7 +23,6 @@
 #include "loop.h"
 
 zend_class_entry* php_parallel_events_ce;
-zend_class_entry* php_parallel_events_timeout_ce;
 zend_object_handlers php_parallel_events_handlers;
 
 static zend_object* php_parallel_events_create(zend_class_entry *type) {
@@ -90,7 +89,7 @@ PHP_METHOD(Events, setInput)
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
         Z_PARAM_OBJECT_OF_CLASS(input, php_parallel_events_input_ce);
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
+        php_parallel_invalid_arguments(
             "expected Input");
         return;
     );
@@ -111,13 +110,14 @@ PHP_METHOD(Events, addChannel)
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
         Z_PARAM_OBJECT_OF_CLASS(target, php_parallel_channel_ce)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
+        php_parallel_invalid_arguments(
             "expected \\parallel\\Channel");
         return;
     );
     
     if (!php_parallel_events_add(events, NULL, target, &key)) {
-        php_parallel_exception(
+        php_parallel_exception_ex(
+            php_parallel_events_error_existence_ce,
             "target named \"%s\" already added", 
             ZSTR_VAL(key));
     }
@@ -134,13 +134,14 @@ PHP_METHOD(Events, addFuture)
         Z_PARAM_STR(name)
         Z_PARAM_OBJECT_OF_CLASS(target, php_parallel_future_ce)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
+        php_parallel_invalid_arguments(
             "expected target name and \\parallel\\Future");
         return;
     );
     
     if (!php_parallel_events_add(events, name, target, &key)) {
-        php_parallel_exception(
+        php_parallel_exception_ex(
+            php_parallel_events_error_existence_ce,
             "target named \"%s\" already added", 
             ZSTR_VAL(key));
     }
@@ -154,12 +155,13 @@ PHP_METHOD(Events, remove)
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
         Z_PARAM_STR(name)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception("expected target name");
+        php_parallel_invalid_arguments("expected target name");
         return;
     );
     
     if (!php_parallel_events_remove(events, name)) {
-        php_parallel_exception(
+        php_parallel_exception_ex(
+            php_parallel_events_error_existence_ce,
             "target named \"%s\" not found", 
             ZSTR_VAL(name));
     }
@@ -173,7 +175,7 @@ PHP_METHOD(Events, setTimeout)
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
         Z_PARAM_LONG(timeout)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
+        php_parallel_invalid_arguments(
             "expected timeout");
         return;
     );
@@ -187,7 +189,7 @@ PHP_METHOD(Events, poll)
     
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
+        php_parallel_invalid_arguments(
             "no arguments expected");
         return;
     );
@@ -224,11 +226,6 @@ void php_parallel_events_startup(void) {
 	php_parallel_events_ce->ce_flags |= ZEND_ACC_FINAL;
 	
     zend_class_implements(php_parallel_events_ce, 1, zend_ce_traversable);
-	
-	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events", "Timeout", NULL);
-	
-	php_parallel_events_timeout_ce = zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
-	php_parallel_events_timeout_ce->ce_flags |= ZEND_ACC_FINAL;
 	
 	php_parallel_events_event_startup();
 	php_parallel_events_input_startup();

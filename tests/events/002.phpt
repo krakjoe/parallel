@@ -12,7 +12,7 @@ $events = new \parallel\Events();
 
 try {
     $events->addFuture("future", new stdClass);
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Error\InvalidArguments $ex) {
     var_dump($ex->getMessage());
 }
 
@@ -25,7 +25,7 @@ $events->addFuture("future", $future);
 
 try {
     $events->addFuture("future", $future);
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Events\Error\Existence $ex) {
     var_dump($ex->getMessage());
 }
 ?>

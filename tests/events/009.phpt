@@ -10,7 +10,7 @@ if (!extension_loaded('parallel')) {
 <?php
 try {
     new \parallel\Events\Event();
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Events\Event\Error $ex) {
     var_dump($ex->getMessage());
 }
 ?>

@@ -12,7 +12,7 @@ $events = new \parallel\Events();
 
 try {
     $events->addChannel(new stdClass);
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Error\InvalidArguments $ex) {
     var_dump($ex->getMessage());
 }
 ?>

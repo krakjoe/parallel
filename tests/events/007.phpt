@@ -14,7 +14,7 @@ $input->add("test", "thing");
 
 try {
     $input->add("test", "thing");
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Events\Input\Error\Existence $ex) {
     var_dump($ex->getMessage());
 }
 
@@ -22,7 +22,7 @@ $input->remove("test");
 
 try {
     $input->remove("test");
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Events\Input\Error\Existence $ex) {
     var_dump($ex->getMessage());
 }
 
@@ -33,6 +33,6 @@ $input->add("test", "thing");
 echo "OK";
 ?>
 --EXPECT--
-string(23) "payload for test exists"
-string(31) "payload for test does not exist"
+string(28) "input for target test exists"
+string(36) "input for target test does not exist"
 OK

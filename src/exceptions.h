@@ -18,13 +18,16 @@
 #ifndef HAVE_PARALLEL_EXCEPTIONS_H
 #define HAVE_PARALLEL_EXCEPTIONS_H
 
-#define php_parallel_exception_ex(type, m, ...) zend_throw_exception_ex(type, 0, m, ##__VA_ARGS__)
-#define php_parallel_exception(m, ...)          php_parallel_exception_ex(php_parallel_exception_ce, m, ##__VA_ARGS__)
+#define php_parallel_exception_ex(type, m, ...)      zend_throw_exception_ex(type, 0, m, ##__VA_ARGS__)
+#define php_parallel_exception(m, ...)               php_parallel_exception_ex(php_parallel_error_ce, m, ##__VA_ARGS__)
+#define php_parallel_invalid_arguments(m, ...)       php_parallel_exception_ex(php_parallel_error_invalid_arguments_ce, m, ##__VA_ARGS__)
 
 /*
 * Base Exception
 */
-extern zend_class_entry* php_parallel_exception_ce;
+extern zend_class_entry* php_parallel_error_ce;
+extern zend_class_entry* php_parallel_error_invalid_arguments_ce;
+
 
 /*
 * Runtime Exceptions
@@ -59,6 +62,17 @@ extern zend_class_entry* php_parallel_channel_error_closed_ce;
 extern zend_class_entry* php_parallel_events_error_ce;
 extern zend_class_entry* php_parallel_events_error_existence_ce;
 extern zend_class_entry* php_parallel_events_error_timeout_ce;
+
+/*
+* Input Exceptions
+*/
+extern zend_class_entry* php_parallel_events_input_error_ce;
+extern zend_class_entry* php_parallel_events_input_error_existence_ce;
+
+/*
+* Event Exceptions
+*/
+extern zend_class_entry* php_parallel_events_event_error_ce;
 
 void php_parallel_exceptions_startup();
 #endif

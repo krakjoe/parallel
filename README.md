@@ -164,13 +164,13 @@ final class parallel\Events implements \Traversable {
 final class parallel\Events\Input {
     /**
     * Shall set input for the given target
-    * Note: target should be the name of a Channel or Future
+    * @throws \parallel\Events\Input\Error\Existence        if input for target already exists
     */
     public function add(string $target, $value) : void;
     
     /**
     * Shall remove input for the given target
-    * Note: target should be the name of a Channel or Future
+    * @throws \parallel\Events\Input\Error\Existence        if input for target does not exist
     */
     public function remove(string $target) : void;
     

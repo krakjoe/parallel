@@ -125,7 +125,8 @@ void php_parallel_events_event_construct(
 
 PHP_METHOD(Event, __construct)
 {
-    php_parallel_exception(
+    php_parallel_exception_ex(
+        php_parallel_events_event_error_ce,
         "construction of Events\\Event objects is not allowed");
 }
 

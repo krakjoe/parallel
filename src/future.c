@@ -63,7 +63,7 @@ PHP_METHOD(Future, value)
 
 	ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
 	ZEND_PARSE_PARAMETERS_END_EX(
-	    php_parallel_exception(
+	    php_parallel_invalid_arguments(
 	        "expected no arguments");
 	    return;
 	);
@@ -120,7 +120,19 @@ PHP_METHOD(Future, done)
 	RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY));
 }
 
+PHP_METHOD(Future, __construct)
+{
+    php_parallel_future_t *future = php_parallel_future_from(getThis());
+    
+    php_parallel_exception_ex(
+        php_parallel_future_error_ce,
+        "construction of Future objects is not allowed");
+        
+    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+}
+
 zend_function_entry php_parallel_future_methods[] = {
+    PHP_ME(Future, __construct, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(Future, value, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(Future, done, NULL, ZEND_ACC_PUBLIC)
 	PHP_FE_END

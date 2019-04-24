@@ -70,14 +70,15 @@ PHP_METHOD(Input, add)
         Z_PARAM_STR(target)
         Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
+        php_parallel_invalid_arguments(
             "expected target and value");
         return;
     );
     
     if (!zend_hash_add(&input->table, target, value)) {
-        php_parallel_exception(
-            "payload for %s exists", ZSTR_VAL(target));
+        php_parallel_exception_ex(
+            php_parallel_events_input_error_existence_ce,
+            "input for target %s exists", ZSTR_VAL(target));
         return;
     }
     
@@ -93,14 +94,15 @@ PHP_METHOD(Input, remove)
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
         Z_PARAM_STR(target)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
+        php_parallel_invalid_arguments(
             "expected target");
         return;
     );
     
     if (zend_hash_del(&input->table, target) != SUCCESS) {
-        php_parallel_exception(
-            "payload for %s does not exist", ZSTR_VAL(target));
+        php_parallel_exception_ex(
+            php_parallel_events_input_error_existence_ce,
+            "input for target %s does not exist", ZSTR_VAL(target));
         return;
     }
 }
@@ -112,7 +114,7 @@ PHP_METHOD(Input, clear)
 
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception(
+        php_parallel_invalid_arguments(
             "no parameters expected");
         return;
     );

@@ -12,7 +12,7 @@ $parallel = new parallel\Runtime();
 
 try {
     $parallel["dimension"];
-} catch (\parallel\Exception $ex) {
+} catch (\parallel\Error $ex) {
     var_dump($ex->getMessage());
 }
 ?>

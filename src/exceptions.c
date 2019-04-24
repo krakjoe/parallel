@@ -20,7 +20,8 @@
 
 #include "parallel.h"
 
-zend_class_entry* php_parallel_exception_ce;
+zend_class_entry* php_parallel_error_ce;
+zend_class_entry* php_parallel_error_invalid_arguments_ce;
 
 zend_class_entry* php_parallel_runtime_error_ce;
 zend_class_entry* php_parallel_runtime_error_bootstrap_ce;
@@ -46,19 +47,31 @@ zend_class_entry* php_parallel_events_error_ce;
 zend_class_entry* php_parallel_events_error_existence_ce;
 zend_class_entry* php_parallel_events_error_timeout_ce;
 
+zend_class_entry* php_parallel_events_input_error_ce;
+zend_class_entry* php_parallel_events_input_error_existence_ce;
+
+zend_class_entry* php_parallel_events_event_error_ce;
+
 void php_parallel_exceptions_startup() {
     zend_class_entry ce;
 
-	INIT_NS_CLASS_ENTRY(ce, "parallel", "Exception", NULL);
+    /*
+    * Base Exceptions
+    */
+	INIT_NS_CLASS_ENTRY(ce, "parallel", "Error", NULL);
+	php_parallel_error_ce = 
+	    zend_register_internal_class_ex(&ce, zend_ce_error_exception);
 
-	php_parallel_exception_ce = zend_register_internal_class_ex(&ce, zend_ce_error_exception);
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Error", "InvalidArguments", NULL);
+	php_parallel_error_invalid_arguments_ce = 
+	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 	
 	/*
 	* Runtime Exceptions
 	*/
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime", "Error", NULL);
 	php_parallel_runtime_error_ce = 
-	    zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
+	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 	    
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime\\Error", "Bootstrap", NULL);
 	php_parallel_runtime_error_bootstrap_ce = 
@@ -93,22 +106,22 @@ void php_parallel_exceptions_startup() {
 	*/
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Future", "Error", NULL);
 	php_parallel_future_error_ce = 
-	    zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
+	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 	
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Future\\Error", "Killed", NULL);
 	php_parallel_future_error_killed_ce = 
-	    zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
+	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 	    
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Future\\Error", "Uncaught", NULL);
 	php_parallel_future_error_uncaught_ce = 
-	    zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
+	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 	    
 	/*
 	* Channel Exceptions
 	*/
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel", "Error", NULL);
 	php_parallel_channel_error_ce = 
-	    zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
+	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 	    
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel\\Error", "Existence", NULL);
 	php_parallel_channel_error_existence_ce = 
@@ -127,7 +140,7 @@ void php_parallel_exceptions_startup() {
 	*/
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events", "Error", NULL);
 	php_parallel_events_error_ce = 
-	    zend_register_internal_class_ex(&ce, php_parallel_exception_ce);
+	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 	    
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events\\Error", "Existence", NULL);
 	php_parallel_events_error_existence_ce = 
@@ -136,5 +149,23 @@ void php_parallel_exceptions_startup() {
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events\\Error", "Timeout", NULL);
 	php_parallel_events_error_timeout_ce = 
 	    zend_register_internal_class_ex(&ce, php_parallel_events_error_ce);	
+	    
+	/*
+	* Input Exceptions
+	*/
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events\\Input", "Error", NULL);
+	php_parallel_events_input_error_ce = 
+	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
+	    
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events\\Input\\Error", "Existence", NULL);
+	php_parallel_events_input_error_existence_ce = 
+	    zend_register_internal_class_ex(&ce, php_parallel_events_input_error_ce);
+	    
+	/*
+	* Event Exceptions
+	*/
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events\\Event", "Error", NULL);
+	php_parallel_events_event_error_ce = 
+	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);	
 }
 #endif

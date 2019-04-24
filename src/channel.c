@@ -63,7 +63,7 @@ PHP_METHOD(Channel, make)
         ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
 	        Z_PARAM_STR(name)
         ZEND_PARSE_PARAMETERS_END_EX(
-            php_parallel_exception("expected channel name");
+            php_parallel_invalid_arguments("expected channel name");
 		    return;
         );
     } else {
@@ -71,12 +71,12 @@ PHP_METHOD(Channel, make)
 	        Z_PARAM_STR(name)
 	        Z_PARAM_LONG(capacity)
         ZEND_PARSE_PARAMETERS_END_EX(
-            php_parallel_exception("expected channel name and capacity");
+            php_parallel_invalid_arguments("expected channel name and capacity");
 		    return;
         );
         
         if (capacity < -1 || capacity == 0) {
-            php_parallel_exception(
+            php_parallel_invalid_arguments(
                 "capacity may be -1 for unlimited, or a positive integer");
             return;
         }
@@ -106,7 +106,7 @@ PHP_METHOD(Channel, open)
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
         Z_PARAM_STR(name)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception("expected channel name");
+        php_parallel_invalid_arguments("expected channel name");
 		return;
     );
 
@@ -132,7 +132,7 @@ PHP_METHOD(Channel, send)
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
         Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception("expected value");
+        php_parallel_invalid_arguments("expected value");
         return;
     );
     
@@ -160,7 +160,7 @@ PHP_METHOD(Channel, recv)
     
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception("expected no arguments");
+        php_parallel_invalid_arguments("expected no arguments");
         return;
     );
     
@@ -180,7 +180,7 @@ PHP_METHOD(Channel, close)
 
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
     ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_exception("expected no arguments");
+        php_parallel_invalid_arguments("expected no arguments");
         return;
     );
 
