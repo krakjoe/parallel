@@ -124,11 +124,13 @@ php_parallel_link_t* php_parallel_link_init(zend_string *name, zend_bool buffere
     php_parallel_link_t *link = pecalloc(1, sizeof(php_parallel_link_t), 1);
     
     if (php_parallel_link_mutex_init(&link->m) != SUCCESS) {
+        pefree(link, 1);
         return NULL;
     }
     
     if (php_parallel_link_cond_init(&link->c) != SUCCESS) {
         php_parallel_link_mutex_destroy(&link->m);
+        pefree(link, 1);
         return NULL;
     }
     
