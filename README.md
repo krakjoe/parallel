@@ -35,8 +35,8 @@ final class parallel\Runtime {
     *                                                            object
     *                                                            resource (streams are cast to int where possible)
     *                                                            references
-    *                                                            caller ignored return
-    * Note: A Future shall only be returned if task contains a return statement
+    *                                                            caller ignored return (or throw)
+    * Note: A Future shall only be returned if task contains a return (or throw) statement
     */
     public function run(Closure $task, array $argv = []) : ?\parallel\Future;
     
@@ -64,7 +64,8 @@ final class parallel\Future {
     * Shall wait until the value is resolved
     * @throws \parallel\Future\Error                        if waiting for a value failed
     * @throws \parallel\Future\Error\Killed                 if task was killed
-    * @throws \parallel\Future\Error\Uncaught               if task raised an uncaught exception
+    * @throws \parallel\Future\Error\Foreign                if task raised an uncuaght unrecognized exception
+    * Note: rethrows uncaught exception raised in task
     */
     public function value() : mixed;
 

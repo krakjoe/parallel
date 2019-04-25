@@ -20,6 +20,17 @@
 
 #include "parallel.h"
 
+typedef struct _php_parallel_exception_t {
+    zval class;
+    zval file;
+    zval line;
+    zval code;
+    zval message;
+    zval trace;
+    zval previous;
+    const zend_object_handlers *handlers;
+} php_parallel_exception_t;
+
 zend_class_entry* php_parallel_error_ce;
 zend_class_entry* php_parallel_error_invalid_arguments_ce;
 
@@ -36,7 +47,7 @@ zend_class_entry* php_parallel_runtime_error_illegal_return_ce;
 
 zend_class_entry* php_parallel_future_error_ce;
 zend_class_entry* php_parallel_future_error_killed_ce;
-zend_class_entry* php_parallel_future_error_uncaught_ce;
+zend_class_entry* php_parallel_future_error_foreign_ce;
 
 zend_class_entry* php_parallel_channel_error_ce;
 zend_class_entry* php_parallel_channel_error_existence_ce;
@@ -51,6 +62,161 @@ zend_class_entry* php_parallel_events_input_error_ce;
 zend_class_entry* php_parallel_events_input_error_existence_ce;
 
 zend_class_entry* php_parallel_events_event_error_ce;
+
+static zend_always_inline zval* php_parallel_exceptions_read(zend_object *exception, zend_string *property) {
+    zend_property_info *info;
+    zend_class_entry *scope = EG(fake_scope);
+    
+    EG(fake_scope) = exception->ce;
+    
+    info = zend_get_property_info(exception->ce, property, 1);
+    
+    EG(fake_scope) = scope;
+    
+    return OBJ_PROP(exception, info->offset);
+}
+
+static zend_always_inline void php_parallel_exceptions_write(zend_object *exception, zend_string *property, zval *value) {
+    zend_property_info *info;
+    zend_class_entry *scope = EG(fake_scope);
+    zval *slot;
+    
+    EG(fake_scope) = exception->ce;
+    
+    info = zend_get_property_info(exception->ce, property, 1);
+    
+    slot = OBJ_PROP(exception, info->offset);
+    
+    if (Z_REFCOUNTED_P(slot)) {
+        zval_ptr_dtor(slot);
+    }
+    
+    ZVAL_COPY_VALUE(slot, value);
+    
+    EG(fake_scope) = scope;
+}
+
+void php_parallel_exceptions_destroy(php_parallel_exception_t *ex) {
+    php_parallel_zval_dtor(&ex->class);
+    php_parallel_zval_dtor(&ex->file);
+    php_parallel_zval_dtor(&ex->line);
+    php_parallel_zval_dtor(&ex->message);
+    php_parallel_zval_dtor(&ex->code);
+    php_parallel_zval_dtor(&ex->trace);
+    php_parallel_zval_dtor(&ex->previous);
+    
+    pefree(ex, 1);
+}
+
+static zend_always_inline void php_parallel_exceptions_treat_trace(zval *trace) {
+    HashTable *table = zend_array_dup(Z_ARRVAL_P(trace));
+    zval        *el;
+    
+    ZEND_HASH_FOREACH_VAL(table, el) {
+        zval *args = zend_hash_find(Z_ARRVAL_P(el), ZSTR_KNOWN(ZEND_STR_ARGS)),
+             *arg;
+        
+        if (!args || Z_TYPE_P(args) != IS_ARRAY) {
+            continue;
+        } 
+        
+        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(args), arg) {
+            if (Z_TYPE_P(arg) == IS_OBJECT) {
+                zend_string *replacement = zend_strpprintf(
+                    0, "Object(%s) #%ld",
+                    ZSTR_VAL(Z_OBJCE_P(arg)->name), 
+                    Z_OBJ_P(arg)->handle);
+
+                zval_ptr_dtor(arg);
+                
+                ZVAL_STR(arg, replacement);
+            } else if (Z_TYPE_P(arg) == IS_ARRAY) {
+                zend_string *replacement = zend_strpprintf(
+                    0, "array(%d)", 
+                    zend_hash_num_elements(Z_ARRVAL_P(arg)));
+                
+                zval_ptr_dtor(arg);
+                
+                ZVAL_STR(arg, replacement); 
+            }
+        } ZEND_HASH_FOREACH_END();
+    } ZEND_HASH_FOREACH_END();
+        
+    zval_ptr_dtor(trace);
+    
+    ZVAL_ARR(trace, table);
+}
+
+void php_parallel_exceptions_save(zval *saved, zend_object *exception) {
+    zval class,
+         *file     = php_parallel_exceptions_read(exception, ZSTR_KNOWN(ZEND_STR_FILE)),
+         *line     = php_parallel_exceptions_read(exception, ZSTR_KNOWN(ZEND_STR_LINE)),
+         *message  = php_parallel_exceptions_read(exception, ZSTR_KNOWN(ZEND_STR_MESSAGE)),
+         *code     = php_parallel_exceptions_read(exception, ZSTR_KNOWN(ZEND_STR_CODE)),
+         *trace    = php_parallel_exceptions_read(exception, ZSTR_KNOWN(ZEND_STR_TRACE)),
+         previous;
+    
+    php_parallel_exception_t *ex = 
+        (php_parallel_exception_t*)
+            pecalloc(1, sizeof(php_parallel_exception_t), 1);
+    
+    /* todo */
+    ZVAL_NULL(&previous);
+    
+    ZVAL_STR(&class, exception->ce->name);
+    
+    php_parallel_exceptions_treat_trace(trace);
+    
+    php_parallel_copy_zval(&ex->class,   &class,     1);
+    php_parallel_copy_zval(&ex->file,    file,       1);
+    php_parallel_copy_zval(&ex->line,    line,       1);
+    php_parallel_copy_zval(&ex->message, message,    1);
+    php_parallel_copy_zval(&ex->code,    code,       1);
+    php_parallel_copy_zval(&ex->trace,   trace,      1);
+    php_parallel_copy_zval(&ex->previous, &previous, 1);
+    
+    ex->handlers = exception->handlers;
+    
+    ZVAL_PTR(saved, ex);
+}
+
+zend_object* php_parallel_exceptions_restore(zval *exception) {
+    zend_object      *object;
+    zend_class_entry *type;
+    zval file, line, message, code, trace, previous;
+    
+    php_parallel_exception_t *ex = 
+        (php_parallel_exception_t*) Z_PTR_P(exception);
+    
+    php_parallel_copy_zval(&file,     &ex->file,     0);
+    php_parallel_copy_zval(&line,     &ex->line,     0);
+    php_parallel_copy_zval(&message,  &ex->message,  0);
+    php_parallel_copy_zval(&code,     &ex->code,     0);
+    php_parallel_copy_zval(&trace,    &ex->trace,    0);
+    php_parallel_copy_zval(&previous, &ex->previous, 0);
+    
+    type = zend_lookup_class(Z_STR(ex->class));
+    
+    if (!type) {    
+        /* we lost type info */
+        type = php_parallel_future_error_foreign_ce;
+    }
+    
+    object = zend_objects_new(type);
+    
+    object->handlers = ex->handlers;
+    
+    object_properties_init(object, type);
+    
+    php_parallel_exceptions_write(object, ZSTR_KNOWN(ZEND_STR_FILE),     &file);
+    php_parallel_exceptions_write(object, ZSTR_KNOWN(ZEND_STR_LINE),     &line);
+    php_parallel_exceptions_write(object, ZSTR_KNOWN(ZEND_STR_MESSAGE),  &message);
+    php_parallel_exceptions_write(object, ZSTR_KNOWN(ZEND_STR_CODE),     &code);
+    php_parallel_exceptions_write(object, ZSTR_KNOWN(ZEND_STR_TRACE),    &trace);
+    php_parallel_exceptions_write(object, ZSTR_KNOWN(ZEND_STR_PREVIOUS), &previous);
+    
+    return object;
+}
 
 void php_parallel_exceptions_startup() {
     zend_class_entry ce;
@@ -112,8 +278,8 @@ void php_parallel_exceptions_startup() {
 	php_parallel_future_error_killed_ce = 
 	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 	    
-	INIT_NS_CLASS_ENTRY(ce, "parallel\\Future\\Error", "Uncaught", NULL);
-	php_parallel_future_error_uncaught_ce = 
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Future\\Error", "Foreign", NULL);
+	php_parallel_future_error_foreign_ce = 
 	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 	    
 	/*
