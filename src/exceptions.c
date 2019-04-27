@@ -68,9 +68,9 @@ static zend_always_inline zval* php_parallel_exceptions_read(zend_object *except
     zend_property_info *info;
     zend_class_entry *scope = EG(fake_scope);
     
-    EG(fake_scope) = exception->ce;
+    EG(fake_scope) = zend_ce_error;
     
-    info = zend_get_property_info(exception->ce, property, 1);
+    info = zend_get_property_info(zend_ce_error, property, 1);
     
     EG(fake_scope) = scope;
     
@@ -82,9 +82,9 @@ static zend_always_inline void php_parallel_exceptions_write(zend_object *except
     zend_class_entry *scope = EG(fake_scope);
     zval *slot;
     
-    EG(fake_scope) = exception->ce;
+    EG(fake_scope) = zend_ce_error;
     
-    info = zend_get_property_info(exception->ce, property, 1);
+    info = zend_get_property_info(zend_ce_error, property, 1);
     
     slot = OBJ_PROP(exception, info->offset);
     
