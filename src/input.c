@@ -75,6 +75,14 @@ PHP_METHOD(Input, add)
         return;
     );
     
+    if (Z_TYPE_P(value) == IS_OBJECT || Z_TYPE_P(value) == IS_NULL) {
+        php_parallel_exception_ex(
+            php_parallel_channel_error_illegal_value_ce,
+            "value of type %s is illegal",
+            zend_get_type_by_const(Z_TYPE_P(value)));
+        return;
+    }
+    
     if (!zend_hash_add(&input->table, target, value)) {
         php_parallel_exception_ex(
             php_parallel_events_input_error_existence_ce,
