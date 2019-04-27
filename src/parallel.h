@@ -31,6 +31,7 @@
 #include "events.h"
 #include "event.h"
 #include "input.h"
+#include "strings.h"
 
 #include "copy.h"
 

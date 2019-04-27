@@ -15,43 +15,12 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_EVENTS_H
-#define HAVE_PARALLEL_EVENTS_H
+#ifndef HAVE_PARALLEL_STRINGS_H
+#define HAVE_PARALLEL_STRINGS_H
 
-typedef struct _php_parallel_events_t {
-    zval        input;
-    HashTable   targets;
-    zend_long   timeout;
-    zend_object std;
-} php_parallel_events_t;
+zend_string* php_parallel_string(zend_string *string);
 
-typedef enum {
-    PHP_PARALLEL_EVENTS_LINK = 1,
-    PHP_PARALLEL_EVENTS_FUTURE
-} php_parallel_events_type_t;
-
-typedef struct _php_parallel_events_state_t {
-    php_parallel_events_type_t type;
-    zend_string *name;
-    zend_bool readable;
-    zend_bool writable;
-    zend_object *object;
-} php_parallel_events_state_t;
-
-#define php_parallel_events_state_initializer {0, NULL, 0, 0, NULL}
-
-static zend_always_inline php_parallel_events_t* php_parallel_events_fetch(zend_object *o) {
-	return (php_parallel_events_t*) (((char*) o) - XtOffsetOf(php_parallel_events_t, std));
-}
-
-static zend_always_inline php_parallel_events_t* php_parallel_events_from(zval *z) {
-	return php_parallel_events_fetch(Z_OBJ_P(z));
-}
-
-void php_parallel_events_startup(void);
-void php_parallel_events_shutdown(void);
-
-extern zend_class_entry* php_parallel_events_ce;
-extern zend_class_entry* php_parallel_events_timeout_ce;
+void php_parallel_strings_startup(void);
+void php_parallel_strings_shutdown(void);
 
 #endif

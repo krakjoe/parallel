@@ -35,25 +35,6 @@ static uint32_t php_parallel_events_event_value_offset;
 #define PHP_PARALLEL_EVENTS_EVENT_PROPERTY(t, p) \
     ZVAL_##t(OBJ_PROP(Z_OBJ_P(return_value), php_parallel_events_event_##p##_offset), p)
 
-TSRM_TLS HashTable php_parallel_events_event_sources;
-
-zend_string* php_parallel_events_event_source_local(zend_string *source) {
-    zend_string *local = 
-        (zend_string*)
-            zend_hash_find_ptr(
-                &php_parallel_events_event_sources, source);
-            
-    if (!local) {
-        local = zend_string_dup(source, 0);
-        
-        zend_hash_add_ptr(
-            &php_parallel_events_event_sources, 
-            local, local);
-    }
-    
-    return local;
-}
-
 void php_parallel_events_event_construct(
         php_parallel_events_t *events,
         php_parallel_events_event_type_t type, 
@@ -68,7 +49,7 @@ void php_parallel_events_event_construct(
     GC_ADDREF(object);
     
     if (object->ce == php_parallel_channel_ce) {
-        source = php_parallel_events_event_source_local(source);
+        source = php_parallel_string(source);
     }
     
     PHP_PARALLEL_EVENTS_EVENT_PROPERTY(LONG,      type);
@@ -139,21 +120,6 @@ void php_parallel_events_event_startup(void) {
 	    php_parallel_events_event_offsetof(php_parallel_events_event_object);
 	php_parallel_events_event_value_offset = 
 	    php_parallel_events_event_offsetof(php_parallel_events_event_value);
-}
-
-void php_parallel_events_event_sources_release(zval *zv) {
-    zend_string_release(Z_PTR_P(zv));
-}
-
-void php_parallel_events_event_startup_request() {
-    zend_hash_init(
-        &php_parallel_events_event_sources,
-        32, NULL,
-        php_parallel_events_event_sources_release, 0);
-}
-
-void php_parallel_events_event_shutdown_request() {
-    zend_hash_destroy(&php_parallel_events_event_sources);
 }
 
 void php_parallel_events_event_shutdown(void) {

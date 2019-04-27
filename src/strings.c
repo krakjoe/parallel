@@ -15,43 +15,42 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_EVENTS_H
-#define HAVE_PARALLEL_EVENTS_H
+#ifndef HAVE_PARALLEL_STRINGS
+#define HAVE_PARALLEL_STRINGS
 
-typedef struct _php_parallel_events_t {
-    zval        input;
-    HashTable   targets;
-    zend_long   timeout;
-    zend_object std;
-} php_parallel_events_t;
+#include "parallel.h"
 
-typedef enum {
-    PHP_PARALLEL_EVENTS_LINK = 1,
-    PHP_PARALLEL_EVENTS_FUTURE
-} php_parallel_events_type_t;
+TSRM_TLS HashTable php_parallel_strings;
 
-typedef struct _php_parallel_events_state_t {
-    php_parallel_events_type_t type;
-    zend_string *name;
-    zend_bool readable;
-    zend_bool writable;
-    zend_object *object;
-} php_parallel_events_state_t;
-
-#define php_parallel_events_state_initializer {0, NULL, 0, 0, NULL}
-
-static zend_always_inline php_parallel_events_t* php_parallel_events_fetch(zend_object *o) {
-	return (php_parallel_events_t*) (((char*) o) - XtOffsetOf(php_parallel_events_t, std));
+void php_parallel_strings_release(zval *zv) {
+    zend_string_release(Z_PTR_P(zv));
 }
 
-static zend_always_inline php_parallel_events_t* php_parallel_events_from(zval *z) {
-	return php_parallel_events_fetch(Z_OBJ_P(z));
+void php_parallel_strings_startup() {
+    zend_hash_init(
+        &php_parallel_strings,
+        32, NULL,
+        php_parallel_strings_release, 0);
 }
 
-void php_parallel_events_startup(void);
-void php_parallel_events_shutdown(void);
+zend_string* php_parallel_string(zend_string *source) {
+    zend_string *local = 
+        (zend_string*)
+            zend_hash_find_ptr(
+                &php_parallel_strings, source);
+            
+    if (!local) {
+        local = zend_string_dup(source, 0);
+        
+        zend_hash_add_ptr(
+            &php_parallel_strings, 
+            local, local);
+    }
+    
+    return local;
+}
 
-extern zend_class_entry* php_parallel_events_ce;
-extern zend_class_entry* php_parallel_events_timeout_ce;
-
+void php_parallel_strings_shutdown() {
+    zend_hash_destroy(&php_parallel_strings);
+}
 #endif
