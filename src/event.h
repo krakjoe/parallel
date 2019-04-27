@@ -35,5 +35,6 @@ void php_parallel_events_event_construct(
         zend_object *object,
         zval *value,
         zval *return_value);
-
+        
+zend_string* php_parallel_events_event_source_local(zend_string *source);
 #endif

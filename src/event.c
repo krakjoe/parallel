@@ -37,6 +37,23 @@ static uint32_t php_parallel_events_event_value_offset;
 
 TSRM_TLS HashTable php_parallel_events_event_sources;
 
+zend_string* php_parallel_events_event_source_local(zend_string *source) {
+    zend_string *local = 
+        (zend_string*)
+            zend_hash_find_ptr(
+                &php_parallel_events_event_sources, source);
+            
+    if (!local) {
+        local = zend_string_dup(source, 0);
+        
+        zend_hash_add_ptr(
+            &php_parallel_events_event_sources, 
+            local, local);
+    }
+    
+    return local;
+}
+
 void php_parallel_events_event_construct(
         php_parallel_events_t *events,
         php_parallel_events_event_type_t type, 
@@ -51,19 +68,7 @@ void php_parallel_events_event_construct(
     GC_ADDREF(object);
     
     if (object->ce == php_parallel_channel_ce) {
-        zend_string *local = 
-            (zend_string*)
-                zend_hash_find_ptr(
-                    &php_parallel_events_event_sources, source);
-                
-        if (!local) {
-            local = zend_string_dup(source, 0);
-            
-            zend_hash_add_ptr(
-                &php_parallel_events_event_sources, 
-                source, local);
-        }
-        source = local;
+        source = php_parallel_events_event_source_local(source);
     }
     
     PHP_PARALLEL_EVENTS_EVENT_PROPERTY(LONG,      type);
