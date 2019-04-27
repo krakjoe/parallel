@@ -51,6 +51,9 @@ static zend_always_inline php_parallel_events_t* php_parallel_events_from(zval *
 void php_parallel_events_startup(void);
 void php_parallel_events_shutdown(void);
 
+void php_parallel_events_event_startup_request(void);
+void php_parallel_events_event_shutdown_request(void);
+
 extern zend_class_entry* php_parallel_events_ce;
 extern zend_class_entry* php_parallel_events_timeout_ce;
 

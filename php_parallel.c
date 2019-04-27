@@ -50,6 +50,8 @@ PHP_RINIT_FUNCTION(parallel)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 
+    php_parallel_events_event_startup_request();
+
 	return SUCCESS;
 }
 /* }}} */
@@ -58,6 +60,8 @@ PHP_RINIT_FUNCTION(parallel)
  */
 PHP_RSHUTDOWN_FUNCTION(parallel)
 {
+    php_parallel_events_event_shutdown_request();
+    
 	return SUCCESS;
 }
 /* }}} */
