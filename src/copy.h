@@ -18,16 +18,19 @@
 #ifndef HAVE_PARALLEL_COPY_H
 #define HAVE_PARALLEL_COPY_H
 
-#ifndef GC_SET_REFCOUNT
+#if PHP_VERSION_ID < 70300
 # define GC_SET_REFCOUNT(ref, rc) (GC_REFCOUNT(ref) = (rc))
-#endif
-
-#ifndef GC_DELREF
-# define GC_DELREF(r) --GC_REFCOUNT(r)
-#endif
-
-#ifndef GC_ADDREF
-# define GC_ADDREF(r) ++GC_REFCOUNT(r)
+# define GC_ADDREF(ref) GC_REFCOUNT(ref)++
+# define GC_DELREF(ref) --GC_REFCOUNT(ref)
+# define GC_SET_PERSISTENT_TYPE(ref, type) (GC_TYPE_INFO(ref) = type)
+# if PHP_VERSION_ID < 70200
+#  define GC_ARRAY IS_ARRAY
+# else
+#  define GC_ARRAY (IS_ARRAY | (GC_COLLECTABLE << GC_FLAGS_SHIFT))
+# endif
+#else
+# define GC_SET_PERSISTENT_TYPE(ref, type) \
+	(GC_TYPE_INFO(ref) = type | (GC_PERSISTENT << GC_FLAGS_SHIFT))
 #endif
 
 zend_function* php_parallel_copy(const zend_function *function, zend_bool persistent);

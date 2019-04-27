@@ -26,7 +26,6 @@ extern zend_class_entry *php_parallel_future_ce;
 typedef struct _php_parallel_future_t {
 	php_parallel_monitor_t *monitor;
 	zval value;
-	zval saved;
 	zend_object std;
 } php_parallel_future_t;
 

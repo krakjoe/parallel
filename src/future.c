@@ -32,24 +32,29 @@ zend_bool php_parallel_future_readable(php_parallel_future_t *future) {
 }
 
 void php_parallel_future_value(php_parallel_future_t *future, zval *return_value) {
-    if (!Z_ISUNDEF(future->saved)) {
-		ZVAL_COPY(return_value, &future->saved);
-		return;
-	}
-	
-    if (Z_TYPE(future->value) != IS_NULL) {
-		php_parallel_copy_zval(return_value, &future->value, 0);
+    if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
+        if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_ERROR)) {
+            ZVAL_OBJ(return_value, 
+                php_parallel_exceptions_restore(&future->value));
+            return;
+        } else if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_KILLED)) {
+            ZVAL_NULL(return_value);
+            return;
+        } else {
+            zval garbage = future->value;
+            
+	        php_parallel_copy_zval(
+	            &future->value, &garbage, 0);
 
-		if (Z_REFCOUNTED(future->value)) {
-			php_parallel_zval_dtor(&future->value);
-		}
-
-		ZVAL_COPY(&future->saved, return_value);
-	} else {
-		ZVAL_NULL(&future->saved);
-	}
-
-	php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+	        if (Z_OPT_REFCOUNTED(garbage)) {
+		        php_parallel_zval_dtor(&garbage);
+	        }
+	        
+	        php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+        }
+    }
+    
+    ZVAL_COPY(return_value, &future->value);
 }
 
 zend_bool php_parallel_future_unlock(php_parallel_future_t *future) {
@@ -97,16 +102,19 @@ PHP_METHOD(Future, value)
 	}
 
 	if ((state & PHP_PARALLEL_ERROR)) {
-		php_parallel_exception_ex(
-		    php_parallel_future_error_uncaught_ce,
-			"cannot retrieve value");
+        zval exception;
+        
+        ZVAL_OBJ(&exception, 
+            php_parallel_exceptions_restore(&future->value));
+        
 		php_parallel_monitor_set(future->monitor, 
 		    PHP_PARALLEL_READY|PHP_PARALLEL_ERROR, 0);
+		
+		zend_throw_exception_object(&exception);
 		return;
 	}
 	
-	php_parallel_monitor_set(
-	    future->monitor, PHP_PARALLEL_READY, 0);
+	php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY, 0);
 
 _php_parallel_future_value:
 	php_parallel_future_value(future, return_value);
@@ -157,14 +165,18 @@ void php_parallel_future_destroy(zend_object *o) {
 
 	if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
 		php_parallel_monitor_wait(future->monitor, PHP_PARALLEL_READY);
-		
-		if (Z_REFCOUNTED(future->value)) {
-			php_parallel_zval_dtor(&future->value);
-		}
 	}
 
-	if (Z_REFCOUNTED(future->saved))
-		zval_ptr_dtor(&future->saved);
+    switch (Z_TYPE(future->value)) {
+        case IS_PTR:
+            php_parallel_exceptions_destroy(Z_PTR(future->value));
+        break;
+        
+        default:
+            if (Z_OPT_REFCOUNTED(future->value)) {
+		        php_parallel_zval_dtor(&future->value);
+	        }
+    }
 
 	php_parallel_monitor_destroy(future->monitor);
 

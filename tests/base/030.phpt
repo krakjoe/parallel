@@ -15,18 +15,13 @@ $future   = $parallel->run(function(){
 	return false;
 });
 
-try {
-	$future->value();
-} catch (\parallel\Future\Error\Uncaught $ex) {
-	var_dump($ex->getMessage());
-}
+$future->value();
 ?>
 --EXPECTF--
 Fatal error: Uncaught Exception in %s:4
 Stack trace:
 #0 {main}
   thrown in %s on line 4
-string(21) "cannot retrieve value"
 
 
 

@@ -46,7 +46,7 @@ extern zend_class_entry* php_parallel_runtime_error_illegal_return_ce;
 */
 extern zend_class_entry* php_parallel_future_error_ce;
 extern zend_class_entry* php_parallel_future_error_killed_ce;
-extern zend_class_entry* php_parallel_future_error_uncaught_ce;
+extern zend_class_entry* php_parallel_future_error_foreign_ce;
 
 /*
 * Channel Exceptions
@@ -73,6 +73,12 @@ extern zend_class_entry* php_parallel_events_input_error_existence_ce;
 * Event Exceptions
 */
 extern zend_class_entry* php_parallel_events_event_error_ce;
+
+typedef struct _php_parallel_exception_t php_parallel_exception_t;
+
+void         php_parallel_exceptions_save(zval *saved, zend_object *exception);
+zend_object* php_parallel_exceptions_restore(zval *exception);
+void         php_parallel_exceptions_destroy(php_parallel_exception_t *ex);
 
 void php_parallel_exceptions_startup();
 #endif

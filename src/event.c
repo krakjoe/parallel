@@ -28,74 +28,12 @@ static zend_string *php_parallel_events_event_source;
 static zend_string *php_parallel_events_event_object;
 static zend_string *php_parallel_events_event_value;
 
-static zend_always_inline void php_parallel_events_event_set_type(zval *event, php_parallel_events_event_type_t type) {
-    zval tmp;
-    
-    ZVAL_LONG(&tmp, type);
-    
-#if PHP_VERSION_ID >= 80000
-    zend_std_write_property(Z_OBJ_P(event), php_parallel_events_event_type, &tmp, NULL);
-#else
-    {
-        zval key;
-        
-        ZVAL_STR(&key, php_parallel_events_event_type);
-        
-        zend_std_write_property(event, &key, &tmp, NULL);
-    }
-#endif
-}
+static uint32_t php_parallel_events_event_type_offset;
+static uint32_t php_parallel_events_event_source_offset;
+static uint32_t php_parallel_events_event_object_offset;
+static uint32_t php_parallel_events_event_value_offset;
 
-static zend_always_inline void php_parallel_events_event_set_source(zval *event, zend_string *source) {
-    zval tmp;
-    
-    ZVAL_STR(&tmp, source);
-    
-#if PHP_VERSION_ID >= 80000
-    zend_std_write_property(Z_OBJ_P(event), php_parallel_events_event_source, &tmp, NULL);
-#else
-    {
-        zval key;
-        
-        ZVAL_STR(&key, php_parallel_events_event_source);
-        
-        zend_std_write_property(event, &key, &tmp, NULL);
-    }
-#endif
-}
-
-static zend_always_inline void php_parallel_events_event_set_object(zval *event, zend_object *object) {
-    zval tmp;
-    
-    ZVAL_OBJ(&tmp, object);
-    
-#if PHP_VERSION_ID >= 80000
-    zend_std_write_property(Z_OBJ_P(event), php_parallel_events_event_object, &tmp, NULL);
-#else
-    {
-        zval key;
-        
-        ZVAL_STR(&key, php_parallel_events_event_object);
-        
-        zend_std_write_property(event, &key, &tmp, NULL);
-    }
-#endif
-}
-
-static zend_always_inline void php_parallel_events_event_set_value(zval *event, zval *value) {    
-#if PHP_VERSION_ID >= 80000
-    zend_std_write_property(Z_OBJ_P(event), php_parallel_events_event_value, value, NULL);
-#else
-    {
-        zval key;
-        
-        ZVAL_STR(&key, php_parallel_events_event_value);
-        
-        zend_std_write_property(event, &key, value, NULL);
-    }
-#endif
-    Z_TRY_DELREF_P(value);
-}
+#define PHP_PARALLEL_EVENTS_EVENT_PROPERTY(t, p) ZVAL_##t(OBJ_PROP(Z_OBJ_P(return_value), php_parallel_events_event_##p##_offset), p)
 
 void php_parallel_events_event_construct(
         php_parallel_events_t *events,
@@ -104,20 +42,21 @@ void php_parallel_events_event_construct(
         zend_object *object,
         zval *value,
         zval *return_value) {
+
+    GC_ADDREF(object);
+    
+    zend_string_addref(source);
+    
     object_init_ex(return_value, php_parallel_events_event_ce);
     
-    php_parallel_events_event_set_type(return_value, type);
-    php_parallel_events_event_set_source(return_value, source);
-    php_parallel_events_event_set_object(return_value, object);
+    PHP_PARALLEL_EVENTS_EVENT_PROPERTY(LONG, type);
+    PHP_PARALLEL_EVENTS_EVENT_PROPERTY(STR,  source);
+    PHP_PARALLEL_EVENTS_EVENT_PROPERTY(OBJ,  object);
     
     if (type == PHP_PARALLEL_EVENTS_EVENT_READ) {
-        php_parallel_events_event_set_value(return_value, value);
+        PHP_PARALLEL_EVENTS_EVENT_PROPERTY(COPY_VALUE, value);
     } else {
         php_parallel_events_input_remove(&events->input, source);
-    }
-    
-    if (instanceof_function(object->ce, php_parallel_channel_ce)) {
-        zend_string_addref(source);
     }
     
     zend_hash_del(&events->targets, source);
@@ -134,6 +73,13 @@ zend_function_entry php_parallel_events_event_methods[] = {
     PHP_ME(Event, __construct, NULL, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
+
+static uint32_t php_parallel_events_event_offsetof(zend_string *property) {
+    zend_property_info *info = 
+        zend_get_property_info(php_parallel_events_event_ce, property, 1);
+        
+    return info->offset;
+}
 
 void php_parallel_events_event_startup(void) {
     zend_class_entry ce;
@@ -162,6 +108,15 @@ void php_parallel_events_event_startup(void) {
 	zend_declare_property_null(php_parallel_events_event_ce, ZEND_STRL("source"), ZEND_ACC_PUBLIC);
 	zend_declare_property_null(php_parallel_events_event_ce, ZEND_STRL("object"), ZEND_ACC_PUBLIC);
 	zend_declare_property_null(php_parallel_events_event_ce, ZEND_STRL("value"), ZEND_ACC_PUBLIC);
+	
+	php_parallel_events_event_type_offset = 
+	    php_parallel_events_event_offsetof(php_parallel_events_event_type);
+	php_parallel_events_event_source_offset = 
+	    php_parallel_events_event_offsetof(php_parallel_events_event_source);  
+	php_parallel_events_event_object_offset = 
+	    php_parallel_events_event_offsetof(php_parallel_events_event_object);
+	php_parallel_events_event_value_offset = 
+	    php_parallel_events_event_offsetof(php_parallel_events_event_value); 
 }
 
 void php_parallel_events_event_shutdown(void) {

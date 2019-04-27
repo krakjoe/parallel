@@ -218,33 +218,32 @@ void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_da
 	        zend_execute_ex(frame);
 		    
 		    if (UNEXPECTED(EG(exception))) {
-		        if (UNEXPECTED(!EG(current_execute_data))) {
+		        if (monitor) {
+		            php_parallel_exceptions_save(
+		                frame->return_value, EG(exception));
+		                
+		            zend_clear_exception();
+		            
+		            php_parallel_monitor_set(
+		                monitor, PHP_PARALLEL_ERROR, 1);
+		        } else {
 		            zend_throw_exception_internal(NULL);
-		        } else if (EG(current_execute_data)->func &&
-		                   ZEND_USER_CODE(EG(current_execute_data)->func->common.type)) {
-		            zend_rethrow_exception(EG(current_execute_data));
 		        }
 		    }
 	    } zend_catch {
             if (monitor) {
-		        if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_KILLED)) {
-			        php_parallel_monitor_set(monitor, 
-				        PHP_PARALLEL_KILLED|PHP_PARALLEL_ERROR, 0);
-		        } else {
-			        php_parallel_monitor_set(monitor, PHP_PARALLEL_ERROR, 0);
-		        }
+		        php_parallel_monitor_set(monitor, PHP_PARALLEL_KILLED, 0);
 	        }
 	    } zend_end_try();
 
          if (frame->return_value  && !Z_ISUNDEF_P(frame->return_value)) {
             zval garbage = *frame->return_value;
-            
-	        if (Z_REFCOUNTED(garbage)) {
+
+	        if (Z_REFCOUNTED(garbage) && Z_TYPE(garbage) != IS_PTR) {
 	            php_parallel_copy_zval(
-                    frame->return_value, 
-                    frame->return_value, 1);
+                    frame->return_value, &garbage, 1);
                     
-		        zval_ptr_dtor(&garbage);
+		        zval_ptr_dtor_nogc(&garbage);
 	        }
         }
     

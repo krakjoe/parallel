@@ -8,19 +8,20 @@ if (!extension_loaded('parallel')) {
 ?>
 --FILE--
 <?php
-$parallel = new parallel\Runtime();
+$parallel = new parallel\Runtime(sprintf("%s/bootstrap.inc", __DIR__));
 
 try {
 	$parallel->run(function(){
-		throw new Error();
+		thrower();
 	});
 } catch (Error $er) { 
-	/* can't catch here what is thrown in parallel */
+	/* can't catch here what is thrown in runtime */
 }
 ?>
 --EXPECTF--
-Fatal error: Uncaught Error in %s:6
+Fatal error: Uncaught %s in %s:7
 Stack trace:
-#0 {main}
-  thrown in %s on line 6
+#0 %s(6): thrower()
+#1 {main}
+  thrown in %s on line 7
 
