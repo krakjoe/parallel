@@ -154,6 +154,8 @@ void php_parallel_link_destroy(php_parallel_link_t *link) {
     pthread_mutex_lock(&link->m.m);
     
      if (--link->refcount == 0) {
+        pthread_mutex_unlock(&link->m.m);
+        
         php_parallel_link_mutex_destroy(&link->m);
         php_parallel_link_cond_destroy(&link->c);
         
