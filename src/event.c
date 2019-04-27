@@ -21,7 +21,6 @@
 #include "parallel.h"
 
 zend_class_entry* php_parallel_events_event_ce;
-zend_object_handlers php_parallel_events_event_handlers;
 
 static zend_string *php_parallel_events_event_type;
 static zend_string *php_parallel_events_event_source;
@@ -74,7 +73,7 @@ void php_parallel_events_event_construct(
     if (type == PHP_PARALLEL_EVENTS_EVENT_READ) {
         PHP_PARALLEL_EVENTS_EVENT_PROPERTY(COPY_VALUE, value);
     } else {
-        php_parallel_events_input_remove(&events->input, source);
+         php_parallel_events_input_remove(&events->input, source);
     }
     
     zend_hash_del(&events->targets, source);
