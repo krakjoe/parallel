@@ -68,6 +68,7 @@ extern zend_class_entry* php_parallel_events_error_timeout_ce;
 */
 extern zend_class_entry* php_parallel_events_input_error_ce;
 extern zend_class_entry* php_parallel_events_input_error_existence_ce;
+extern zend_class_entry* php_parallel_events_input_error_illegal_value_ce;
 
 /*
 * Event Exceptions

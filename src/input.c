@@ -77,7 +77,7 @@ PHP_METHOD(Input, add)
     
     if (Z_TYPE_P(value) == IS_OBJECT || Z_TYPE_P(value) == IS_NULL) {
         php_parallel_exception_ex(
-            php_parallel_channel_error_illegal_value_ce,
+            php_parallel_events_input_error_illegal_value_ce,
             "value of type %s is illegal",
             zend_get_type_by_const(Z_TYPE_P(value)));
         return;

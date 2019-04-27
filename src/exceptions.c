@@ -60,6 +60,7 @@ zend_class_entry* php_parallel_events_error_timeout_ce;
 
 zend_class_entry* php_parallel_events_input_error_ce;
 zend_class_entry* php_parallel_events_input_error_existence_ce;
+zend_class_entry* php_parallel_events_input_error_illegal_value_ce;
 
 zend_class_entry* php_parallel_events_event_error_ce;
 
@@ -325,6 +326,10 @@ void php_parallel_exceptions_startup() {
 	    
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events\\Input\\Error", "Existence", NULL);
 	php_parallel_events_input_error_existence_ce = 
+	    zend_register_internal_class_ex(&ce, php_parallel_events_input_error_ce);
+
+	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events\\Input\\Error", "IllegalValue", NULL);
+	php_parallel_events_input_error_illegal_value_ce = 
 	    zend_register_internal_class_ex(&ce, php_parallel_events_input_error_ce);
 	    
 	/*

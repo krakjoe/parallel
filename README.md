@@ -166,7 +166,7 @@ final class parallel\Events\Input {
     /**
     * Shall set input for the given target
     * @throws \parallel\Events\Input\Error\Existence        if input for target already exists
-    * @throws \parallel\Channel\Error\IllegalValue          if value is illegal (object, null)
+    * @throws \parallel\Events\Input\Error\IllegalValue     if value is illegal (object, null)
     */
     public function add(string $target, $value) : void;
     
