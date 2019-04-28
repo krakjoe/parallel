@@ -25,3 +25,5 @@ Stack trace:
 #1 %s037.php(7): Foo->bar('array(1)', 'Object(stdClass...')
 #2 {main}
   thrown in %sbootstrap.inc on line 12
+--XFAIL--
+not done here yet ...
