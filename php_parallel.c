@@ -50,6 +50,7 @@ PHP_RINIT_FUNCTION(parallel)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 
+    php_parallel_copy_startup();
     php_parallel_strings_startup();
 
 	return SUCCESS;
@@ -61,6 +62,7 @@ PHP_RINIT_FUNCTION(parallel)
 PHP_RSHUTDOWN_FUNCTION(parallel)
 {
     php_parallel_strings_shutdown();
+    php_parallel_copy_shutdown();
     
 	return SUCCESS;
 }

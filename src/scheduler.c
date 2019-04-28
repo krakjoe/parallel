@@ -62,7 +62,6 @@ static void php_parallel_schedule_free(void *scheduleed) {
         slot++;
     }
 
-    php_parallel_copy_free(el->frame->func, 1);
     pefree(el->frame, 1);
 }
 
@@ -243,7 +242,7 @@ void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_da
 	            php_parallel_copy_zval(
                     frame->return_value, &garbage, 1);
                     
-		        zval_ptr_dtor_nogc(&garbage);
+		        zval_ptr_dtor(&garbage);
 	        }
         }
     
