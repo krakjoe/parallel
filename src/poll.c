@@ -222,7 +222,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_future(
         php_parallel_future_t *future =
             php_parallel_future_fetch(state->object);
             
-        php_parallel_future_value(future, &read);
+        php_parallel_future_value(future, &read, 0);
         
         php_parallel_events_event_construct(
             events,

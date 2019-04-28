@@ -262,7 +262,8 @@ static void _php_parallel_scheduler_kill(void *scheduled) {
 	    (php_parallel_schedule_el_t*) scheduled;
 
 	if (Z_PTR(el->frame->This)) {
-		php_parallel_monitor_set(Z_PTR(el->frame->This), PHP_PARALLEL_KILLED, 1);
+		php_parallel_monitor_set(Z_PTR(el->frame->This), 
+		    PHP_PARALLEL_READY|PHP_PARALLEL_KILLED, 1);
 	}
 }
 
