@@ -112,7 +112,7 @@ void php_parallel_exceptions_destroy(php_parallel_exception_t *ex) {
 static zend_always_inline void php_parallel_exceptions_treat_trace(zval *trace) {
     HashTable *table = zend_array_dup(Z_ARRVAL_P(trace));
     zval        *el;
-    
+
     ZEND_HASH_FOREACH_VAL(table, el) {
         zval *args = zend_hash_find(Z_ARRVAL_P(el), ZSTR_KNOWN(ZEND_STR_ARGS)),
              *arg;
@@ -204,9 +204,7 @@ zend_object* php_parallel_exceptions_restore(zval *exception) {
     }
     
     object = zend_objects_new(type);
-    
     object->handlers = ex->handlers;
-    
     object_properties_init(object, type);
     
     php_parallel_exceptions_write(object, ZSTR_KNOWN(ZEND_STR_FILE),     &file);

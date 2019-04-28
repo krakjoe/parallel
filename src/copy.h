@@ -23,11 +23,9 @@
 # define GC_ADDREF(ref) GC_REFCOUNT(ref)++
 # define GC_DELREF(ref) --GC_REFCOUNT(ref)
 # define GC_SET_PERSISTENT_TYPE(ref, type) (GC_TYPE_INFO(ref) = type)
-# if PHP_VERSION_ID < 70200
-#  define GC_ARRAY IS_ARRAY
-# else
-#  define GC_ARRAY (IS_ARRAY | (GC_COLLECTABLE << GC_FLAGS_SHIFT))
-# endif
+# define GC_ADD_FLAGS(ref, flags) GC_FLAGS(ref) |= flags 
+# define GC_DEL_FLAGS(ref, flags) GC_FLAGS(ref) &= ~flags
+# define GC_ARRAY (IS_ARRAY | (GC_COLLECTABLE << GC_FLAGS_SHIFT))
 #else
 # define GC_SET_PERSISTENT_TYPE(ref, type) \
 	(GC_TYPE_INFO(ref) = type | (GC_PERSISTENT << GC_FLAGS_SHIFT))
@@ -40,9 +38,9 @@ zend_bool php_parallel_copy_check(zend_execute_data *execute_data, const zend_fu
 
 static zend_always_inline void php_parallel_ht_dtor(HashTable *table, zend_bool persistent) {
 #if PHP_VERSION_ID < 70300
-    if (GC_DELREF(table) == 0) {
+    if (GC_DELREF(table) == (persistent ? 1 : 0)) {
 #else
-    if (table != &zend_empty_array && GC_DELREF(table) == 0) {
+    if (table != &zend_empty_array && GC_DELREF(table) == (persistent ? 1 : 0)) {
 #endif
         zend_hash_destroy(table);
 	    pefree(table, persistent);
@@ -65,4 +63,6 @@ static zend_always_inline void php_parallel_zval_dtor(zval *zv) {
 	}
 }
 
+void php_parallel_copy_startup(void);
+void php_parallel_copy_shutdown(void);
 #endif
