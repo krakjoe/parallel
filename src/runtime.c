@@ -244,11 +244,12 @@ PHP_METHOD(Runtime, run)
 
 	php_parallel_monitor_lock(runtime->monitor);
 	
-	function = (zend_function*) zend_get_closure_method_def(closure);
+	function = php_parallel_copy_check(
+	            EG(current_execute_data)->prev_execute_data,
+		        (zend_function*) zend_get_closure_method_def(closure), 
+		        argv, &returns);
 
-	if (!php_parallel_copy_check(
-	    EG(current_execute_data)->prev_execute_data,
-		function, argv, &returns)) {
+	if (!function) {
 		php_parallel_monitor_unlock(runtime->monitor);
 		return;
 	}
