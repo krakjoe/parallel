@@ -104,37 +104,42 @@ static zend_always_inline void php_parallel_runtime_functions_update(php_paralle
     zend_string *key;
     zend_function *function;
     
-    ZEND_HASH_FOREACH_STR_KEY_PTR(&runtime->functions.lambdas, key, function) {
-        zend_function *copy;
-        
-        if (zend_hash_exists(EG(function_table), key)) {
-            continue;
-        }
-        
-        copy = php_parallel_copy(function, 0);
-        copy->common.fn_flags |= ZEND_ACC_CLOSURE;
-        copy->common.function_name = php_parallel_string(key);
-        
-        zend_hash_add_ptr(EG(function_table),  copy->common.function_name, copy);
-        zend_hash_add_ptr(&functions->lambdas, copy->common.function_name, copy);
-    } ZEND_HASH_FOREACH_END();
-    
-    ZEND_HASH_FOREACH_STR_KEY_PTR(&runtime->functions.functions, key, function) {
-        zend_function *copy;
-        
-        if (zend_hash_exists(EG(function_table), key)) {
-            continue;
-        }
-        
-        copy = php_parallel_copy(function, 0);
-        copy->common.function_name = php_parallel_string(copy->common.function_name);
-        
-        zend_hash_add_ptr(EG(function_table),    key, copy);
-        zend_hash_add_ptr(&functions->functions, key, copy);
-    } ZEND_HASH_FOREACH_END();
+    if (runtime->functions.lambdas.nNumUsed) {
+        ZEND_HASH_FOREACH_STR_KEY_PTR(&runtime->functions.lambdas, key, function) {
+            zend_function *copy;
+            
+            if (zend_hash_exists(EG(function_table), key)) {
+                continue;
+            }
+            
+            copy = php_parallel_copy(function, 0);
+            copy->common.fn_flags |= ZEND_ACC_CLOSURE;
+            copy->common.function_name = php_parallel_string(key);
+            
+            zend_hash_add_ptr(EG(function_table),  copy->common.function_name, copy);
+            zend_hash_add_ptr(&functions->lambdas, copy->common.function_name, copy);
+        } ZEND_HASH_FOREACH_END();
 
-    zend_hash_clean(&runtime->functions.lambdas);
-    zend_hash_clean(&runtime->functions.functions);
+        zend_hash_clean(&runtime->functions.lambdas);
+    }
+    
+    if (runtime->functions.functions.nNumUsed) {
+        ZEND_HASH_FOREACH_STR_KEY_PTR(&runtime->functions.functions, key, function) {
+            zend_function *copy;
+            
+            if (zend_hash_exists(EG(function_table), key)) {
+                continue;
+            }
+            
+            copy = php_parallel_copy(function, 0);
+            copy->common.function_name = php_parallel_string(copy->common.function_name);
+            
+            zend_hash_add_ptr(EG(function_table),    key, copy);
+            zend_hash_add_ptr(&functions->functions, key, copy);
+        } ZEND_HASH_FOREACH_END();
+
+        zend_hash_clean(&runtime->functions.functions);
+    }
 }
 
 static zend_always_inline void php_parallel_runtime_functions_finish(php_parallel_runtime_functions_t *functions) {
