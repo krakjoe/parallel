@@ -18,19 +18,24 @@
 #ifndef HAVE_PARALLEL_RUNTIME_H
 #define HAVE_PARALLEL_RUNTIME_H
 
+typedef struct _php_parallel_runtime_functions_t {
+    HashTable               lambdas;
+    HashTable               functions;
+} php_parallel_runtime_functions_t;
+
 typedef struct _php_parallel_runtime_t {
-	pthread_t                   thread;
-	php_parallel_monitor_t     *monitor;
-	zend_string                *bootstrap;
+	pthread_t                        thread;
+	php_parallel_monitor_t          *monitor;
+	zend_string                     *bootstrap;
+	php_parallel_runtime_functions_t functions;
 	struct {
-		zend_bool              *interrupt;
+		zend_bool                   *interrupt;
 	} child;
 	struct {
-		void                   *server;
+		void                        *server;
 	} parent;
-	zend_llist                  schedule;
-	HashTable                   lambdas;
-	zend_object                 std;
+	zend_llist                       schedule;
+	zend_object                      std;
 } php_parallel_runtime_t;
 
 static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_fetch(zend_object *o) {
@@ -41,7 +46,7 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_from(zval
 	return php_parallel_runtime_fetch(Z_OBJ_P(z));
 }
 
-void php_parallel_runtime_lambda_push(php_parallel_runtime_t *runtime, zend_string *name, const zend_function *lambda);
+void php_parallel_runtime_function_push(php_parallel_runtime_t *runtime, zend_string *name, const zend_function *function, zend_bool lambda);
 
 void         php_parallel_runtime_startup();
 void         php_parallel_runtime_shutdown();
