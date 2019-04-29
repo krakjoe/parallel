@@ -315,7 +315,11 @@ static zend_always_inline zend_bool php_parallel_copying_lexical_reference(zend_
 
     while (opline < end) {
         if ((opline->opcode == ZEND_BIND_LEXICAL) && 
+#if PHP_VERSION_ID >= 70300
             (opline->extended_value & ZEND_BIND_REF)) {
+#else
+            (opline->extended_value)) {
+#endif
             if (zend_string_equals(
                 zend_get_compiled_variable_name((zend_op_array*)function, bind->op1.var), 
                 zend_get_compiled_variable_name((zend_op_array*)EX(func), opline->op2.var))) {
