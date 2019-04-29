@@ -23,7 +23,7 @@ final class parallel\Runtime {
     * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
     * @throws \parallel\Runtime\Error\IllegalFunction       if task was created from internal function
     * @throws \parallel\Runtime\Error\IllegalInstruction    if task contains illegal instructions:
-    *                                                            declare (anonymous) function
+    *                                                            declare function
     *                                                            declare (anonymous) class
     *                                                            lexical by-reference access
     *                                                            yield

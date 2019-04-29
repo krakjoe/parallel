@@ -34,7 +34,7 @@
 zend_function* php_parallel_copy(const zend_function *function, zend_bool persistent);
 void php_parallel_copy_free(zend_function *function, zend_bool persistent);
 void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent);
-zend_function* php_parallel_copy_check(zend_execute_data *execute_data, const zend_function * function, zval *argv, zend_bool *returns);
+zend_function* php_parallel_copy_check(php_parallel_runtime_t *runtime, zend_execute_data *execute_data, const zend_function * function, zval *argv, zend_bool *returns);
 
 static zend_always_inline void php_parallel_ht_dtor(HashTable *table, zend_bool persistent) {
 #if PHP_VERSION_ID < 70300
