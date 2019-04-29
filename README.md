@@ -25,7 +25,7 @@ final class parallel\Runtime {
     * @throws \parallel\Runtime\Error\IllegalInstruction    if task contains illegal instructions:
     *                                                            declare (anonymous) function
     *                                                            declare (anonymous) class
-    *                                                            lexical scope access
+    *                                                            lexical by-reference access
     *                                                            yield
     * @throws \parallel\Runtime\Error\IllegalParameter      if task accepts or argv contains illegal variables:
     *                                                            object

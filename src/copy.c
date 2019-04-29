@@ -95,6 +95,7 @@ void php_parallel_copy_shutdown(void) {
     zend_hash_destroy(&PCG(copied));
     zend_hash_destroy(&PCG(checked));
     zend_hash_destroy(&PCG(activated));
+    zend_hash_destroy(&PCG(uncached));
 }
 
 static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) {
@@ -302,7 +303,7 @@ HashTable *php_parallel_copy_hash(HashTable *source, zend_bool persistent) {
     return php_parallel_copy_hash_request(source);
 }
 
-static zend_always_inline zend_bool php_parallel_copying_lexical(zend_execute_data *execute_data, const zend_function *function, zend_op *bind) { /* {{{ */
+static zend_always_inline zend_bool php_parallel_copying_lexical_reference(zend_execute_data *execute_data, const zend_function *function, zend_op *bind) { /* {{{ */
     zend_op *opline, *end;
 
     if (EX(func)->type != ZEND_USER_FUNCTION) {
@@ -313,7 +314,8 @@ static zend_always_inline zend_bool php_parallel_copying_lexical(zend_execute_da
     end    = opline + EX(func)->op_array.last;
 
     while (opline < end) {
-        if (opline->opcode == ZEND_BIND_LEXICAL) {
+        if ((opline->opcode == ZEND_BIND_LEXICAL) && 
+            (opline->extended_value & ZEND_BIND_REF)) {
             if (zend_string_equals(
                 zend_get_compiled_variable_name((zend_op_array*)function, bind->op1.var), 
                 zend_get_compiled_variable_name((zend_op_array*)EX(func), opline->op2.var))) {
@@ -514,12 +516,14 @@ static zend_always_inline zend_function* php_parallel_copy_uncached(const zend_f
                 case ZEND_ASSERT_CHECK:
                     opline->op2.jmp_addr = &opcodes[opline->op2.jmp_addr - source->op_array.opcodes];
                     break;
-                    
+
+#ifdef ZEND_LAST_CATCH
                 case ZEND_CATCH:
                     if (!(opline->extended_value & ZEND_LAST_CATCH)) {
                         opline->op2.jmp_addr = &opcodes[opline->op2.jmp_addr - source->op_array.opcodes];
                     }
                     break;
+#endif
             }
 #endif
 
@@ -612,10 +616,10 @@ zend_function* php_parallel_copy_check(zend_execute_data *execute_data, const ze
                 return 0;
 
             case ZEND_BIND_STATIC:	
-                if (php_parallel_copying_lexical(execute_data, function, it)) {
+                if (php_parallel_copying_lexical_reference(execute_data, function, it)) {
                     php_parallel_exception_ex(
                         php_parallel_runtime_error_illegal_instruction_ce,
-                        "illegal instruction (lexical) in task");
+                        "illegal instruction (lexical reference) in task");
                     return 0;
                 }
             break;
