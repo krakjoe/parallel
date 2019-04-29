@@ -29,6 +29,7 @@ typedef struct _php_parallel_runtime_t {
 		void                   *server;
 	} parent;
 	zend_llist                  schedule;
+	HashTable                   lambdas;
 	zend_object                 std;
 } php_parallel_runtime_t;
 
@@ -39,6 +40,8 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_fetch(zen
 static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_from(zval *z) {
 	return php_parallel_runtime_fetch(Z_OBJ_P(z));
 }
+
+void php_parallel_runtime_lambda_push(php_parallel_runtime_t *runtime, zend_string *name, const zend_function *lambda);
 
 void         php_parallel_runtime_startup();
 void         php_parallel_runtime_shutdown();

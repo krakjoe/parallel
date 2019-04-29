@@ -73,12 +73,71 @@ static zend_always_inline int php_parallel_runtime_bootstrap(zend_string *file) 
 	return FAILURE;
 }
 
+void php_parallel_runtime_lambda_push(php_parallel_runtime_t *runtime, zend_string *name, const zend_function *lambda) {
+    php_parallel_monitor_lock(runtime->monitor);
+    
+    zend_hash_add_ptr(
+        &runtime->lambdas, name, 
+        php_parallel_copy(lambda, 1));
+    
+    php_parallel_monitor_unlock(runtime->monitor);
+}
+
+static void php_parallel_runtime_lambdas_dtor(zval *zv) {
+    HashTable *table = EG(function_table);
+    dtor_func_t dtor = table->pDestructor;
+    zend_function *function = Z_FUNC_P(zv);
+    
+    table->pDestructor = NULL;
+    
+    zend_hash_del(
+        table, 
+        function->common.function_name);
+    
+    table->pDestructor = dtor;
+    
+    php_parallel_copy_free(function, 0);
+}
+
+static zend_always_inline void php_parallel_runtime_lambdas_setup(php_parallel_runtime_t *runtime, HashTable *lambdas) {
+    zend_hash_init(lambdas, 16, NULL, php_parallel_runtime_lambdas_dtor, 0);
+}
+
+static zend_always_inline void php_parallel_runtime_lambdas_update(php_parallel_runtime_t *runtime, HashTable *lambdas) {
+    zend_string *key;
+    zend_function *function;
+    
+    ZEND_HASH_FOREACH_STR_KEY_PTR(&runtime->lambdas, key, function) {
+        zend_function *lambda;
+        
+        if (zend_hash_exists(EG(function_table), key)) {
+            continue;
+        }
+        
+        lambda = php_parallel_copy(function, 0);
+        lambda->common.fn_flags |= ZEND_ACC_CLOSURE;
+        lambda->common.function_name = php_parallel_string(key);
+        
+        zend_hash_add_ptr(
+            EG(function_table), lambda->common.function_name, lambda);
+        zend_hash_add_ptr(
+            lambdas, lambda->common.function_name, lambda);
+    } ZEND_HASH_FOREACH_END();
+}
+
+static zend_always_inline void php_parallel_runtime_lambdas_finish(php_parallel_runtime_t *runtime, HashTable *lambdas) {
+    zend_hash_destroy(lambdas);
+}
+
 static void* php_parallel_runtime(void *arg) {	
 	int32_t state = 0;
+	HashTable lambdas;
 
 	php_parallel_runtime_t *runtime = 
 	    php_parallel_scheduler_setup(
 	        (php_parallel_runtime_t*) arg);
+
+    php_parallel_runtime_lambdas_setup(runtime, &lambdas);
 
 	if (php_parallel_runtime_bootstrap(runtime->bootstrap) != SUCCESS) {
 		php_parallel_monitor_set(
@@ -122,13 +181,15 @@ _php_parallel_kill:
 				}
 			}
 		}
-
+		
+		php_parallel_runtime_lambdas_update(runtime, &lambdas);
 		php_parallel_monitor_unlock(runtime->monitor);
         
 		php_parallel_scheduler_run(runtime, el.frame);
 	} while (1);
 
 _php_parallel_exit:
+    php_parallel_runtime_lambdas_finish(runtime, &lambdas);
 	php_parallel_scheduler_exit(runtime);
 
 	return NULL;
@@ -166,6 +227,8 @@ static void php_parallel_runtime_stop(php_parallel_runtime_t *runtime) {
 	}
 
     php_parallel_scheduler_destroy(runtime);
+    
+    zend_hash_destroy(&runtime->lambdas);
     
     runtime->monitor = NULL;
 }
@@ -245,6 +308,7 @@ PHP_METHOD(Runtime, run)
 	php_parallel_monitor_lock(runtime->monitor);
 	
 	function = php_parallel_copy_check(
+	            runtime,
 	            EG(current_execute_data)->prev_execute_data,
 		        (zend_function*) zend_get_closure_method_def(closure), 
 		        argv, &returns);
@@ -366,6 +430,8 @@ zend_object* php_parallel_runtime_create(zend_class_entry *type) {
     php_parallel_scheduler_init(runtime);
 
 	runtime->parent.server = SG(server_context);
+	
+	zend_hash_init(&runtime->lambdas, 16, NULL, NULL, 0);
 
 	return &runtime->std;
 }

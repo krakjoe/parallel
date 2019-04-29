@@ -1,5 +1,5 @@
 --TEST--
-ZEND_DECLARE_LAMBDA_FUNCTION
+ZEND_DECLARE_LAMBDA_FUNCTION (OK)
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -10,15 +10,25 @@ if (!extension_loaded('parallel')) {
 <?php
 $runtime = new parallel\Runtime();
 
-try {
-	$runtime->run(function() {
-		function() {};
-	});
-} catch (\parallel\Runtime\Error\IllegalInstruction $ex) {
-	var_dump($ex->getMessage());
-}
+$runtime->run(function() {
+	$closure = function() {
+	    return true;
+	};
+	var_dump($closure());
+});
+
+$runtime->run(function() {
+	$closure = function() {
+	    $result = function(){
+	        return true;
+	    };
+	    return $result();
+	};
+	var_dump($closure());
+});
 ?>
---EXPECTF--
-string(%d) "illegal instruction (function) on line 1 of task"
+--EXPECT--
+bool(true)
+bool(true)
 
 

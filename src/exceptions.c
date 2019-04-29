@@ -124,7 +124,7 @@ static zend_always_inline void php_parallel_exceptions_treat_trace(zval *trace) 
         ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(args), arg) {
             if (Z_TYPE_P(arg) == IS_OBJECT) {
                 zend_string *replacement = zend_strpprintf(
-                    0, "Object(%s) #%ld",
+                    0, "Object(%s) #%u",
                     ZSTR_VAL(Z_OBJCE_P(arg)->name), 
                     Z_OBJ_P(arg)->handle);
 
