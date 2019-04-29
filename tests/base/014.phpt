@@ -9,17 +9,27 @@ if (!extension_loaded('parallel')) {
 --FILE--
 <?php
 $parallel = new parallel\Runtime();
-$var     = null;
 
-try {
-	$parallel->run(function() {
-		function test() {}
-	});
-} catch (\parallel\Runtime\Error\IllegalInstruction $ex) {
-	var_dump($ex->getMessage());
-}
+$parallel->run(function() {
+	function test() {
+	    return true;
+	}
+	
+	var_dump(test());
+});
+
+$parallel->run(function() {
+	function test2() {
+	    function test3() {
+	        return true;
+	    }
+	    return test3();
+	}
+	
+	var_dump(test2());
+});
 ?>
---EXPECTF--
-string(%d) "illegal instruction (function) on line 1 of task"
-
+--EXPECT--
+bool(true)
+bool(true)
 

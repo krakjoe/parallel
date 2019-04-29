@@ -238,10 +238,10 @@ void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_da
          if (frame->return_value  && !Z_ISUNDEF_P(frame->return_value)) {
             zval garbage = *frame->return_value;
 
-	        if (Z_REFCOUNTED(garbage) && Z_TYPE(garbage) != IS_PTR) {
+	        if (Z_OPT_REFCOUNTED(garbage)) {
 	            php_parallel_copy_zval(
                     frame->return_value, &garbage, 1);
-                    
+
 		        zval_ptr_dtor(&garbage);
 	        }
         }
