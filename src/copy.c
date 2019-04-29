@@ -23,8 +23,6 @@
 #include "php_streams.h"
 #include "php_network.h"
 
-extern zend_string* php_parallel_runtime_main;
-
 typedef struct _php_parallel_copy_check_t {
     zend_function *function;
     zend_bool      returns;

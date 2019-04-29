@@ -215,7 +215,7 @@ void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_da
     zend_first_try {
 	    zend_try {
 	        zend_execute_ex(frame);
-		    
+	        
 		    if (UNEXPECTED(EG(exception))) {
 		        if (monitor) {
 		            php_parallel_exceptions_save(

@@ -23,8 +23,6 @@
 zend_class_entry *php_parallel_runtime_ce;
 zend_object_handlers php_parallel_runtime_handlers;
 
-zend_string *php_parallel_runtime_main;
-
 static zend_always_inline int php_parallel_runtime_bootstrap(zend_string *file) {
 	zend_file_handle fh;
 	zend_op_array *ops;
@@ -494,13 +492,9 @@ void php_parallel_runtime_startup() {
 	php_parallel_runtime_ce = zend_register_internal_class(&ce);
 	php_parallel_runtime_ce->create_object = php_parallel_runtime_create;
 	php_parallel_runtime_ce->ce_flags |= ZEND_ACC_FINAL;
-
-	php_parallel_runtime_main = zend_new_interned_string(
-	                        zend_string_init(ZEND_STRL(
-	                            "\\parallel\\Runtime::run"), 1));
 }
 
 void php_parallel_runtime_shutdown() {
-	zend_string_release(php_parallel_runtime_main);
+
 }
 #endif

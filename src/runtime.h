@@ -52,5 +52,4 @@ void         php_parallel_runtime_startup();
 void         php_parallel_runtime_shutdown();
 
 extern zend_class_entry* php_parallel_runtime_ce;
-extern zend_string*      php_parallel_runtime_main;
 #endif
