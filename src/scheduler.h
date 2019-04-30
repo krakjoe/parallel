@@ -19,7 +19,7 @@
 #define HAVE_PARALLEL_SCHEDULER_H
 
 typedef struct _php_parallel_schedule_el_t {
-	zend_execute_data          *frame;
+    zend_execute_data          *frame;
 } php_parallel_schedule_el_t;
 
 void php_parallel_scheduler_startup(void);

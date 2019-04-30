@@ -30,45 +30,45 @@ static pthread_mutex_t php_parallel_output_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static size_t php_parallel_output_function(const char *str, size_t len) {
     size_t result;
-    
+
     pthread_mutex_lock(&php_parallel_output_mutex);
-    result = 
+    result =
         php_sapi_output_function(str, len);
     pthread_mutex_unlock(&php_parallel_output_mutex);
-    
+
     return result;
 }
 
 void php_parallel_startup(void) {
-	if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
-		php_sapi_deactivate_function = sapi_module.deactivate;
-        
-		sapi_module.deactivate = NULL;
-	}
-	
+    if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
+        php_sapi_deactivate_function = sapi_module.deactivate;
+
+        sapi_module.deactivate = NULL;
+    }
+
     php_sapi_output_function = sapi_module.ub_write;
-    
+
     sapi_module.ub_write = php_parallel_output_function;
-    
+
     php_parallel_exceptions_startup();
     php_parallel_handlers_startup();
-	php_parallel_scheduler_startup();
-	php_parallel_runtime_startup();
-	php_parallel_future_startup();
-	php_parallel_channel_startup();
-	php_parallel_events_startup();
+    php_parallel_scheduler_startup();
+    php_parallel_runtime_startup();
+    php_parallel_future_startup();
+    php_parallel_channel_startup();
+    php_parallel_events_startup();
 }
 
 void php_parallel_shutdown(void) {
-	php_parallel_channel_shutdown();
-	php_parallel_scheduler_shutdown();
-	php_parallel_runtime_shutdown();
-	php_parallel_events_shutdown();
-	
-	if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
-		sapi_module.deactivate = php_sapi_deactivate_function;
-	}
-	
-	sapi_module.ub_write = php_sapi_output_function;
+    php_parallel_channel_shutdown();
+    php_parallel_scheduler_shutdown();
+    php_parallel_runtime_shutdown();
+    php_parallel_events_shutdown();
+
+    if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
+        sapi_module.deactivate = php_sapi_deactivate_function;
+    }
+
+    sapi_module.ub_write = php_sapi_output_function;
 }
 #endif

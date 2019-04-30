@@ -30,11 +30,11 @@ typedef struct _php_parallel_events_loop_t {
 static void php_parallel_events_loop_destroy(zend_object_iterator *zo) {
     php_parallel_events_loop_t *loop =
         (php_parallel_events_loop_t*) zo;
-    
+
     if (!Z_ISUNDEF(loop->event)) {
         zval_ptr_dtor(&loop->event);
     }
-    
+
     zval_ptr_dtor(&loop->events);
 }
 
@@ -61,7 +61,7 @@ static void php_parallel_events_loop_poll(zend_object_iterator *zo) {
 static zval* php_parallel_events_loop_current(zend_object_iterator *zo) {
     php_parallel_events_loop_t *loop =
         (php_parallel_events_loop_t*) zo;
-    
+
     return &loop->event;
 }
 
@@ -76,18 +76,18 @@ const zend_object_iterator_funcs php_parallel_events_loop_functions = {
 };
 
 zend_object_iterator* php_parallel_events_loop_create(zend_class_entry *type, zval *events, int by_ref) {
-    php_parallel_events_loop_t *loop = 
-        (php_parallel_events_loop_t*) 
+    php_parallel_events_loop_t *loop =
+        (php_parallel_events_loop_t*)
             ecalloc(1, sizeof(php_parallel_events_loop_t));
-    
+
     zend_iterator_init(&loop->it);
-    
+
     loop->it.funcs = &php_parallel_events_loop_functions;
-    
+
     ZVAL_COPY(&loop->events, events);
 
     ZVAL_UNDEF(&loop->event);
-    
+
     return &loop->it;
 }
 #endif

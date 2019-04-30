@@ -41,11 +41,11 @@ typedef struct _php_parallel_events_state_t {
 #define php_parallel_events_state_initializer {0, NULL, 0, 0, NULL}
 
 static zend_always_inline php_parallel_events_t* php_parallel_events_fetch(zend_object *o) {
-	return (php_parallel_events_t*) (((char*) o) - XtOffsetOf(php_parallel_events_t, std));
+    return (php_parallel_events_t*) (((char*) o) - XtOffsetOf(php_parallel_events_t, std));
 }
 
 static zend_always_inline php_parallel_events_t* php_parallel_events_from(zval *z) {
-	return php_parallel_events_fetch(Z_OBJ_P(z));
+    return php_parallel_events_fetch(Z_OBJ_P(z));
 }
 
 void php_parallel_events_startup(void);

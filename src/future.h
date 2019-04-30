@@ -24,17 +24,17 @@
 extern zend_class_entry *php_parallel_future_ce;
 
 typedef struct _php_parallel_future_t {
-	php_parallel_monitor_t *monitor;
-	zval value;
-	zend_object std;
+    php_parallel_monitor_t *monitor;
+    zval value;
+    zend_object std;
 } php_parallel_future_t;
 
 static zend_always_inline php_parallel_future_t* php_parallel_future_fetch(zend_object *o) {
-	return (php_parallel_future_t*) (((char*) o) - XtOffsetOf(php_parallel_future_t, std));
+    return (php_parallel_future_t*) (((char*) o) - XtOffsetOf(php_parallel_future_t, std));
 }
 
 static zend_always_inline php_parallel_future_t* php_parallel_future_from(zval *z) {
-	return php_parallel_future_fetch(Z_OBJ_P(z));
+    return php_parallel_future_fetch(Z_OBJ_P(z));
 }
 
 zend_object* php_parallel_future_create(zend_class_entry *);

@@ -30,11 +30,11 @@ void php_parallel_events_event_shutdown(void);
 
 void php_parallel_events_event_construct(
         php_parallel_events_t *events,
-        php_parallel_events_event_type_t type, 
+        php_parallel_events_event_type_t type,
         zend_string *source,
         zend_object *object,
         zval *value,
         zval *return_value);
-        
+
 zend_string* php_parallel_events_event_source_local(zend_string *source);
 #endif
