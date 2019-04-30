@@ -13,13 +13,11 @@ final class parallel\Runtime {
     * Shall construct a new Runtime
     * @throws \parallel\Runtime\Error                       if the thread could not be created
     * @throws \parallel\Runtime\Error\Bootstrap             if bootstrapping failed
-    * Note: any Error leaves the Runtime unusable
     **/
     public function __construct(string $bootstrap = null);
 
     /**
     * Shall schedule a task for execution passing optional arguments
-    * @throws \parallel\Runtime\Error                       if Runtime is unusable
     * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
     * @throws \parallel\Runtime\Error\IllegalFunction       if task was created from internal function
     * @throws \parallel\Runtime\Error\IllegalInstruction    if task contains illegal instructions:
@@ -41,7 +39,6 @@ final class parallel\Runtime {
     
     /**
     * Shall request the Runtime shutdown
-    * @throws \parallel\Runtime\Error                       if Runtime is unusable
     * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
     * Note: Tasks scheduled for execution will be executed
     */
@@ -49,7 +46,6 @@ final class parallel\Runtime {
 
     /**
     * Shall kill the Runtime
-    * @throws \parallel\Runtime\Error                       if Runtime is unusable
     * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
     * Note: Tasks scheduled for execution will not be executed,
     *    currently running task will be interrupted.

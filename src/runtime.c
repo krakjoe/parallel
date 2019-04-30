@@ -323,13 +323,6 @@ PHP_METHOD(Runtime, run)
         Z_PARAM_ARRAY(argv)
     ZEND_PARSE_PARAMETERS_END();
     
-    if (!runtime->monitor) {
-        php_parallel_exception_ex(
-		    php_parallel_runtime_error_ce, 
-		    "Runtime unusable");
-		return;
-    }
-    
     if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
 		php_parallel_exception_ex(
 		    php_parallel_runtime_error_closed_ce, 
@@ -379,13 +372,6 @@ PHP_METHOD(Runtime, close)
 		php_parallel_runtime_from(getThis());
 		
     PARALLEL_PARAMETERS_NONE(return);
-		
-	if (!runtime->monitor) {
-	    php_parallel_exception_ex(
-	        php_parallel_runtime_error_ce, 
-	        "Runtime unusable");
-	    return;
-	}
 	
 	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
 	    php_parallel_exception_ex(
@@ -415,13 +401,6 @@ PHP_METHOD(Runtime, kill)
 		php_parallel_runtime_from(getThis());
 
     PARALLEL_PARAMETERS_NONE(return);
-
-	if (!runtime->monitor) {
-	    php_parallel_exception_ex(
-	        php_parallel_runtime_error_ce, 
-	        "Runtime unusable");
-	    return;
-	}
 	
 	if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
 	    php_parallel_exception_ex(
