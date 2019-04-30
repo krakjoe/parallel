@@ -31,12 +31,20 @@
 	(GC_TYPE_INFO(ref) = type | (GC_PERSISTENT << GC_FLAGS_SHIFT))
 #endif
 
-zend_function* php_parallel_copy(const zend_function *function, zend_bool persistent);
-void php_parallel_copy_free(zend_function *function, zend_bool persistent);
-void php_parallel_copy_zval(zval *dest, zval *source, zend_bool persistent);
-zend_function* php_parallel_copy_check(php_parallel_runtime_t *runtime, zend_execute_data *execute_data, const zend_function * function, zval *argv, zend_bool *returns);
+#define PARALLEL_ZVAL_COPY php_parallel_copy_zval_ctor
+#define PARALLEL_ZVAL_DTOR php_parallel_copy_zval_dtor
 
-static zend_always_inline void php_parallel_ht_dtor(HashTable *table, zend_bool persistent) {
+zend_function* php_parallel_copy_check(
+                    php_parallel_runtime_t *runtime, 
+                    zend_execute_data *execute_data, 
+                    const zend_function * function, zval *argv, zend_bool *returns);
+
+zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent);
+void           php_parallel_copy_function_free(zend_function *function, zend_bool persistent);
+
+void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent);
+
+static zend_always_inline void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
 #if PHP_VERSION_ID < 70300
     if (GC_DELREF(table) == (persistent ? 1 : 0)) {
 #else
@@ -47,17 +55,17 @@ static zend_always_inline void php_parallel_ht_dtor(HashTable *table, zend_bool 
     }
 }
 
-static zend_always_inline void php_parallel_zval_dtor(zval *zv) {
+static zend_always_inline void php_parallel_copy_zval_dtor(zval *zv) {
 	if (Z_TYPE_P(zv) == IS_ARRAY) {
 #if PHP_VERSION_ID < 70300
-		php_parallel_ht_dtor(Z_ARRVAL_P(zv), Z_ARRVAL_P(zv)->u.flags & HASH_FLAG_PERSISTENT);
+		php_parallel_copy_hash_dtor(Z_ARRVAL_P(zv), Z_ARRVAL_P(zv)->u.flags & HASH_FLAG_PERSISTENT);
 #else
-		php_parallel_ht_dtor(Z_ARRVAL_P(zv), GC_FLAGS(Z_ARRVAL_P(zv)) & IS_ARRAY_PERSISTENT);
+		php_parallel_copy_hash_dtor(Z_ARRVAL_P(zv), GC_FLAGS(Z_ARRVAL_P(zv)) & IS_ARRAY_PERSISTENT);
 #endif
 	} else if (Z_TYPE_P(zv) == IS_STRING) {
 		zend_string_release(Z_STR_P(zv));
 	} else {
-		if (Z_REFCOUNTED_P(zv)) {
+		if (Z_OPT_REFCOUNTED_P(zv)) {
 			zval_ptr_dtor(zv);
 		}
 	}

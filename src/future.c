@@ -46,11 +46,11 @@ void php_parallel_future_value(php_parallel_future_t *future, zval *return_value
     if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
         zval garbage = future->value;
             
-        php_parallel_copy_zval(
+        PARALLEL_ZVAL_COPY(
             &future->value, &garbage, 0);
 
         if (Z_OPT_REFCOUNTED(garbage)) {
-	        php_parallel_zval_dtor(&garbage);
+	        PARALLEL_ZVAL_DTOR(&garbage);
         }
         
         php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
@@ -176,7 +176,7 @@ void php_parallel_future_destroy(zend_object *o) {
         
         default:
             if (Z_OPT_REFCOUNTED(future->value)) {
-		        php_parallel_zval_dtor(&future->value);
+		        PARALLEL_ZVAL_DTOR(&future->value);
 	        }
     }
 

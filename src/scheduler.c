@@ -57,8 +57,7 @@ static void php_parallel_schedule_free(void *scheduleed) {
          *end = slot + ZEND_CALL_NUM_ARGS(el->frame);
 
     while (slot < end) {
-        php_parallel_zval_dtor(slot);
-
+        PARALLEL_ZVAL_DTOR(slot);
         slot++;
     }
 
@@ -129,7 +128,7 @@ void php_parallel_scheduler_push(
 	    (zend_execute_data*) 
 	        pecalloc(1, zend_vm_calc_used_stack(argc, function), 1);
 
-    frame->func = php_parallel_copy(function, 1);
+    frame->func = php_parallel_copy_function(function, 1);
     
 	if (argv && Z_TYPE_P(argv) == IS_ARRAY) {
 	    zval *slot = ZEND_CALL_ARG(frame, 1);
@@ -137,7 +136,7 @@ void php_parallel_scheduler_push(
 	    uint32_t argc = 0;
 	    
 	    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(argv), param) {
-	        php_parallel_copy_zval(slot, param, 1);
+	        PARALLEL_ZVAL_COPY(slot, param, 1);
 	        slot++;
 	        argc++;
 	    } ZEND_HASH_FOREACH_END();
@@ -175,7 +174,7 @@ zend_bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parall
 	
 	el->frame = zend_vm_stack_push_call_frame(
         ZEND_CALL_TOP_FUNCTION, 
-        php_parallel_copy(head->frame->func, 0), 
+        php_parallel_copy_function(head->frame->func, 0), 
         ZEND_CALL_NUM_ARGS(head->frame), 
 #if PHP_VERSION_ID < 70400
         NULL, 
@@ -188,7 +187,7 @@ zend_bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parall
         zval *param = ZEND_CALL_ARG(el->frame, 1);
         
         while (slot < end) {
-            php_parallel_copy_zval(param, slot, 0);
+            PARALLEL_ZVAL_COPY(param, slot, 0);
             slot++;
             param++;
         }
@@ -239,14 +238,14 @@ void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_da
             zval garbage = *frame->return_value;
 
 	        if (Z_OPT_REFCOUNTED(garbage)) {
-	            php_parallel_copy_zval(
+	            PARALLEL_ZVAL_COPY(
                     frame->return_value, &garbage, 1);
 
 		        zval_ptr_dtor(&garbage);
 	        }
         }
     
-        php_parallel_copy_free(frame->func, 0);
+        php_parallel_copy_function_free(frame->func, 0);
     
         zend_vm_stack_free_call_frame(frame);
     } zend_end_try ();

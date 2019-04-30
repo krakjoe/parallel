@@ -138,7 +138,7 @@ php_parallel_link_t* php_parallel_link_init(zend_string *name, zend_bool buffere
         link->type = PHP_PARALLEL_LINK_BUFFERED;
         zend_llist_init(&link->port.q.l, 
             sizeof(zval), 
-            (llist_dtor_func_t) php_parallel_zval_dtor, 1);
+            (llist_dtor_func_t) PARALLEL_ZVAL_DTOR, 1);
         link->port.q.c = capacity;
     } else {
         link->type = PHP_PARALLEL_LINK_UNBUFFERED;
@@ -217,7 +217,7 @@ static zend_always_inline zend_bool php_parallel_link_send_buffered(php_parallel
         return 0;
     }
     
-    php_parallel_copy_zval(&sent, value, 1);
+    PARALLEL_ZVAL_COPY(&sent, value, 1);
     
     zend_llist_add_element(
         &link->port.q.l, &sent);
@@ -254,7 +254,7 @@ static zend_always_inline zend_bool php_parallel_link_recv_unbuffered(php_parall
         return 0;
     }
     
-    php_parallel_copy_zval(
+    PARALLEL_ZVAL_COPY(
         value, &link->port.z, 0);
     ZVAL_UNDEF(&link->port.z);
     link->s.w--;
@@ -292,7 +292,7 @@ static zend_always_inline zend_bool php_parallel_link_recv_buffered(php_parallel
     
     head = zend_llist_get_first(&link->port.q.l);
     
-    php_parallel_copy_zval(value, head, 0);
+    PARALLEL_ZVAL_COPY(value, head, 0);
     
     zend_llist_del_element(
         &link->port.q.l, head, php_parallel_link_queue_delete);

@@ -98,13 +98,13 @@ static zend_always_inline void php_parallel_exceptions_write(zend_object *except
 }
 
 void php_parallel_exceptions_destroy(php_parallel_exception_t *ex) {
-    php_parallel_zval_dtor(&ex->class);
-    php_parallel_zval_dtor(&ex->file);
-    php_parallel_zval_dtor(&ex->line);
-    php_parallel_zval_dtor(&ex->message);
-    php_parallel_zval_dtor(&ex->code);
-    php_parallel_zval_dtor(&ex->trace);
-    php_parallel_zval_dtor(&ex->previous);
+    PARALLEL_ZVAL_DTOR(&ex->class);
+    PARALLEL_ZVAL_DTOR(&ex->file);
+    PARALLEL_ZVAL_DTOR(&ex->line);
+    PARALLEL_ZVAL_DTOR(&ex->message);
+    PARALLEL_ZVAL_DTOR(&ex->code);
+    PARALLEL_ZVAL_DTOR(&ex->trace);
+    PARALLEL_ZVAL_DTOR(&ex->previous);
     
     pefree(ex, 1);
 }
@@ -168,13 +168,13 @@ void php_parallel_exceptions_save(zval *saved, zend_object *exception) {
     
     php_parallel_exceptions_treat_trace(trace);
     
-    php_parallel_copy_zval(&ex->class,   &class,     1);
-    php_parallel_copy_zval(&ex->file,    file,       1);
-    php_parallel_copy_zval(&ex->line,    line,       1);
-    php_parallel_copy_zval(&ex->message, message,    1);
-    php_parallel_copy_zval(&ex->code,    code,       1);
-    php_parallel_copy_zval(&ex->trace,   trace,      1);
-    php_parallel_copy_zval(&ex->previous, &previous, 1);
+    PARALLEL_ZVAL_COPY(&ex->class,   &class,     1);
+    PARALLEL_ZVAL_COPY(&ex->file,    file,       1);
+    PARALLEL_ZVAL_COPY(&ex->line,    line,       1);
+    PARALLEL_ZVAL_COPY(&ex->message, message,    1);
+    PARALLEL_ZVAL_COPY(&ex->code,    code,       1);
+    PARALLEL_ZVAL_COPY(&ex->trace,   trace,      1);
+    PARALLEL_ZVAL_COPY(&ex->previous, &previous, 1);
     
     ex->handlers = exception->handlers;
     
@@ -189,12 +189,12 @@ zend_object* php_parallel_exceptions_restore(zval *exception) {
     php_parallel_exception_t *ex = 
         (php_parallel_exception_t*) Z_PTR_P(exception);
     
-    php_parallel_copy_zval(&file,     &ex->file,     0);
-    php_parallel_copy_zval(&line,     &ex->line,     0);
-    php_parallel_copy_zval(&message,  &ex->message,  0);
-    php_parallel_copy_zval(&code,     &ex->code,     0);
-    php_parallel_copy_zval(&trace,    &ex->trace,    0);
-    php_parallel_copy_zval(&previous, &ex->previous, 0);
+    PARALLEL_ZVAL_COPY(&file,     &ex->file,     0);
+    PARALLEL_ZVAL_COPY(&line,     &ex->line,     0);
+    PARALLEL_ZVAL_COPY(&message,  &ex->message,  0);
+    PARALLEL_ZVAL_COPY(&code,     &ex->code,     0);
+    PARALLEL_ZVAL_COPY(&trace,    &ex->trace,    0);
+    PARALLEL_ZVAL_COPY(&previous, &ex->previous, 0);
     
     type = zend_lookup_class(Z_STR(ex->class));
     

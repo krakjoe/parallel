@@ -79,13 +79,13 @@ void php_parallel_runtime_function_push(php_parallel_runtime_t *runtime, zend_st
             &runtime->functions.lambdas : 
             &runtime->functions.functions, 
         name, 
-        php_parallel_copy(function, 1));
+        php_parallel_copy_function(function, 1));
     
     php_parallel_monitor_unlock(runtime->monitor);
 }
 
 static void php_parallel_runtime_functions_dtor(zval *zv) {
-    php_parallel_copy_free(Z_FUNC_P(zv), 0);
+    php_parallel_copy_function_free(Z_FUNC_P(zv), 0);
 }
 
 static zend_always_inline void php_parallel_runtime_functions_setup(php_parallel_runtime_functions_t *functions, zend_bool thread) {
@@ -110,7 +110,7 @@ static zend_always_inline void php_parallel_runtime_functions_update(php_paralle
                 continue;
             }
             
-            copy = php_parallel_copy(function, 0);
+            copy = php_parallel_copy_function(function, 0);
             copy->common.fn_flags |= ZEND_ACC_CLOSURE;
             copy->common.function_name = php_parallel_string(key);
             
@@ -129,7 +129,7 @@ static zend_always_inline void php_parallel_runtime_functions_update(php_paralle
                 continue;
             }
             
-            copy = php_parallel_copy(function, 0);
+            copy = php_parallel_copy_function(function, 0);
             copy->common.function_name = php_parallel_string(copy->common.function_name);
             
             zend_hash_add_ptr(EG(function_table),    key, copy);
