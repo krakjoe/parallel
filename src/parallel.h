@@ -42,6 +42,10 @@
 #include "zend_exceptions.h"
 #include "zend_vm.h"
 
+#define PARALLEL_PARAMETERS_NONE(r) \
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, 0, 0) \
+    ZEND_PARSE_PARAMETERS_END()
+
 void php_parallel_shutdown(void);
 void php_parallel_startup(void);
 #endif

@@ -158,7 +158,7 @@ final class parallel\Events implements \Countable, \Traversable {
     * Shall poll for the next event
     * @throws \parallel\Events\Error\Timeout                if timeout is used and reached
     */
-    public function poll() : Event|false;
+    public function poll() : ?Event;
 }
 
 final class parallel\Events\Input {

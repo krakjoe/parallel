@@ -244,7 +244,7 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
     uint32_t        try = 1;
     
     if (!php_parallel_events_poll_init(&poll, events)) {
-        ZVAL_FALSE(retval);
+        ZVAL_NULL(retval);
         return;
     }
 

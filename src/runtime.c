@@ -140,6 +140,11 @@ static zend_always_inline void php_parallel_runtime_functions_update(php_paralle
     }
 }
 
+static zend_always_inline void php_parallel_runtime_functions_destroy(php_parallel_runtime_functions_t *functions) {
+    zend_hash_destroy(&functions->lambdas);
+    zend_hash_destroy(&functions->functions);
+}
+
 static zend_always_inline void php_parallel_runtime_functions_finish(php_parallel_runtime_functions_t *functions) {
     dtor_func_t dtor = EG(function_table)->pDestructor;
     zend_string *key, *rtd;
@@ -254,18 +259,13 @@ static void php_parallel_runtime_stop(php_parallel_runtime_t *runtime) {
 	}
 
 	php_parallel_monitor_destroy(runtime->monitor);
-
-	if (runtime->bootstrap) {
-		zend_string_release(runtime->bootstrap);
-	}
-
-    php_parallel_scheduler_destroy(runtime);
-    
-    zend_hash_destroy(&runtime->functions.lambdas);
-    zend_hash_destroy(&runtime->functions.functions);
     
     runtime->monitor = NULL;
 }
+
+ZEND_BEGIN_ARG_INFO_EX(php_parallel_runtime_construct_arginfo, 0, 0, 0)
+    ZEND_ARG_TYPE_INFO(0, bootstrap, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 
 PHP_METHOD(Runtime, __construct)
 {
@@ -273,20 +273,22 @@ PHP_METHOD(Runtime, __construct)
 	zend_string            *bootstrap = NULL;
 	int32_t                 state = SUCCESS;
 
-	ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 1)
+	ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL
         Z_PARAM_STR(bootstrap)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "optional bootstrap expected");
-        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE, 0);
-        php_parallel_runtime_stop(runtime);
-        return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
 
 	if (bootstrap) {
 		runtime->bootstrap = zend_string_dup(bootstrap, 1);
 	}
+	
+	runtime->monitor = php_parallel_monitor_create();
+    
+    php_parallel_scheduler_init(runtime);
+
+	runtime->parent.server = SG(server_context);
+	
+	php_parallel_runtime_functions_setup(&runtime->functions, 0);
 
 	if (pthread_create(&runtime->thread, NULL, php_parallel_runtime, runtime) != SUCCESS) {
 		php_parallel_exception_ex(
@@ -307,6 +309,11 @@ PHP_METHOD(Runtime, __construct)
 	}
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_runtime_run_arginfo, 0, 1, \\parallel\\Future, 1)
+    ZEND_ARG_OBJ_INFO(0, task, Closure, 0)
+    ZEND_ARG_TYPE_INFO(0, argv, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Runtime, run)
 {
 	php_parallel_runtime_t  *runtime = php_parallel_runtime_from(getThis());
@@ -316,14 +323,11 @@ PHP_METHOD(Runtime, run)
 	zval *argv = NULL;
 	zend_bool returns = 0;
 
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 2)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_OBJECT_OF_CLASS(closure, zend_ce_closure)
         Z_PARAM_OPTIONAL
         Z_PARAM_ARRAY(argv)
-    ZEND_PARSE_PARAMETERS_END_EX(
-		php_parallel_invalid_arguments("Closure, or Closure and args expected");
-		return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
     
     if (!runtime->monitor) {
         php_parallel_exception_ex(
@@ -372,10 +376,15 @@ PHP_METHOD(Runtime, run)
 	php_parallel_monitor_unlock(runtime->monitor);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_runtime_close_or_kill_arginfo, 0, 0, IS_VOID, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Runtime, close)
 {
 	php_parallel_runtime_t *runtime = 
 		php_parallel_runtime_from(getThis());
+		
+    PARALLEL_PARAMETERS_NONE(return);
 		
 	if (!runtime->monitor) {
 	    php_parallel_exception_ex(
@@ -411,6 +420,8 @@ PHP_METHOD(Runtime, kill)
 	php_parallel_runtime_t *runtime = 
 		php_parallel_runtime_from(getThis());
 
+    PARALLEL_PARAMETERS_NONE(return);
+
 	if (!runtime->monitor) {
 	    php_parallel_exception_ex(
 	        php_parallel_runtime_error_ce, 
@@ -444,10 +455,10 @@ PHP_METHOD(Runtime, kill)
 }
 
 zend_function_entry php_parallel_runtime_methods[] = {
-	PHP_ME(Runtime, __construct, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Runtime, run, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Runtime, close, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Runtime, kill, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(Runtime, __construct, php_parallel_runtime_construct_arginfo, ZEND_ACC_PUBLIC)
+	PHP_ME(Runtime, run, php_parallel_runtime_run_arginfo, ZEND_ACC_PUBLIC)
+	PHP_ME(Runtime, close, php_parallel_runtime_close_or_kill_arginfo, ZEND_ACC_PUBLIC)
+	PHP_ME(Runtime, kill, php_parallel_runtime_close_or_kill_arginfo, ZEND_ACC_PUBLIC)
 	PHP_FE_END
 };
 
@@ -459,14 +470,6 @@ zend_object* php_parallel_runtime_create(zend_class_entry *type) {
 
 	runtime->std.handlers = &php_parallel_runtime_handlers;
 
-	runtime->monitor = php_parallel_monitor_create();
-    
-    php_parallel_scheduler_init(runtime);
-
-	runtime->parent.server = SG(server_context);
-	
-	php_parallel_runtime_functions_setup(&runtime->functions, 0);
-
 	return &runtime->std;
 }
 
@@ -475,6 +478,14 @@ void php_parallel_runtime_destroy(zend_object *o) {
 		php_parallel_runtime_fetch(o);
 
 	php_parallel_runtime_stop(runtime);
+	
+    if (runtime->bootstrap) {
+		zend_string_release(runtime->bootstrap);
+	}
+
+    php_parallel_scheduler_destroy(runtime);
+    
+    php_parallel_runtime_functions_destroy(&runtime->functions);
 	
 	zend_object_std_dtor(o);
 }

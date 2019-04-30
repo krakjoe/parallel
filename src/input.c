@@ -59,6 +59,11 @@ static void php_parallel_events_input_destroy(zend_object *zo) {
     zend_object_std_dtor(zo);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_input_add_arginfo, 0, 2, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, target, IS_STRING, 0)
+    ZEND_ARG_INFO(0, value)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Input, add)
 {
     php_parallel_events_input_t *input =
@@ -66,14 +71,10 @@ PHP_METHOD(Input, add)
     zend_string *target;
     zval        *value;
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 2, 2)
+    ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_STR(target)
         Z_PARAM_ZVAL(value)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "expected target and value");
-        return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
     
     if (Z_TYPE_P(value) == IS_OBJECT || Z_TYPE_P(value) == IS_NULL) {
         php_parallel_exception_ex(
@@ -93,19 +94,19 @@ PHP_METHOD(Input, add)
     Z_TRY_ADDREF_P(value);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_input_remove_arginfo, 0, 1, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, target, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Input, remove)
 {
     php_parallel_events_input_t *input =
         php_parallel_events_input_from(getThis());
     zend_string *target;
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_STR(target)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "expected target");
-        return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
     
     if (zend_hash_del(&input->table, target) != SUCCESS) {
         php_parallel_exception_ex(
@@ -115,25 +116,23 @@ PHP_METHOD(Input, remove)
     }
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_input_clear_arginfo, 0, 0, IS_VOID, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Input, clear)
 {
     php_parallel_events_input_t *input =
         php_parallel_events_input_from(getThis());
 
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "no parameters expected");
-        return;
-    );
+    PARALLEL_PARAMETERS_NONE(return);
     
     zend_hash_clean(&input->table);   
 }
 
 zend_function_entry php_parallel_events_input_methods[] = {
-    PHP_ME(Input, add, NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Input, remove, NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Input, clear, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Input, add, php_parallel_events_input_add_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Input, remove, php_parallel_events_input_remove_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Input, clear, php_parallel_events_input_clear_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

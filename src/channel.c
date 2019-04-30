@@ -53,6 +53,11 @@ static zend_always_inline void php_parallel_channels_open(zval *return_value, ph
     channel->link = php_parallel_link_copy(link);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_make_arginfo, 0, 1, \\parallel\\Channel, 0)
+    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO(0, capacity, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Channel, make)
 {
 	zend_string *name = NULL;
@@ -60,20 +65,14 @@ PHP_METHOD(Channel, make)
     zend_long    capacity = -1;
     
     if (ZEND_NUM_ARGS() == 1) {
-        ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+        ZEND_PARSE_PARAMETERS_START(1, 1)
 	        Z_PARAM_STR(name)
-        ZEND_PARSE_PARAMETERS_END_EX(
-            php_parallel_invalid_arguments("expected channel name");
-		    return;
-        );
+        ZEND_PARSE_PARAMETERS_END();
     } else {
-        ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 2, 2)
+        ZEND_PARSE_PARAMETERS_START(2, 2)
 	        Z_PARAM_STR(name)
 	        Z_PARAM_LONG(capacity)
-        ZEND_PARSE_PARAMETERS_END_EX(
-            php_parallel_invalid_arguments("expected channel name and capacity");
-		    return;
-        );
+        ZEND_PARSE_PARAMETERS_END();
         
         if (capacity < -1 || capacity == 0) {
             php_parallel_invalid_arguments(
@@ -98,17 +97,18 @@ PHP_METHOD(Channel, make)
 	php_parallel_monitor_unlock(php_parallel_channels.monitor);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_open_arginfo, 0, 1, \\parallel\\Channel, 0)
+    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Channel, open)
 {
 	zend_string *name = NULL;
 	php_parallel_link_t *link;
 
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_STR(name)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments("expected channel name");
-		return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
 
 	php_parallel_monitor_lock(php_parallel_channels.monitor);
 
@@ -124,17 +124,18 @@ PHP_METHOD(Channel, open)
 	php_parallel_monitor_unlock(php_parallel_channels.monitor);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_channel_send_arginfo, 0, 1, IS_VOID, 0)
+    ZEND_ARG_INFO(0, value)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Channel, send)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
     zval *value;
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_ZVAL(value)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments("expected value");
-        return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
     
     if (Z_TYPE_P(value) == IS_OBJECT || Z_TYPE_P(value) == IS_NULL) {
         php_parallel_exception_ex(
@@ -154,15 +155,14 @@ PHP_METHOD(Channel, send)
     }
 }
 
+ZEND_BEGIN_ARG_INFO_EX(php_parallel_channel_recv_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Channel, recv)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments("expected no arguments");
-        return;
-    );
+    PARALLEL_PARAMETERS_NONE(return);
     
     if (php_parallel_link_closed(channel->link) ||
         !php_parallel_link_recv(channel->link, return_value)) {
@@ -174,15 +174,14 @@ PHP_METHOD(Channel, recv)
     }
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_channel_close_arginfo, 0, 0, IS_VOID, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Channel, close)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
 
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments("expected no arguments");
-        return;
-    );
+    PARALLEL_PARAMETERS_NONE(return);
 
 	if (!php_parallel_link_close(channel->link)) {
         php_parallel_exception_ex(
@@ -207,11 +206,11 @@ PHP_METHOD(Channel, __toString)
 }
 
 zend_function_entry php_parallel_channel_methods[] = {
-	PHP_ME(Channel, make, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-	PHP_ME(Channel, open, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-	PHP_ME(Channel, send, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Channel, recv, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(Channel, close, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(Channel, make, php_parallel_channel_make_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	PHP_ME(Channel, open, php_parallel_channel_open_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	PHP_ME(Channel, send, php_parallel_channel_send_arginfo, ZEND_ACC_PUBLIC)
+	PHP_ME(Channel, recv, php_parallel_channel_recv_arginfo, ZEND_ACC_PUBLIC)
+	PHP_ME(Channel, close, php_parallel_channel_close_arginfo, ZEND_ACC_PUBLIC)
 	PHP_ME(Channel, __toString, NULL, ZEND_ACC_PUBLIC)
 	PHP_FE_END
 };

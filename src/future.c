@@ -68,12 +68,7 @@ PHP_METHOD(Future, value)
 	php_parallel_future_t *future = php_parallel_future_from(getThis());
 	int32_t state;
     
-	ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
-	ZEND_PARSE_PARAMETERS_END_EX(
-	    php_parallel_invalid_arguments(
-	        "expected no arguments");
-	    return;
-	);
+    PARALLEL_PARAMETERS_NONE(return);
 
     if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
         goto _php_parallel_future_value;

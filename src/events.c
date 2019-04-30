@@ -82,18 +82,18 @@ static void php_parallel_events_destroy(zend_object *zo) {
     zend_object_std_dtor(zo);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_set_input_arginfo, 0, 1, IS_VOID, 0)
+    ZEND_ARG_OBJ_INFO(0, input, \\parallel\\Events\\Input, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Events, setInput)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
     zval *input;
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_OBJECT_OF_CLASS(input, php_parallel_events_input_ce);
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "expected Input");
-        return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
     
     if (Z_TYPE(events->input) == IS_OBJECT) {
         zval_ptr_dtor(&events->input);
@@ -102,19 +102,19 @@ PHP_METHOD(Events, setInput)
     ZVAL_COPY(&events->input, input);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_add_channel_arginfo, 0, 1, IS_VOID, 0)
+    ZEND_ARG_OBJ_INFO(0, channel, \\parallel\\Channel, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Events, addChannel)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
     zval *target = NULL;
     zend_string *key = NULL;
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_OBJECT_OF_CLASS(target, php_parallel_channel_ce)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "expected \\parallel\\Channel");
-        return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
     
     if (!php_parallel_events_add(events, NULL, target, &key)) {
         php_parallel_exception_ex(
@@ -124,6 +124,11 @@ PHP_METHOD(Events, addChannel)
     }
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_add_future_arginfo, 0, 2, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+    ZEND_ARG_OBJ_INFO(0, future, \\parallel\\Future, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Events, addFuture)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
@@ -131,14 +136,10 @@ PHP_METHOD(Events, addFuture)
     zend_string *name = NULL;
     zend_string *key = NULL;
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 2, 2)
+    ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_STR(name)
         Z_PARAM_OBJECT_OF_CLASS(target, php_parallel_future_ce)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "expected target name and \\parallel\\Future");
-        return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
     
     if (!php_parallel_events_add(events, name, target, &key)) {
         php_parallel_exception_ex(
@@ -148,52 +149,51 @@ PHP_METHOD(Events, addFuture)
     }
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_remove_arginfo, 0, 1, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, target, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Events, remove)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
-    zend_string *name = NULL;
+    zend_string *target = NULL;
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
-        Z_PARAM_STR(name)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments("expected target name");
-        return;
-    );
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR(target)
+    ZEND_PARSE_PARAMETERS_END();
     
-    if (!php_parallel_events_remove(events, name)) {
+    if (!php_parallel_events_remove(events, target)) {
         php_parallel_exception_ex(
             php_parallel_events_error_existence_ce,
             "target named \"%s\" not found", 
-            ZSTR_VAL(name));
+            ZSTR_VAL(target));
     }
 }
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_set_timeout_arginfo, 0, 1, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 
 PHP_METHOD(Events, setTimeout)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
     zend_long timeout = -1;
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_LONG(timeout)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "expected timeout");
-        return;
-    );
+    ZEND_PARSE_PARAMETERS_END();
     
     events->timeout = timeout;
 }
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_events_poll_arginfo, 0, 0, \\parallel\\Events\\Event, 1)
+ZEND_END_ARG_INFO()
 
 PHP_METHOD(Events, poll)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "no arguments expected");
-        return;
-    );
+    PARALLEL_PARAMETERS_NONE(return);
     
     php_parallel_events_poll(events, return_value);
 }
@@ -202,23 +202,18 @@ PHP_METHOD(Events, count)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
     
-    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_QUIET, 0, 0)
-    ZEND_PARSE_PARAMETERS_END_EX(
-        php_parallel_invalid_arguments(
-            "no arguments expected");
-        return;
-    );
+    PARALLEL_PARAMETERS_NONE(return);
     
     RETURN_LONG(zend_hash_num_elements(&events->targets));
 }
 
 zend_function_entry php_parallel_events_methods[] = {
-    PHP_ME(Events, setInput,    NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, addChannel,  NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, addFuture,   NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, remove,      NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, setTimeout,  NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, poll,        NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, setInput,    php_parallel_events_set_input_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, addChannel,  php_parallel_events_add_channel_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, addFuture,   php_parallel_events_add_future_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, remove,      php_parallel_events_remove_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, setTimeout,  php_parallel_events_set_timeout_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, poll,        php_parallel_events_poll_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, count,       NULL, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
