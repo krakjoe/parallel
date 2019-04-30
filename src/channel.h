@@ -21,18 +21,18 @@
 #include "link.h"
 
 typedef struct _php_parallel_channel_t {
-	php_parallel_link_t *link;
-	zend_object std;
+    php_parallel_link_t *link;
+    zend_object std;
 } php_parallel_channel_t;
 
 extern zend_class_entry *php_parallel_channel_ce;
 
 static zend_always_inline php_parallel_channel_t* php_parallel_channel_fetch(zend_object *o) {
-	return (php_parallel_channel_t*) (((char*) o) - XtOffsetOf(php_parallel_channel_t, std));
+    return (php_parallel_channel_t*) (((char*) o) - XtOffsetOf(php_parallel_channel_t, std));
 }
 
 static zend_always_inline php_parallel_channel_t* php_parallel_channel_from(zval *z) {
-	return php_parallel_channel_fetch(Z_OBJ_P(z));
+    return php_parallel_channel_fetch(Z_OBJ_P(z));
 }
 
 zend_object* php_parallel_channel_create(zend_class_entry *);

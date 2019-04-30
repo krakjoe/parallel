@@ -22,12 +22,12 @@
 #include "monitor.h"
 
 php_parallel_monitor_t* php_parallel_monitor_create(void) {
-	pthread_mutexattr_t attributes;
-	php_parallel_monitor_t *monitor = 
-		(php_parallel_monitor_t*) 
-			calloc(1, sizeof(php_parallel_monitor_t));
+    pthread_mutexattr_t attributes;
+    php_parallel_monitor_t *monitor =
+        (php_parallel_monitor_t*)
+            calloc(1, sizeof(php_parallel_monitor_t));
 
-	pthread_mutexattr_init(&attributes);
+    pthread_mutexattr_init(&attributes);
 
 #if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
      pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
@@ -35,87 +35,87 @@ php_parallel_monitor_t* php_parallel_monitor_create(void) {
      pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
 #endif
 
-	pthread_mutex_init(&monitor->mutex, &attributes);
-	pthread_mutexattr_destroy(&attributes);
+    pthread_mutex_init(&monitor->mutex, &attributes);
+    pthread_mutexattr_destroy(&attributes);
 
-	pthread_cond_init(&monitor->condition, NULL);
+    pthread_cond_init(&monitor->condition, NULL);
 
-	return monitor;
+    return monitor;
 }
 
 int php_parallel_monitor_lock(php_parallel_monitor_t *monitor) {
-	return pthread_mutex_lock(&monitor->mutex);
+    return pthread_mutex_lock(&monitor->mutex);
 }
 
 int32_t php_parallel_monitor_check(php_parallel_monitor_t *monitor, int32_t state) {
-	return (monitor->state & (state));
+    return (monitor->state & (state));
 }
 
 int php_parallel_monitor_unlock(php_parallel_monitor_t *monitor) {
-	return pthread_mutex_unlock(&monitor->mutex);
+    return pthread_mutex_unlock(&monitor->mutex);
 }
 
 int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state) {
-	int32_t changed = FAILURE;
-	int      rc      = SUCCESS;
+    int32_t changed = FAILURE;
+    int      rc      = SUCCESS;
 
-	if (pthread_mutex_lock(&monitor->mutex) != SUCCESS) {
-		return FAILURE;
-	}
+    if (pthread_mutex_lock(&monitor->mutex) != SUCCESS) {
+        return FAILURE;
+    }
 
-	while (!(changed = (monitor->state & state))) {
+    while (!(changed = (monitor->state & state))) {
 
-		if ((rc = pthread_cond_wait(
-				&monitor->condition, &monitor->mutex)) != SUCCESS) {
-			pthread_mutex_unlock(&monitor->mutex);
+        if ((rc = pthread_cond_wait(
+                &monitor->condition, &monitor->mutex)) != SUCCESS) {
+            pthread_mutex_unlock(&monitor->mutex);
 
-			return FAILURE;
-		}
-	}
+            return FAILURE;
+        }
+    }
 
-	monitor->state ^= changed;
+    monitor->state ^= changed;
 
-	if (pthread_mutex_unlock(&monitor->mutex) != SUCCESS) {
-		return FAILURE;
-	}
+    if (pthread_mutex_unlock(&monitor->mutex) != SUCCESS) {
+        return FAILURE;
+    }
 
-	return changed;
+    return changed;
 }
 
 int32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, int32_t state) {
-	int32_t changed = FAILURE;
-	int      rc      = SUCCESS;
+    int32_t changed = FAILURE;
+    int      rc      = SUCCESS;
 
-	while (!(changed = (monitor->state & state))) {
-		if ((rc = pthread_cond_wait(
-				&monitor->condition, &monitor->mutex)) != SUCCESS) {
-			return FAILURE;
-		}
-	}
+    while (!(changed = (monitor->state & state))) {
+        if ((rc = pthread_cond_wait(
+                &monitor->condition, &monitor->mutex)) != SUCCESS) {
+            return FAILURE;
+        }
+    }
 
-	monitor->state ^= changed;
+    monitor->state ^= changed;
 
-	return changed;
+    return changed;
 }
 
 void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state, zend_bool lock) {
-	if (lock) {
-		pthread_mutex_lock(&monitor->mutex);
-	}
+    if (lock) {
+        pthread_mutex_lock(&monitor->mutex);
+    }
 
-	monitor->state |= state;
+    monitor->state |= state;
 
-	pthread_cond_signal(&monitor->condition);
+    pthread_cond_signal(&monitor->condition);
 
-	if (lock) {
-		pthread_mutex_unlock(&monitor->mutex);
-	}
+    if (lock) {
+        pthread_mutex_unlock(&monitor->mutex);
+    }
 }
 
 void php_parallel_monitor_destroy(php_parallel_monitor_t *monitor) {
-	pthread_mutex_destroy(&monitor->mutex);
-	pthread_cond_destroy(&monitor->condition);
+    pthread_mutex_destroy(&monitor->mutex);
+    pthread_cond_destroy(&monitor->condition);
 
-	free(monitor);
+    free(monitor);
 }
 #endif

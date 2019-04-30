@@ -149,7 +149,12 @@ final class parallel\Events implements \Countable, \Traversable {
     * @param non-negative timeout in microseconds
     */
     public function setTimeout(int $timeout) : void;
-    
+
+    /*
+    * Shall set blocking mode
+    */    
+    public function setBlocking(bool $blocking) : void;
+
     /**
     * Shall poll for the next event
     * @throws \parallel\Events\Error\Timeout                if timeout is used and reached
