@@ -170,7 +170,11 @@ void php_parallel_link_destroy(php_parallel_link_t *link) {
 }
 
 php_parallel_link_t* php_parallel_link_copy(php_parallel_link_t *link) {
+    pthread_mutex_lock(&link->m.m);
+    
     link->refcount++;
+    
+    pthread_mutex_unlock(&link->m.m);
     
     return link;
 }
