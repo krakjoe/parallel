@@ -12,7 +12,7 @@ use \parallel\Channel;
 
 try {
     Channel::make("name", -2);
-} catch (\parallel\Error\InvalidArguments $th) {
+} catch (TypeError $th) {
     var_dump($th->getMessage());
 }
 ?>

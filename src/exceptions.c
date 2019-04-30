@@ -227,10 +227,6 @@ void php_parallel_exceptions_startup() {
 	php_parallel_error_ce = 
 	    zend_register_internal_class_ex(&ce, zend_ce_error_exception);
 
-	INIT_NS_CLASS_ENTRY(ce, "parallel\\Error", "InvalidArguments", NULL);
-	php_parallel_error_invalid_arguments_ce = 
-	    zend_register_internal_class_ex(&ce, php_parallel_error_ce);
-	
 	/*
 	* Runtime Exceptions
 	*/
