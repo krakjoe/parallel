@@ -283,12 +283,6 @@ PHP_METHOD(Runtime, __construct)
 	}
 	
 	runtime->monitor = php_parallel_monitor_create();
-    
-    php_parallel_scheduler_init(runtime);
-
-	runtime->parent.server = SG(server_context);
-	
-	php_parallel_runtime_functions_setup(&runtime->functions, 0);
 
 	if (pthread_create(&runtime->thread, NULL, php_parallel_runtime, runtime) != SUCCESS) {
 		php_parallel_exception_ex(
@@ -469,6 +463,12 @@ zend_object* php_parallel_runtime_create(zend_class_entry *type) {
 	zend_object_std_init(&runtime->std, type);
 
 	runtime->std.handlers = &php_parallel_runtime_handlers;
+	
+	php_parallel_scheduler_init(runtime);
+
+	runtime->parent.server = SG(server_context);
+	
+	php_parallel_runtime_functions_setup(&runtime->functions, 0);
 
 	return &runtime->std;
 }
