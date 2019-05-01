@@ -45,6 +45,7 @@ extern zend_class_entry* php_parallel_runtime_error_illegal_return_ce;
 */
 extern zend_class_entry* php_parallel_future_error_ce;
 extern zend_class_entry* php_parallel_future_error_killed_ce;
+extern zend_class_entry* php_parallel_future_error_cancelled_ce;
 extern zend_class_entry* php_parallel_future_error_foreign_ce;
 
 /*

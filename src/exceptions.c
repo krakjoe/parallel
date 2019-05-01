@@ -47,6 +47,7 @@ zend_class_entry* php_parallel_runtime_error_illegal_return_ce;
 
 zend_class_entry* php_parallel_future_error_ce;
 zend_class_entry* php_parallel_future_error_killed_ce;
+zend_class_entry* php_parallel_future_error_cancelled_ce;
 zend_class_entry* php_parallel_future_error_foreign_ce;
 
 zend_class_entry* php_parallel_channel_error_ce;
@@ -271,6 +272,10 @@ void php_parallel_exceptions_startup() {
 
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Future\\Error", "Killed", NULL);
     php_parallel_future_error_killed_ce =
+        zend_register_internal_class_ex(&ce, php_parallel_error_ce);
+
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Future\\Error", "Cancelled", NULL);
+    php_parallel_future_error_cancelled_ce =
         zend_register_internal_class_ex(&ce, php_parallel_error_ce);
 
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Future\\Error", "Foreign", NULL);

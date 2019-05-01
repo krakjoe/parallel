@@ -668,6 +668,12 @@ zend_function* php_parallel_copy_check(php_parallel_runtime_t *runtime, zend_exe
         it++;
     }
 
+    if (!*returns) {
+        if (EX(opline)->result_type != IS_UNUSED) {
+            *returns = 1;
+        }
+    }
+
     check.returns = *returns;
     if (function->op_array.refcount) {
         check.function =

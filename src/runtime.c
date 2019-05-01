@@ -167,6 +167,22 @@ static zend_always_inline void php_parallel_runtime_functions_finish(php_paralle
     zend_hash_destroy(&functions->lambdas);
 }
 
+static void _php_parallel_runtime_kill(void *scheduled) {
+    php_parallel_schedule_el_t *el =
+        (php_parallel_schedule_el_t*) scheduled;
+    php_parallel_future_t *future = Z_PTR(el->frame->This);
+
+    if (future) {
+        php_parallel_monitor_set(future->monitor,
+            PHP_PARALLEL_READY|PHP_PARALLEL_KILLED, 1);
+    }
+}
+
+void php_parallel_runtime_kill(php_parallel_runtime_t *runtime) {
+    zend_llist_apply(&runtime->schedule, _php_parallel_runtime_kill);
+    zend_llist_clean(&runtime->schedule);
+}
+
 static void* php_parallel_runtime(void *arg) {
     int32_t state = 0;
     php_parallel_runtime_functions_t functions;
@@ -195,7 +211,7 @@ static void* php_parallel_runtime(void *arg) {
 
         if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_KILLED)) {
 _php_parallel_kill:
-            php_parallel_scheduler_kill(runtime);
+            php_parallel_runtime_kill(runtime);
 
             php_parallel_monitor_unlock(runtime->monitor);
             goto _php_parallel_exit;
@@ -311,7 +327,6 @@ ZEND_END_ARG_INFO()
 PHP_METHOD(Runtime, run)
 {
     php_parallel_runtime_t  *runtime = php_parallel_runtime_from(getThis());
-    php_parallel_future_t   *future = NULL;
     zval *closure = NULL;
     zend_function *function;
     zval *argv = NULL;
@@ -346,17 +361,11 @@ PHP_METHOD(Runtime, run)
     if (returns) {
         object_init_ex(return_value, php_parallel_future_ce);
 
-        future = php_parallel_future_from(return_value);
-
-        php_parallel_scheduler_push(
-            runtime,
-            future->monitor,
-            function, argv, &future->value);
+        php_parallel_scheduler_push(runtime, 
+            php_parallel_future_from(return_value), 
+            function, argv);
     } else {
-        php_parallel_scheduler_push(
-            runtime,
-            NULL,
-            function, argv, NULL);
+        php_parallel_scheduler_push(runtime, NULL, function, argv);
     }
 
     php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_EXEC, 0);
@@ -409,22 +418,7 @@ PHP_METHOD(Runtime, kill)
         return;
     }
 
-    php_parallel_monitor_lock(runtime->monitor);
-
-    php_parallel_monitor_set(
-        runtime->monitor, PHP_PARALLEL_KILLED, 0);
-
-    *(runtime->child.interrupt) = 1;
-
-    php_parallel_monitor_wait_locked(
-        runtime->monitor, PHP_PARALLEL_DONE);
-
-    php_parallel_monitor_unlock(runtime->monitor);
-
-    php_parallel_monitor_set(
-        runtime->monitor, PHP_PARALLEL_CLOSED, 0);
-
-    pthread_join(runtime->thread, NULL);
+    php_parallel_scheduler_kill(runtime);
 }
 
 zend_function_entry php_parallel_runtime_methods[] = {

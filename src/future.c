@@ -37,7 +37,8 @@ void php_parallel_future_value(php_parallel_future_t *future, zval *return_value
             ZVAL_OBJ(return_value,
                 php_parallel_exceptions_restore(&future->value));
             return;
-        } else if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_KILLED)) {
+        } else if (php_parallel_monitor_check(future->monitor, 
+                    PHP_PARALLEL_KILLED|PHP_PARALLEL_CANCELLED)) {
             ZVAL_NULL(return_value);
             return;
         }
@@ -63,6 +64,9 @@ zend_bool php_parallel_future_unlock(php_parallel_future_t *future) {
     return php_parallel_monitor_unlock(future->monitor);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_value_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Future, value)
 {
     php_parallel_future_t *future = php_parallel_future_from(getThis());
@@ -70,13 +74,26 @@ PHP_METHOD(Future, value)
 
     PARALLEL_PARAMETERS_NONE(return);
 
+    if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_CANCELLED)) {
+        php_parallel_exception_ex(
+            php_parallel_future_error_cancelled_ce,
+            "cannot retrieve value");
+        return;
+    }
+
+    if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_KILLED)) {
+        php_parallel_exception_ex(
+            php_parallel_future_error_killed_ce,
+            "cannot retrieve value");
+        return;
+    }
+
     if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
         goto _php_parallel_future_value;
     } else {
         state = php_parallel_monitor_wait(future->monitor,
                     PHP_PARALLEL_READY|
                     PHP_PARALLEL_FAILURE|
-                    PHP_PARALLEL_KILLED|
                     PHP_PARALLEL_ERROR);
     }
 
@@ -86,15 +103,6 @@ PHP_METHOD(Future, value)
             "cannot retrieve value");
         php_parallel_monitor_set(future->monitor,
             PHP_PARALLEL_READY|PHP_PARALLEL_FAILURE, 0);
-        return;
-    }
-
-    if ((state & PHP_PARALLEL_KILLED)) {
-        php_parallel_exception_ex(
-            php_parallel_future_error_killed_ce,
-            "cannot retrieve value");
-        php_parallel_monitor_set(future->monitor,
-            PHP_PARALLEL_READY|PHP_PARALLEL_KILLED, 0);
         return;
     }
 
@@ -117,6 +125,49 @@ _php_parallel_future_value:
     php_parallel_future_value(future, return_value, 1);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_future_cancel_arginfo, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Future, cancel)
+{
+    php_parallel_future_t *future =
+        php_parallel_future_from(getThis());
+
+    PARALLEL_PARAMETERS_NONE(return);
+
+    if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_CANCELLED)) {
+        php_parallel_exception_ex(
+            php_parallel_future_error_cancelled_ce,
+            "task was already cancelled");
+        return;
+    }
+
+    if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_KILLED)) {
+        php_parallel_exception_ex(
+            php_parallel_future_error_killed_ce,
+            "runtime executing task was killed");
+        return;
+    }
+
+    RETURN_BOOL(php_parallel_scheduler_cancel(future));
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_future_cancelled_arginfo, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Future, cancelled)
+{
+    php_parallel_future_t *future =
+        php_parallel_future_from(getThis());
+
+    PARALLEL_PARAMETERS_NONE(return);
+
+    RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_CANCELLED));
+}
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_future_done_arginfo, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Future, done)
 {
     php_parallel_future_t *future =
@@ -124,6 +175,9 @@ PHP_METHOD(Future, done)
 
     RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY));
 }
+
+ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_construct_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
 
 PHP_METHOD(Future, __construct)
 {
@@ -137,9 +191,11 @@ PHP_METHOD(Future, __construct)
 }
 
 zend_function_entry php_parallel_future_methods[] = {
-    PHP_ME(Future, __construct, NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Future, value, NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(Future, done, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Future, __construct, php_parallel_future_construct_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Future, value, php_parallel_future_value_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Future, done, php_parallel_future_done_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Future, cancel, php_parallel_future_cancel_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Future, cancelled, php_parallel_future_cancelled_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -173,6 +229,10 @@ void php_parallel_future_destroy(zend_object *o) {
             if (Z_OPT_REFCOUNTED(future->value)) {
                 PARALLEL_ZVAL_DTOR(&future->value);
             }
+    }
+
+    if (future->runtime) {
+       OBJ_RELEASE(&future->runtime->std);
     }
 
     php_parallel_monitor_destroy(future->monitor);

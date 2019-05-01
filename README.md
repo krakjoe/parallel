@@ -18,7 +18,7 @@ final class parallel\Runtime {
 
     /**
     * Shall schedule a task for execution passing optional arguments
-    * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
+    * @throws \parallel\Runtime\Error\Closed                if runtime is closed
     * @throws \parallel\Runtime\Error\IllegalFunction       if task was created from internal function
     * @throws \parallel\Runtime\Error\IllegalInstruction    if task contains illegal instructions:
     *                                                            declare (anonymous) class
@@ -33,20 +33,20 @@ final class parallel\Runtime {
     *                                                            resource (streams are cast to int where possible)
     *                                                            references
     *                                                            caller ignored return (or throw)
-    * Note: A Future shall only be returned if task contains a return (or throw) statement
+    * Note: The caller must not ignore the return value if task contains throw or return statements
     */
     public function run(Closure $task, array $argv = []) : ?\parallel\Future;
     
     /**
     * Shall request the Runtime shutdown
-    * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
+    * @throws \parallel\Runtime\Error\Closed                if runtime is closed
     * Note: Tasks scheduled for execution will be executed
     */
     public function close() : void;
 
     /**
     * Shall kill the Runtime
-    * @throws \parallel\Runtime\Error\Closed                if Runtime was closed
+    * @throws \parallel\Runtime\Error\Closed                if runtime is closed
     * Note: Tasks scheduled for execution will not be executed,
     *    currently running task will be interrupted.
     * Note: Cannot interrupt internal function calls in progress
@@ -56,19 +56,33 @@ final class parallel\Runtime {
 
 final class parallel\Future {
     /**
-    * Shall wait until the value is resolved
-    * @throws \parallel\Future\Error                        if waiting for a value failed
-    * @throws \parallel\Future\Error\Killed                 if task was killed
+    * Shall return (and if necessary wait for) return or throw from task
+    * @throws \parallel\Future\Error                        if waiting failed
+    * @throws \parallel\Future\Error\Killed                 if runtime executing task was killed
+    * @throws \parallel\Future\Error\Cancelled              if task was cancelled
     * @throws \parallel\Future\Error\Foreign                if task raised an uncuaght unrecognized exception
     * Note: rethrows uncaught exception raised in task
     */
     public function value() : mixed;
 
     /**
-    * Shall indicate if the Future value is resolved
-    * @returns bool
+    * Shall indicate if the task is complete
     */
     public function done() : bool;
+
+    /*
+    * Shall try to cancel the task
+    * @throws \parallel\Future\Error\Killed                 if runtime executing task was killed
+    * @throws \parallel\Future\Error\Cancelled              if task was already cancelled
+    * Note: should the task be executing it will be interrupted
+    * Note: cannot interrupt internal function calls in progress
+    */
+    public function cancel() : bool;
+
+    /*
+    * Shall indicate if the task was cancelled
+    */
+    public function cancelled() : bool;
 }
 
 final class parallel\Channel {
