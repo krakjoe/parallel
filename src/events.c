@@ -38,6 +38,7 @@ static zend_object* php_parallel_events_create(zend_class_entry *type) {
         &events->targets, 32, NULL, ZVAL_PTR_DTOR, 0);
 
     events->timeout = -1;
+    events->blocking = 1;
 
     ZVAL_UNDEF(&events->input);
 
@@ -186,6 +187,22 @@ PHP_METHOD(Events, setTimeout)
     events->timeout = timeout;
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_set_blocking_arginfo, 0, 1, IS_VOID, 0)
+    ZEND_ARG_TYPE_INFO(0, blocking, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Events, setBlocking)
+{
+    php_parallel_events_t *events = php_parallel_events_from(getThis());
+    zend_bool blocking;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_BOOL(blocking)
+    ZEND_PARSE_PARAMETERS_END();
+
+    events->blocking = blocking;
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_events_poll_arginfo, 0, 0, \\parallel\\Events\\Event, 1)
 ZEND_END_ARG_INFO()
 
@@ -212,6 +229,7 @@ zend_function_entry php_parallel_events_methods[] = {
     PHP_ME(Events, addChannel,  php_parallel_events_add_channel_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, addFuture,   php_parallel_events_add_future_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, remove,      php_parallel_events_remove_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, setBlocking, php_parallel_events_set_blocking_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, setTimeout,  php_parallel_events_set_timeout_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, poll,        php_parallel_events_poll_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, count,       NULL, ZEND_ACC_PUBLIC)

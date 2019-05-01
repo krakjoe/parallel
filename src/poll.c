@@ -244,12 +244,17 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval) {
     uint32_t        try = 1;
 
     if (!php_parallel_events_poll_init(&poll, events)) {
+_php_parallel_events_poll_null:
         ZVAL_NULL(retval);
         return;
     }
 
     do {
         if (!php_parallel_events_poll_begin(events, &selected)) {
+            if (!events->blocking) {
+                goto _php_parallel_events_poll_null;
+            }
+
             if (php_parallel_events_poll_timeout(&poll, events)) {
                 return;
             }
