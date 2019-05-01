@@ -223,7 +223,7 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
     return 1;
 }
 
-static zend_always_inline void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame) {
+static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame) {
     php_parallel_scheduler_future = (php_parallel_future_t*) Z_PTR(frame->This);
 
     zend_first_try {
