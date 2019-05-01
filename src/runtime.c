@@ -73,8 +73,7 @@ void php_parallel_runtime_functions_finish(php_parallel_runtime_functions_t *fun
     } ZEND_HASH_FOREACH_END();
     EG(function_table)->pDestructor = dtor;
 
-    zend_hash_destroy(&functions->functions);
-    zend_hash_destroy(&functions->lambdas);
+    php_parallel_runtime_functions_destroy(functions);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_runtime_construct_arginfo, 0, 0, 0)
