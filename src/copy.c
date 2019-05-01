@@ -597,6 +597,12 @@ zend_function* php_parallel_copy_check(php_parallel_runtime_t *runtime, zend_exe
         *returns =
             checked->returns;
 
+        if (!*returns) {
+            if (EX(opline)->result_type != IS_UNUSED) {
+                *returns = 1;
+            }
+        }
+
         return (zend_function*) (checked->function ? checked->function : function);
     }
 
