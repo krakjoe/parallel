@@ -55,12 +55,12 @@ final class parallel\Runtime {
 
 final class parallel\Future {
     /**
-    * Shall return (and if necessary wait for) return or throw from task
+    * Shall return (and if necessary wait for) return from task
     * @throws \parallel\Future\Error                        if waiting failed
     * @throws \parallel\Future\Error\Killed                 if runtime executing task was killed
     * @throws \parallel\Future\Error\Cancelled              if task was cancelled
-    * @throws \parallel\Future\Error\Foreign                if task raised an uncuaght unrecognized exception
-    * Note: rethrows uncaught exception raised in task
+    * @throws \parallel\Future\Error\Foreign                if task threw an unrecognized exception
+    * @throws \Throwable                                    if task threw an uncaught exception
     */
     public function value() : mixed;
 
@@ -73,8 +73,8 @@ final class parallel\Future {
     * Shall try to cancel the task
     * @throws \parallel\Future\Error\Killed                 if runtime executing task was killed
     * @throws \parallel\Future\Error\Cancelled              if task was already cancelled
-    * Note: should the task be executing it will be interrupted
-    * Note: cannot interrupt internal function calls in progress
+    * Note: If task is executing it will be interrupted
+    * Note: Cannot interrupt internal function calls in progress
     */
     public function cancel() : bool;
 

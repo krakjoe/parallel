@@ -321,8 +321,7 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
         if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY)) {
             *(future->runtime->child.interrupt) = 1;
 
-            php_parallel_monitor_set(future->monitor,
-                PHP_PARALLEL_CANCELLED, 0);
+            php_parallel_monitor_set(future->monitor, PHP_PARALLEL_CANCELLED, 0);
             php_parallel_monitor_wait_locked(future->monitor,
                 PHP_PARALLEL_READY);
             php_parallel_monitor_set(future->monitor,
