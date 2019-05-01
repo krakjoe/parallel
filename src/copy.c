@@ -597,7 +597,7 @@ zend_function* php_parallel_copy_check(php_parallel_runtime_t *runtime, zend_exe
         *returns =
             checked->returns;
 
-        return checked->function;
+        return (zend_function*) (checked->function ? checked->function : function);
     }
 
     if (!php_parallel_copy_arginfo_check(function)) {
@@ -679,11 +679,13 @@ zend_function* php_parallel_copy_check(php_parallel_runtime_t *runtime, zend_exe
         check.function =
             php_parallel_copy_function_uncached(function);
     } else {
-        check.function = (zend_function*) function;
+        check.function = NULL;
     }
 
-    zend_hash_index_add_mem(&PCG(checked), (zend_ulong) function->op_array.opcodes, &check, sizeof(php_parallel_copy_check_t));
-    return check.function;
+    zend_hash_index_add_mem(
+        &PCG(checked), (zend_ulong) function->op_array.opcodes, &check, sizeof(php_parallel_copy_check_t));
+
+    return (zend_function*) (check.function ? check.function : function);
 } /* }}} */
 
 /* {{{ */
