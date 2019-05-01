@@ -78,6 +78,10 @@ void php_parallel_scheduler_init(php_parallel_runtime_t *runtime) {
 
 void php_parallel_scheduler_destroy(php_parallel_runtime_t *runtime) {
     zend_llist_destroy(&runtime->schedule);
+
+    if (runtime->bootstrap) {
+        zend_string_release(runtime->bootstrap);
+    }
 }
 
 static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(php_parallel_runtime_t *runtime) {

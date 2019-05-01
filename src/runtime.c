@@ -188,10 +188,6 @@ void php_parallel_runtime_destroy(zend_object *o) {
 
     php_parallel_scheduler_stop(runtime);
 
-    if (runtime->bootstrap) {
-        zend_string_release(runtime->bootstrap);
-    }
-
     php_parallel_scheduler_destroy(runtime);
 
     php_parallel_runtime_functions_destroy(&runtime->functions);
