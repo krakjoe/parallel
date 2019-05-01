@@ -46,10 +46,15 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_from(zval
     return php_parallel_runtime_fetch(Z_OBJ_P(z));
 }
 
+void php_parallel_runtime_functions_setup(php_parallel_runtime_functions_t *functions, zend_bool thread);
 void php_parallel_runtime_function_push(php_parallel_runtime_t *runtime, zend_string *name, const zend_function *function, zend_bool lambda);
+void php_parallel_runtime_functions_update(php_parallel_runtime_t *runtime, php_parallel_runtime_functions_t *functions);
+void php_parallel_runtime_functions_finish(php_parallel_runtime_functions_t *functions);
 
 void         php_parallel_runtime_startup();
 void         php_parallel_runtime_shutdown();
+
+void*        php_parallel_runtime(void *arg);
 
 extern zend_class_entry* php_parallel_runtime_ce;
 #endif

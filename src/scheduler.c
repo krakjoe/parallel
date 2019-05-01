@@ -80,7 +80,7 @@ void php_parallel_scheduler_destroy(php_parallel_runtime_t *runtime) {
     zend_llist_destroy(&runtime->schedule);
 }
 
-php_parallel_runtime_t* php_parallel_scheduler_setup(php_parallel_runtime_t *runtime) {
+static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(php_parallel_runtime_t *runtime) {
     php_parallel_scheduler_context = runtime;
 
     ts_resource(0);
@@ -110,7 +110,7 @@ php_parallel_runtime_t* php_parallel_scheduler_setup(php_parallel_runtime_t *run
     return runtime;
 }
 
-void php_parallel_scheduler_exit(php_parallel_runtime_t *runtime) {
+static zend_always_inline void php_parallel_scheduler_exit(php_parallel_runtime_t *runtime) {
     php_parallel_monitor_set(
         runtime->monitor,
         PHP_PARALLEL_DONE, 1);
@@ -122,7 +122,7 @@ void php_parallel_scheduler_exit(php_parallel_runtime_t *runtime) {
     pthread_exit(NULL);
 }
 
-void php_parallel_scheduler_push(
+static zend_always_inline void php_parallel_scheduler_add(
             php_parallel_runtime_t *runtime,
             php_parallel_future_t *future,
             zend_function *function,
@@ -172,11 +172,11 @@ void php_parallel_scheduler_push(
     }
 }
 
-zend_bool php_parallel_scheduler_empty(php_parallel_runtime_t *runtime) {
+static zend_always_inline zend_bool php_parallel_scheduler_empty(php_parallel_runtime_t *runtime) {
     return !zend_llist_count(&runtime->schedule);
 }
 
-zend_bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parallel_schedule_el_t *el) {
+static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parallel_schedule_el_t *el) {
     php_parallel_schedule_el_t *head;
 
     if (zend_llist_count(&runtime->schedule) == 0) {
@@ -223,7 +223,7 @@ zend_bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parall
     return 1;
 }
 
-void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame) {
+static zend_always_inline void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame) {
     php_parallel_scheduler_future = (php_parallel_future_t*) Z_PTR(frame->This);
 
     zend_first_try {
@@ -278,6 +278,268 @@ void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_da
             php_parallel_scheduler_future->monitor, 
             PHP_PARALLEL_READY, 1);
     }
+}
+
+static void php_parallel_scheduler_killed(void *scheduled) {
+    php_parallel_schedule_el_t *el =
+        (php_parallel_schedule_el_t*) scheduled;
+    php_parallel_future_t *future = Z_PTR(el->frame->This);
+
+    if (future) {
+        php_parallel_monitor_set(future->monitor,
+            PHP_PARALLEL_READY|PHP_PARALLEL_KILLED, 1);
+    }
+}
+
+static zend_always_inline void php_parallel_scheduler_kill(php_parallel_runtime_t *runtime) {
+    zend_llist_apply(&runtime->schedule, php_parallel_scheduler_killed);
+    zend_llist_clean(&runtime->schedule);
+}
+
+static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
+    zend_file_handle fh;
+    zend_op_array *ops;
+    zval rv;
+    int result;
+
+    if (!file) {
+        return SUCCESS;
+    }
+
+    result = php_stream_open_for_zend_ex(ZSTR_VAL(file), &fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
+
+    if (result != SUCCESS) {
+        return FAILURE;
+    }
+
+    if (!fh.opened_path) {
+        fh.opened_path = zend_string_dup(file, 0);
+    }
+
+    zend_hash_add_empty_element(&EG(included_files), fh.opened_path);
+
+    ops = zend_compile_file(
+        &fh, ZEND_REQUIRE);
+    zend_destroy_file_handle(&fh);
+
+    if (ops) {
+        ZVAL_UNDEF(&rv);
+        zend_execute(ops, &rv);
+        destroy_op_array(ops);
+        efree(ops);
+
+        if (EG(exception)) {
+            zend_clear_exception();
+            return FAILURE;
+        }
+
+        zval_ptr_dtor(&rv);
+        return SUCCESS;
+    }
+
+    if (EG(exception)) {
+        zend_clear_exception();
+    }
+
+    return FAILURE;
+}
+
+static zend_always_inline void php_parallel_scheduler_update(php_parallel_runtime_t *runtime, php_parallel_runtime_functions_t *functions) {
+    zend_string *key;
+    zend_function *function;
+
+    if (runtime->functions.lambdas.nNumUsed) {
+        ZEND_HASH_FOREACH_STR_KEY_PTR(&runtime->functions.lambdas, key, function) {
+            zend_function *copy;
+
+            if (zend_hash_exists(EG(function_table), key)) {
+                continue;
+            }
+
+            copy = php_parallel_copy_function(function, 0);
+            copy->common.fn_flags |= ZEND_ACC_CLOSURE;
+            copy->common.function_name = php_parallel_string(key);
+
+            zend_hash_add_ptr(EG(function_table),  copy->common.function_name, copy);
+            zend_hash_add_ptr(&functions->lambdas, copy->common.function_name, copy);
+        } ZEND_HASH_FOREACH_END();
+
+        zend_hash_clean(&runtime->functions.lambdas);
+    }
+
+    if (runtime->functions.functions.nNumUsed) {
+        ZEND_HASH_FOREACH_STR_KEY_PTR(&runtime->functions.functions, key, function) {
+            zend_function *copy;
+
+            if (zend_hash_exists(EG(function_table), key)) {
+                continue;
+            }
+
+            copy = php_parallel_copy_function(function, 0);
+            copy->common.function_name = php_parallel_string(copy->common.function_name);
+
+            zend_hash_add_ptr(EG(function_table),    key, copy);
+            zend_hash_add_ptr(&functions->functions, key, copy);
+        } ZEND_HASH_FOREACH_END();
+
+        zend_hash_clean(&runtime->functions.functions);
+    }
+}
+
+static void* php_parallel_thread(void *arg) {
+    int32_t state = 0;
+    php_parallel_runtime_functions_t functions;
+
+    php_parallel_runtime_t *runtime =
+        php_parallel_scheduler_setup(
+            (php_parallel_runtime_t*) arg);
+
+    php_parallel_runtime_functions_setup(&functions, 1);
+
+    if (php_parallel_thread_bootstrap(runtime->bootstrap) != SUCCESS) {
+        php_parallel_monitor_set(
+            runtime->monitor, PHP_PARALLEL_FAILURE, 1);
+
+        goto _php_parallel_thread_exit;
+    }
+
+    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_READY, 1);
+
+    do {
+        php_parallel_schedule_el_t el;
+
+        if (php_parallel_monitor_lock(runtime->monitor) != SUCCESS) {
+            break;
+        }
+
+        if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_KILLED)) {
+_php_parallel_thread_killed:
+            php_parallel_scheduler_kill(runtime);
+
+            php_parallel_monitor_unlock(runtime->monitor);
+            goto _php_parallel_thread_exit;
+        }
+
+        while (!php_parallel_scheduler_pop(runtime, &el)) {
+            if (!(state & PHP_PARALLEL_CLOSE)) {
+                state = php_parallel_monitor_wait_locked(
+                        runtime->monitor,
+                        PHP_PARALLEL_EXEC|PHP_PARALLEL_CLOSE|PHP_PARALLEL_KILLED);
+            }
+
+            if ((state & (PHP_PARALLEL_CLOSE|PHP_PARALLEL_KILLED))) {
+                if ((state & PHP_PARALLEL_KILLED)) {
+                    goto _php_parallel_thread_killed;
+                }
+
+                if (php_parallel_scheduler_empty(runtime)) {
+                    php_parallel_monitor_unlock(runtime->monitor);
+                    goto _php_parallel_thread_exit;
+                }
+            }
+        }
+
+        php_parallel_scheduler_update(runtime, &functions);
+
+        php_parallel_monitor_unlock(runtime->monitor);
+
+        php_parallel_scheduler_run(runtime, el.frame);
+    } while (1);
+
+_php_parallel_thread_exit:
+    php_parallel_runtime_functions_finish(&functions);
+    php_parallel_scheduler_exit(runtime);
+
+    return NULL;
+}
+
+void php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *bootstrap) {
+    uint32_t state = SUCCESS;
+
+    if (bootstrap) {
+        runtime->bootstrap = zend_string_dup(bootstrap, 1);
+    }
+
+    runtime->monitor = php_parallel_monitor_create();
+
+    if (pthread_create(&runtime->thread, NULL, php_parallel_thread, runtime) != SUCCESS) {
+        php_parallel_exception_ex(
+            php_parallel_runtime_error_ce,
+            "cannot create thread %s", strerror(errno));
+        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE, 0);
+        php_parallel_scheduler_stop(runtime);
+        return;
+    }
+
+    state = php_parallel_monitor_wait(runtime->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_FAILURE);
+
+    if ((state == FAILURE) || (state & PHP_PARALLEL_FAILURE)) {
+        php_parallel_exception_ex(
+            php_parallel_runtime_error_bootstrap_ce,
+            "bootstrapping failed with %s", ZSTR_VAL(runtime->bootstrap));
+        php_parallel_scheduler_stop(runtime);
+    }
+}
+
+void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime) {
+    if (!runtime->monitor) {
+        return;
+    }
+
+    php_parallel_monitor_lock(runtime->monitor);
+
+    if (!php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
+        php_parallel_monitor_set(
+            runtime->monitor,
+            PHP_PARALLEL_CLOSE, 0);
+
+        if (!php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_FAILURE)) {
+            php_parallel_monitor_wait_locked(
+                runtime->monitor,
+                PHP_PARALLEL_DONE);
+        }
+
+        php_parallel_monitor_unlock(runtime->monitor);
+
+        pthread_join(runtime->thread, NULL);
+    } else {
+        php_parallel_monitor_unlock(runtime->monitor);
+    }
+
+    php_parallel_monitor_destroy(runtime->monitor);
+
+    runtime->monitor = NULL;
+}
+
+void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure, zval *argv, zval *return_value) {
+    zend_function *function;
+    zend_bool      returns = 0;
+
+    php_parallel_monitor_lock(runtime->monitor);
+
+    function = php_parallel_copy_check(
+                runtime,
+                EG(current_execute_data)->prev_execute_data,
+                (zend_function*) zend_get_closure_method_def(closure),
+                argv, &returns);
+
+    if (!function) {
+        php_parallel_monitor_unlock(runtime->monitor);
+        return;
+    }
+
+    if (returns) {
+        object_init_ex(return_value, php_parallel_future_ce);
+
+        php_parallel_scheduler_add(runtime, 
+            php_parallel_future_from(return_value), 
+            function, argv);
+    } else {
+        php_parallel_scheduler_add(runtime, NULL, function, argv);
+    }
+
+    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_EXEC, 0);
+    php_parallel_monitor_unlock(runtime->monitor);
 }
 
 void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill) {
