@@ -184,6 +184,13 @@ PHP_METHOD(Events, setTimeout)
         Z_PARAM_LONG(timeout)
     ZEND_PARSE_PARAMETERS_END();
 
+    if (!events->blocking) {
+        php_parallel_exception_ex(
+            php_parallel_events_error_ce,
+            "cannot set timeout on loop in non-blocking mode");
+        return;
+    }
+
     events->timeout = timeout;
 }
 
@@ -199,6 +206,13 @@ PHP_METHOD(Events, setBlocking)
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_BOOL(blocking)
     ZEND_PARSE_PARAMETERS_END();
+
+    if (events->timeout > -1) {
+        php_parallel_exception_ex(
+            php_parallel_events_error_ce,
+            "cannot set blocking mode on loop with timeout");
+        return;
+    }
 
     events->blocking = blocking;
 }
