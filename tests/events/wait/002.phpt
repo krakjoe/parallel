@@ -31,7 +31,7 @@ $events->addFuture("future", $parallel->run(function(){
 
 foreach ($events as $event) {
     switch ($event->type) {
-        case Event::Read:
+        case Event\Type::Read:
             if ($event->object instanceof Future &&
                 $event->value == [42]) {
                 echo "OK\n";
@@ -43,7 +43,7 @@ foreach ($events as $event) {
             }
         break;
         
-        case Event::Write:
+        case Event\Type::Write:
             $events->addChannel($channel);
         break;
     }

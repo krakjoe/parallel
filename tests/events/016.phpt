@@ -1,5 +1,5 @@
 --TEST--
-Check Events Future killed
+Check Events Future cancelled
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -17,11 +17,9 @@ $runtime = new Runtime;
 $future  = $runtime->run(function(){
     while (1)
         usleep(1000);
-    
-    return 42;
 });
 
-$runtime->kill();
+$future->cancel();
 
 $events = new Events();
 $events->addFuture("future", $future);
@@ -31,7 +29,7 @@ var_dump($events->poll());
 --EXPECTF--
 object(parallel\Events\Event)#%d (%d) {
   ["type"]=>
-  int(6)
+  int(5)
   ["source"]=>
   string(6) "future"
   ["object"]=>

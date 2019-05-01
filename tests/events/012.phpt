@@ -24,7 +24,7 @@ var_dump($events->poll());
 --EXPECTF--
 object(parallel\Events\Event)#5 (4) {
   ["type"]=>
-  int(1)
+  int(4)
   ["source"]=>
   string(6) "future"
   ["object"]=>

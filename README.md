@@ -198,25 +198,57 @@ final class parallel\Events\Input {
 }
 
 final class parallel\Events\Event {
-    /**
-    * Event::Read or Event::Write
+    /*
+    * See Event\Type constants
     */
     public int        $type;
+
     /**
     * Shall be the name of $object
     */
     public string    $source;
+
     /**
     * Shall be either Future or Channel
     */
     public object    $object;
+
     /**
-    * Shall be set for Read
+    * Shall be set for Read/Error
     */
     public            $value;
-    
+}
+
+final class parallel\Events\Event\Type {
+    /*
+    * Event::$object was read
+    */
     const Read;
+
+    /*
+    * Input for Event::$source written to Event::$object
+    */
     const Write;
+
+    /*
+    * Event::$object (Channel) was closed
+    */
+    const Close;
+
+    /*
+    * Event::$object (Future) was cancelled
+    */
+    const Cancel;
+
+    /*
+    * Event::$object (Future) was killed
+    */
+    const Kill;
+
+    /*
+    * Event::$object (Future) raised error
+    */
+    const Error; 
 }
 ```
 

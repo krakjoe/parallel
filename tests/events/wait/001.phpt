@@ -25,11 +25,11 @@ $events->setInput($input);
 
 foreach ($events as $event) {
     switch ($event->type) {
-        case Event::Read:
+        case Event\Type::Read:
             var_dump($event->value);
             return;
         
-        case Event::Write:
+        case Event\Type::Write:
             $events->addChannel($channel);
         break;
     }

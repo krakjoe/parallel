@@ -90,13 +90,17 @@ static zend_always_inline zend_bool php_parallel_events_poll_begin_link(
 
     php_parallel_link_lock(channel->link);
 
-    if (php_parallel_events_input_exists(&events->input, name)) {
-        state->writable = php_parallel_link_writable(channel->link);
+    if (php_parallel_link_closed(channel->link)) {
+        state->closed = 1;
     } else {
-        state->readable = php_parallel_link_readable(channel->link);
+        if (php_parallel_events_input_exists(&events->input, name)) {
+            state->writable = php_parallel_link_writable(channel->link);
+        } else {
+            state->readable = php_parallel_link_readable(channel->link);
+        }
     }
 
-    if (state->readable || state->writable) {
+    if (state->readable || state->writable || state->closed) {
         state->type     = PHP_PARALLEL_EVENTS_LINK;
         state->name     = name;
         state->object   = object;
@@ -173,38 +177,50 @@ static zend_always_inline zend_bool php_parallel_events_poll_link(
         php_parallel_channel_fetch(state->object);
     zval *input;
 
-    if ((input = php_parallel_events_input_find(&events->input, state->name))) {
+    if (state->closed) {
+        php_parallel_events_event_construct(
+            events,
+            PHP_PARALLEL_EVENTS_EVENT_CLOSE,
+            state->name,
+            state->object,
+            NULL,
+            retval);
 
-        if (state->writable) {
-
-            if (php_parallel_link_send(channel->link, input)) {
-
-                php_parallel_events_event_construct(
-                    events,
-                    PHP_PARALLEL_EVENTS_EVENT_WRITE,
-                    state->name,
-                    state->object,
-                    NULL,
-                    retval);
-
-                return 1;
-            }
-        }
+        return 1;
     } else {
-        if (state->readable) {
-            zval read;
+        if ((input = php_parallel_events_input_find(&events->input, state->name))) {
 
-            if (php_parallel_link_recv(channel->link, &read)) {
+            if (state->writable) {
 
-                php_parallel_events_event_construct(
-                    events,
-                    PHP_PARALLEL_EVENTS_EVENT_READ,
-                    state->name,
-                    state->object,
-                    &read,
-                    retval);
+                if (php_parallel_link_send(channel->link, input)) {
 
-                return 1;
+                    php_parallel_events_event_construct(
+                        events,
+                        PHP_PARALLEL_EVENTS_EVENT_WRITE,
+                        state->name,
+                        state->object,
+                        NULL,
+                        retval);
+
+                    return 1;
+                }
+            }
+        } else {
+            if (state->readable) {
+                zval read;
+
+                if (php_parallel_link_recv(channel->link, &read)) {
+
+                    php_parallel_events_event_construct(
+                        events,
+                        PHP_PARALLEL_EVENTS_EVENT_READ,
+                        state->name,
+                        state->object,
+                        &read,
+                        retval);
+
+                    return 1;
+                }
             }
         }
     }
@@ -218,15 +234,27 @@ static zend_always_inline zend_bool php_parallel_events_poll_future(
                             zval *retval) {
     if (state->readable) {
         zval read;
-
+        php_parallel_events_event_type_t type = PHP_PARALLEL_EVENTS_EVENT_READ;
         php_parallel_future_t *future =
             php_parallel_future_fetch(state->object);
 
-        php_parallel_future_value(future, &read, 0);
+        ZVAL_NULL(&read);
+
+        if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_KILLED)) {
+            type = PHP_PARALLEL_EVENTS_EVENT_KILL;
+        } else if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_CANCELLED)) {
+            type = PHP_PARALLEL_EVENTS_EVENT_CANCEL;
+        } else {
+            if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_ERROR)) {
+                type = PHP_PARALLEL_EVENTS_EVENT_ERROR;
+            }
+
+            php_parallel_future_value(future, &read, 0);
+        }
 
         php_parallel_events_event_construct(
             events,
-            PHP_PARALLEL_EVENTS_EVENT_READ,
+            type,
             state->name,
             state->object,
             &read,

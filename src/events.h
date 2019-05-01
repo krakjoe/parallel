@@ -36,6 +36,7 @@ typedef struct _php_parallel_events_state_t {
     zend_string *name;
     zend_bool readable;
     zend_bool writable;
+    zend_bool closed;
     zend_object *object;
 } php_parallel_events_state_t;
 

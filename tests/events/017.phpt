@@ -1,5 +1,5 @@
 --TEST--
-Check Events Future killed
+Check Events Channel closed
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -12,32 +12,32 @@ opcache.optimization_level=0
 <?php
 use \parallel\Events;
 use \parallel\Runtime;
+use \parallel\Channel;
 
 $runtime = new Runtime;
-$future  = $runtime->run(function(){
-    while (1)
-        usleep(1000);
-    
-    return 42;
+$sync    = Channel::make("sync");
+
+$runtime->run(function(){
+    $sync = Channel::open("sync");
+    $sync->close();
 });
 
-$runtime->kill();
-
 $events = new Events();
-$events->addFuture("future", $future);
+$events->addChannel($sync);
 
 var_dump($events->poll());
 ?>
 --EXPECTF--
 object(parallel\Events\Event)#%d (%d) {
   ["type"]=>
-  int(6)
+  int(3)
   ["source"]=>
-  string(6) "future"
+  string(4) "sync"
   ["object"]=>
-  object(parallel\Future)#%d (0) {
+  object(parallel\Channel)#%d (%d) {
   }
   ["value"]=>
   NULL
 }
+
 

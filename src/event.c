@@ -21,6 +21,7 @@
 #include "parallel.h"
 
 zend_class_entry* php_parallel_events_event_ce;
+zend_class_entry* php_parallel_events_event_type_ce;
 
 static zend_string *php_parallel_events_event_type;
 static zend_string *php_parallel_events_event_source;
@@ -56,10 +57,11 @@ void php_parallel_events_event_construct(
     PHP_PARALLEL_EVENTS_EVENT_PROPERTY(STR_COPY,  source);
     PHP_PARALLEL_EVENTS_EVENT_PROPERTY(OBJ,       object);
 
-    if (type == PHP_PARALLEL_EVENTS_EVENT_READ) {
+    if (type == PHP_PARALLEL_EVENTS_EVENT_WRITE) {
+        php_parallel_events_input_remove(&events->input, source);
+    } else if (type == PHP_PARALLEL_EVENTS_EVENT_READ ||
+               type == PHP_PARALLEL_EVENTS_EVENT_ERROR) {
         PHP_PARALLEL_EVENTS_EVENT_PROPERTY(COPY_VALUE, value);
-    } else {
-         php_parallel_events_input_remove(&events->input, source);
     }
 
     zend_hash_del(&events->targets, source);
@@ -90,9 +92,19 @@ void php_parallel_events_event_startup(void) {
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Events", "Event", php_parallel_events_event_methods);
 
     php_parallel_events_event_ce = zend_register_internal_class(&ce);
+    php_parallel_events_event_ce->ce_flags |= ZEND_ACC_FINAL;
 
-    zend_declare_class_constant_long(php_parallel_events_event_ce, ZEND_STRL("Read"), PHP_PARALLEL_EVENTS_EVENT_READ);
-    zend_declare_class_constant_long(php_parallel_events_event_ce, ZEND_STRL("Write"), PHP_PARALLEL_EVENTS_EVENT_WRITE);
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Events\\Event", "Type", NULL);
+
+    php_parallel_events_event_type_ce = zend_register_internal_class(&ce);
+    php_parallel_events_event_type_ce->ce_flags |= ZEND_ACC_FINAL;
+
+    zend_declare_class_constant_long(php_parallel_events_event_type_ce, ZEND_STRL("Read"),   PHP_PARALLEL_EVENTS_EVENT_READ);
+    zend_declare_class_constant_long(php_parallel_events_event_type_ce, ZEND_STRL("Write"),  PHP_PARALLEL_EVENTS_EVENT_WRITE);
+    zend_declare_class_constant_long(php_parallel_events_event_type_ce, ZEND_STRL("Close"),  PHP_PARALLEL_EVENTS_EVENT_CLOSE);
+    zend_declare_class_constant_long(php_parallel_events_event_type_ce, ZEND_STRL("Cancel"), PHP_PARALLEL_EVENTS_EVENT_CANCEL);
+    zend_declare_class_constant_long(php_parallel_events_event_type_ce, ZEND_STRL("Kill"),   PHP_PARALLEL_EVENTS_EVENT_KILL);
+    zend_declare_class_constant_long(php_parallel_events_event_type_ce, ZEND_STRL("Error"),  PHP_PARALLEL_EVENTS_EVENT_ERROR);
 
     php_parallel_events_event_type =
         zend_new_interned_string(
