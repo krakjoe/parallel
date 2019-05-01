@@ -241,7 +241,7 @@ final class parallel\Events\Event\Type {
     const Cancel;
 
     /*
-    * Event::$object (Future) was killed
+    * Runtime executing Event::$object (Future) was killed
     */
     const Kill;
 
