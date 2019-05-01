@@ -33,7 +33,6 @@ final class parallel\Runtime {
     *                                                            resource (streams are cast to int where possible)
     *                                                            references
     *                                                            caller ignored return (or throw)
-    * Note: The caller must not ignore the return value if task contains throw or return statements
     */
     public function run(Closure $task, array $argv = []) : ?\parallel\Future;
     

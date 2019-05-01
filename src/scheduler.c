@@ -316,24 +316,24 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
     if (in == out) {
         zend_bool cancelled = 0;
 
-        *(future->runtime->child.interrupt) = 1;
-
         php_parallel_monitor_lock(future->monitor);
 
         if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY)) {
+            *(future->runtime->child.interrupt) = 1;
+
             php_parallel_monitor_set(future->monitor,
                 PHP_PARALLEL_CANCELLED, 0);
             php_parallel_monitor_wait_locked(future->monitor,
                 PHP_PARALLEL_READY);
             php_parallel_monitor_set(future->monitor,
                 PHP_PARALLEL_READY|PHP_PARALLEL_DONE, 0);
+
             cancelled = 1;
         }
 
         php_parallel_monitor_unlock(future->monitor);
 
         php_parallel_monitor_unlock(future->runtime->monitor);
-
         return cancelled;
     } else {
         php_parallel_monitor_set(future->monitor,
