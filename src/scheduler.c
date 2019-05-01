@@ -280,21 +280,24 @@ void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_da
     }
 }
 
-void php_parallel_scheduler_kill(php_parallel_runtime_t *runtime) {
+void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill) {
     php_parallel_monitor_lock(runtime->monitor);
 
-    php_parallel_monitor_set(
-        runtime->monitor, PHP_PARALLEL_KILLED, 0);
+    if (kill){
+        php_parallel_monitor_set(
+            runtime->monitor, PHP_PARALLEL_KILLED, 0);
 
-    *(runtime->child.interrupt) = 1;
+        *(runtime->child.interrupt) = 1;
+    } else {
+        php_parallel_monitor_set(
+            runtime->monitor, PHP_PARALLEL_CLOSE, 0);
+    }
 
-    php_parallel_monitor_wait_locked(
-        runtime->monitor, PHP_PARALLEL_DONE);
+    php_parallel_monitor_wait_locked(runtime->monitor, PHP_PARALLEL_DONE);
 
     php_parallel_monitor_unlock(runtime->monitor);
 
-    php_parallel_monitor_set(
-        runtime->monitor, PHP_PARALLEL_CLOSED, 0);
+    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED, 0);
 
     pthread_join(runtime->thread, NULL);
 }

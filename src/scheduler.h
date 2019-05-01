@@ -33,7 +33,7 @@ php_parallel_runtime_t* php_parallel_scheduler_setup(php_parallel_runtime_t *run
 zend_bool       php_parallel_scheduler_empty(php_parallel_runtime_t *runtime);
 zend_bool       php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parallel_schedule_el_t *el);
 void            php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame);
-void            php_parallel_scheduler_kill(php_parallel_runtime_t *runtime);
+void            php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill);
 void            php_parallel_scheduler_exit(php_parallel_runtime_t *runtime);
 
 void            php_parallel_schedule_kill(php_parallel_runtime_t *runtime);

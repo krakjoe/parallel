@@ -389,19 +389,7 @@ PHP_METHOD(Runtime, close)
         return;
     }
 
-    php_parallel_monitor_lock(runtime->monitor);
-
-    php_parallel_monitor_set(
-        runtime->monitor, PHP_PARALLEL_CLOSE, 0);
-    php_parallel_monitor_wait_locked(
-        runtime->monitor, PHP_PARALLEL_DONE);
-
-    php_parallel_monitor_unlock(runtime->monitor);
-
-    php_parallel_monitor_set(
-        runtime->monitor, PHP_PARALLEL_CLOSED, 0);
-
-    pthread_join(runtime->thread, NULL);
+    php_parallel_scheduler_join(runtime, 0);
 }
 
 PHP_METHOD(Runtime, kill)
@@ -418,7 +406,7 @@ PHP_METHOD(Runtime, kill)
         return;
     }
 
-    php_parallel_scheduler_kill(runtime);
+    php_parallel_scheduler_join(runtime, 1);
 }
 
 zend_function_entry php_parallel_runtime_methods[] = {
