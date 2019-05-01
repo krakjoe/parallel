@@ -75,8 +75,27 @@ const zend_object_iterator_funcs php_parallel_events_loop_functions = {
     .get_current_key    = NULL,
 };
 
+static zend_always_inline zend_bool php_parallel_events_loop_check(zval *zv) {
+    php_parallel_events_t *events = php_parallel_events_from(zv);
+
+    if (events->blocking) {
+        return 1;
+    }
+
+    return 0;
+}
+
 zend_object_iterator* php_parallel_events_loop_create(zend_class_entry *type, zval *events, int by_ref) {
-    php_parallel_events_loop_t *loop =
+    php_parallel_events_loop_t *loop;
+
+    if (!php_parallel_events_loop_check(events)) {
+        php_parallel_exception_ex(
+            php_parallel_events_error_ce,
+            "cannot create iterator for non-blocking event loop");
+        return NULL;
+    }
+
+    loop =
         (php_parallel_events_loop_t*)
             ecalloc(1, sizeof(php_parallel_events_loop_t));
 
