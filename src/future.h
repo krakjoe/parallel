@@ -39,6 +39,12 @@ static zend_always_inline php_parallel_future_t* php_parallel_future_from(zval *
     return php_parallel_future_fetch(Z_OBJ_P(z));
 }
 
+static zend_always_inline php_parallel_future_t* php_parallel_future_construct(zval *retval) {
+        object_init_ex(retval, php_parallel_future_ce);
+
+        return php_parallel_future_from(retval);
+}
+
 zend_object* php_parallel_future_create(zend_class_entry *);
 void         php_parallel_future_destroy(zend_object *);
 

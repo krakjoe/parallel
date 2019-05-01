@@ -124,16 +124,16 @@ static zend_always_inline void php_parallel_scheduler_exit(php_parallel_runtime_
 
 static zend_always_inline void php_parallel_scheduler_add(
             php_parallel_runtime_t *runtime,
-            php_parallel_future_t *future,
-            zend_function *function,
-            zval *argv) {
+            const zend_function *function,
+            zval *argv,
+            php_parallel_future_t *future) {
     php_parallel_schedule_el_t el;
     uint32_t argc = argv && Z_TYPE_P(argv) == IS_ARRAY ?
                         zend_hash_num_elements(Z_ARRVAL_P(argv)) : 0;
 
     zend_execute_data *frame =
         (zend_execute_data*)
-            pecalloc(1, zend_vm_calc_used_stack(argc, function), 1);
+            pecalloc(1, zend_vm_calc_used_stack(argc, (zend_function*) function), 1);
 
     frame->func = php_parallel_copy_function(function, 1);
 
@@ -512,31 +512,23 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime) {
 }
 
 void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure, zval *argv, zval *return_value) {
-    zend_function *function;
-    zend_bool      returns = 0;
+    zend_execute_data      *caller = EG(current_execute_data)->prev_execute_data;
+    const zend_function    *function = zend_get_closure_method_def(closure);
+    zend_bool               returns = 0;
+    php_parallel_future_t  *future = NULL;
 
     php_parallel_monitor_lock(runtime->monitor);
 
-    function = php_parallel_copy_check(
-                runtime,
-                EG(current_execute_data)->prev_execute_data,
-                (zend_function*) zend_get_closure_method_def(closure),
-                argv, &returns);
-
-    if (!function) {
+    if (!(function = php_parallel_copy_check(runtime, caller, function, argv, &returns))) {
         php_parallel_monitor_unlock(runtime->monitor);
         return;
     }
 
     if (returns) {
-        object_init_ex(return_value, php_parallel_future_ce);
-
-        php_parallel_scheduler_add(runtime, 
-            php_parallel_future_from(return_value), 
-            function, argv);
-    } else {
-        php_parallel_scheduler_add(runtime, NULL, function, argv);
+        future = php_parallel_future_construct(return_value);
     }
+
+    php_parallel_scheduler_add(runtime, function, argv, future);
 
     php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_EXEC, 0);
     php_parallel_monitor_unlock(runtime->monitor);
