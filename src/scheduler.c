@@ -284,13 +284,11 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill
     php_parallel_monitor_lock(runtime->monitor);
 
     if (kill){
-        php_parallel_monitor_set(
-            runtime->monitor, PHP_PARALLEL_KILLED, 0);
+        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_KILLED, 0);
 
         *(runtime->child.interrupt) = 1;
     } else {
-        php_parallel_monitor_set(
-            runtime->monitor, PHP_PARALLEL_CLOSE, 0);
+        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSE, 0);
     }
 
     php_parallel_monitor_wait_locked(runtime->monitor, PHP_PARALLEL_DONE);
