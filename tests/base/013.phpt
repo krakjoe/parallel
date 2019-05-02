@@ -1,23 +1,25 @@
 --TEST--
-ZEND_DECLARE_LAMBDA_FUNCTION (OK)
+ZEND_DECLARE_LAMBDA_FUNCTION
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
 	echo 'skip';
 }
 ?>
+--INI--
+opcache.optimization_level=0
 --FILE--
 <?php
 $runtime = new parallel\Runtime();
 
-$runtime->run(function() {
+$f1 = $runtime->run(function() {
 	$closure = function() {
 	    return true;
 	};
 	var_dump($closure());
 });
 
-$runtime->run(function() {
+$f2 = $runtime->run(function() {
 	$closure = function() {
 	    $result = function(){
 	        return true;
@@ -26,9 +28,39 @@ $runtime->run(function() {
 	};
 	var_dump($closure());
 });
+
+$f1->value() && $f2->value();
+
+try {
+    $runtime->run(function() {
+        $closure = function() {
+            $closure = function() {
+                new class{};
+            };
+        };
+    });
+} catch (\parallel\Runtime\Error\IllegalInstruction $ex) {
+    var_dump($ex->getMessage());
+}
+
+try {
+    $runtime->run(function() {
+        $closure = function() {
+            $closure = function() {
+                class illegal {}
+            };
+        };
+    });
+} catch (\parallel\Runtime\Error\IllegalInstruction $ex) {
+    var_dump($ex->getMessage());
+}
 ?>
---EXPECT--
+--EXPECTF--
 bool(true)
 bool(true)
+string(%d) "illegal instruction (new class) on line 1 of closure declared on line 26 of %s and scheduled"
+string(%d) "illegal instruction (class) on line 1 of closure declared on line 38 of %s and scheduled"
+
+
 
 
