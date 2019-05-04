@@ -876,6 +876,11 @@ zend_function* php_parallel_copy_function(const zend_function *function, zend_bo
         copy->op_array.run_time_cache = NULL;
 #endif
 
+        if (copy->op_array.scope) {
+            copy->op_array.scope =
+                zend_lookup_class(copy->op_array.scope->name);
+        }
+
         php_parallel_copy_auto_globals_activate(copy);
 
         return copy;
