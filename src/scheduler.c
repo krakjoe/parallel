@@ -265,8 +265,12 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
             zval garbage = *frame->return_value;
 
             if (Z_OPT_REFCOUNTED(garbage)) {
-                PARALLEL_ZVAL_COPY(
-                    frame->return_value, &garbage, 1);
+                if (!PARALLEL_IS_CLOSURE(&garbage)) {
+                    PARALLEL_ZVAL_COPY(
+                        frame->return_value, &garbage, 1);
+                } else {
+                    ZVAL_TRUE(frame->return_value);
+                }
 
                 zval_ptr_dtor(&garbage);
             }
