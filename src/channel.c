@@ -138,11 +138,13 @@ PHP_METHOD(Channel, send)
     ZEND_PARSE_PARAMETERS_END();
 
     if (Z_TYPE_P(value) == IS_OBJECT || Z_TYPE_P(value) == IS_NULL) {
-        php_parallel_exception_ex(
-            php_parallel_channel_error_illegal_value_ce,
-            "value of type %s is illegal",
-            zend_get_type_by_const(Z_TYPE_P(value)));
-        return;
+        if (!PARALLEL_IS_CLOSURE(value)) {
+            php_parallel_exception_ex(
+                php_parallel_channel_error_illegal_value_ce,
+                "value of type %s is illegal",
+                zend_get_type_by_const(Z_TYPE_P(value)));
+            return;
+        }
     }
 
     if (php_parallel_link_closed(channel->link) ||

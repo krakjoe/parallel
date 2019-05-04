@@ -153,7 +153,7 @@ php_parallel_link_t* php_parallel_link_init(zend_string *name, zend_bool buffere
 void php_parallel_link_destroy(php_parallel_link_t *link) {
     pthread_mutex_lock(&link->m.m);
 
-     if (--link->refcount == 0) {
+    if (--link->refcount == 0) {
         pthread_mutex_unlock(&link->m.m);
 
         php_parallel_link_mutex_destroy(&link->m);
@@ -191,10 +191,6 @@ static zend_always_inline zend_bool php_parallel_link_send_unbuffered(php_parall
         pthread_mutex_unlock(&link->m.m);
         pthread_mutex_unlock(&link->m.w);
         return 0;
-    }
-
-    if (PARALLEL_IS_CLOSURE(&link->port.z)) {
-        PARALLEL_ZVAL_DTOR(&link->port.z);
     }
 
     if (PARALLEL_IS_CLOSURE(value)) {
