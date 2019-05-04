@@ -33,14 +33,14 @@
 #include "input.h"
 #include "strings.h"
 
-#include "copy.h"
-
 #include "SAPI.h"
 #include "php_main.h"
 #include "zend_closures.h"
 #include "zend_interfaces.h"
 #include "zend_exceptions.h"
 #include "zend_vm.h"
+
+#include "copy.h"
 
 #define PARALLEL_PARAMETERS_NONE(r) \
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, 0, 0) \

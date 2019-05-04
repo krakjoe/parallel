@@ -66,7 +66,13 @@ static zend_always_inline void php_parallel_copy_zval_dtor(zval *zv) {
         zend_string_release(Z_STR_P(zv));
     } else {
         if (Z_OPT_REFCOUNTED_P(zv)) {
-            zval_ptr_dtor(zv);
+            if (Z_TYPE_P(zv) == IS_OBJECT && Z_OBJCE_P(zv) == zend_ce_closure) {
+                if (zv->u2.extra) {
+                    pefree(Z_OBJ_P(zv), 1);
+                }
+            } else {
+                zval_ptr_dtor(zv);
+            } 
         }
     }
 }
