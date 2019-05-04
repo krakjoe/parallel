@@ -23,21 +23,6 @@
 #include "php_streams.h"
 #include "php_network.h"
 
-#define PCG(e) php_parallel_copy_globals.e
-
-typedef struct _php_parallel_copy_check_t {
-    zend_function *function;
-    zend_bool      returns;
-    HashTable      functions;
-    HashTable      lambdas;
-} php_parallel_copy_check_t;
-
-typedef struct _php_parallel_copy_g {
-    HashTable checked;
-    HashTable copied;
-    HashTable activated;
-} php_parallel_copy_g;
-
 typedef struct _zend_closure_t {
     zend_object       std;
     zend_function     func;
@@ -46,11 +31,26 @@ typedef struct _zend_closure_t {
     zif_handler       orig_internal_handler;
 } zend_closure_t;
 
-TSRM_TLS php_parallel_copy_g php_parallel_copy_globals;
+typedef struct _php_parallel_copy_check_t {
+    zend_function *function;
+    zend_bool      returns;
+    HashTable      functions;
+    HashTable      lambdas;
+} php_parallel_copy_check_t;
 
-static pthread_mutex_t php_parallel_copy_cache_mutex = PTHREAD_MUTEX_INITIALIZER;
+TSRM_TLS struct {
+    HashTable checked;
+    HashTable copied;
+    HashTable activated;
+} php_parallel_copy_globals;
 
-static HashTable php_parallel_copy_cache;
+static struct {
+    pthread_mutex_t mutex;
+    HashTable       table;
+} php_parallel_copy_cache = {PTHREAD_MUTEX_INITIALIZER};
+
+#define PCG(e) php_parallel_copy_globals.e
+#define PCC(e) php_parallel_copy_cache.e
 
 static const uint32_t php_parallel_copy_uninitialized_bucket[-HT_MIN_MASK] = {HT_INVALID_IDX, HT_INVALID_IDX};
 
@@ -114,6 +114,14 @@ static void php_parallel_copy_uncached_dtor(zval *zv) {
 
     pefree(function->op_array.opcodes, 1);
     pefree(function, 1);
+}
+
+void php_parallel_copy_cache_startup() {
+    zend_hash_init(&PCC(table), 32, NULL, php_parallel_copy_uncached_dtor, 1);
+}
+
+void php_parallel_copy_cache_shutdown() {
+    zend_hash_destroy(&PCC(table));
 }
 
 void php_parallel_copy_startup(void) {
@@ -481,10 +489,10 @@ static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval *
 static zend_function* php_parallel_copy_function_uncached(const zend_function *source) {
     zend_function *copy;
 
-    pthread_mutex_lock(&php_parallel_copy_cache_mutex);
+    pthread_mutex_lock(&PCC(mutex));
 
-    if ((copy = zend_hash_index_find_ptr(&php_parallel_copy_cache, (zend_ulong) source->op_array.opcodes))) {
-        pthread_mutex_unlock(&php_parallel_copy_cache_mutex);
+    if ((copy = zend_hash_index_find_ptr(&PCC(table), (zend_ulong) source->op_array.opcodes))) {
+        pthread_mutex_unlock(&PCC(mutex));
 
         return copy;
     }
@@ -605,10 +613,10 @@ static zend_function* php_parallel_copy_function_uncached(const zend_function *s
     }
 
     zend_hash_index_add_ptr(
-        &php_parallel_copy_cache, 
+        &PCC(table),
         (zend_ulong) source->op_array.opcodes, copy);
 
-    pthread_mutex_unlock(&php_parallel_copy_cache_mutex);
+    pthread_mutex_unlock(&PCC(mutex));
 
     return copy;
 } /* }}} */
@@ -1004,13 +1012,5 @@ void php_parallel_copy_function_free(zend_function *function, zend_bool persiste
     }
 
     pefree(function, persistent);
-} /* }}} */
-
-void php_parallel_copy_cache_startup() { /* {{{ */
-    zend_hash_init(&php_parallel_copy_cache, 32, NULL, php_parallel_copy_uncached_dtor, 1);
-} /* }}} */
-
-void php_parallel_copy_cache_shutdown() { /* {{{ */
-    zend_hash_destroy(&php_parallel_copy_cache);
 } /* }}} */
 #endif
