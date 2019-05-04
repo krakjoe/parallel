@@ -725,9 +725,13 @@ void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persis
 
         if (Z_TYPE(copy->this_ptr) == IS_OBJECT) {
             ZVAL_NULL(&copy->this_ptr);
-        }   
+        }
 
         zend_object_std_init(&copy->std, copy->std.ce);
+
+#if PHP_VERSION_ID < 70300
+        copy->func.common.prototype = (void*) copy;
+#endif
 
         efree(function);
     }
