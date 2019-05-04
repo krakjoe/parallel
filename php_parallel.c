@@ -61,9 +61,11 @@ PHP_RINIT_FUNCTION(parallel)
  */
 PHP_RSHUTDOWN_FUNCTION(parallel)
 {
-    php_parallel_strings_shutdown();
-    php_parallel_copy_shutdown();
-    
+    if (!CG(unclean_shutdown)) {
+        php_parallel_strings_shutdown();
+        php_parallel_copy_shutdown();
+    }
+
 	return SUCCESS;
 }
 /* }}} */
