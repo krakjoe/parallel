@@ -161,6 +161,10 @@ void php_parallel_link_destroy(php_parallel_link_t *link) {
 
         if (link->type == PHP_PARALLEL_LINK_BUFFERED) {
             zend_llist_destroy(&link->port.q.l);
+        } else {
+            if (Z_TYPE(link->port.z) == IS_OBJECT && Z_OBJCE(link->port.z) == zend_ce_closure) {
+                PARALLEL_ZVAL_DTOR(&link->port.z);
+            }
         }
         zend_string_release(link->name);
         pefree(link, 1);
@@ -189,7 +193,15 @@ static zend_always_inline zend_bool php_parallel_link_send_unbuffered(php_parall
         return 0;
     }
 
-    ZVAL_COPY_VALUE(&link->port.z, value);
+    if (Z_TYPE(link->port.z) == IS_OBJECT && Z_OBJCE(link->port.z) == zend_ce_closure) {
+        PARALLEL_ZVAL_DTOR(&link->port.z);
+    }
+
+    if (Z_TYPE_P(value) == IS_OBJECT && Z_OBJCE_P(value) == zend_ce_closure) {
+        PARALLEL_ZVAL_COPY(&link->port.z, value, 1);
+    } else {
+        ZVAL_COPY_VALUE(&link->port.z, value);
+    }
     link->s.w++;
 
     if (link->s.r) {
