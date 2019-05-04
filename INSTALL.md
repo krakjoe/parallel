@@ -1,7 +1,7 @@
 Requirements
 ============
 
-  * PHP 7.1+
+  * PHP 7.2+
   * ZTS
   * <pthread.h>
 
