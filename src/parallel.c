@@ -50,6 +50,7 @@ void php_parallel_startup(void) {
 
     sapi_module.ub_write = php_parallel_output_function;
 
+    php_parallel_copy_cache_startup();
     php_parallel_exceptions_startup();
     php_parallel_handlers_startup();
     php_parallel_scheduler_startup();
@@ -64,6 +65,7 @@ void php_parallel_shutdown(void) {
     php_parallel_scheduler_shutdown();
     php_parallel_runtime_shutdown();
     php_parallel_events_shutdown();
+    php_parallel_copy_cache_shutdown();
 
     if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
         sapi_module.deactivate = php_sapi_deactivate_function;

@@ -11,7 +11,7 @@ if (!extension_loaded('parallel')) {
 $runtime = new \parallel\Runtime;
 
 try {
-    $runtime->run(function(Closure $arg) : Closure {
+    $future = $runtime->run(function(Closure $closure) : Closure {
         return $closure;
     }, [function(){
         return true;
