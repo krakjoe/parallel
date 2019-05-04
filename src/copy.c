@@ -372,9 +372,13 @@ static zend_always_inline zend_bool php_parallel_copying_lexical_reference(zend_
 static zend_always_inline zend_bool php_parallel_copy_type_closure(zend_type type) { /* {{{ */
     zend_class_entry *class;
 
+#ifdef ZEND_TYPE_IS_CE
     if (ZEND_TYPE_IS_CE(type)) {
         class = ZEND_TYPE_CE(type);
     } else class = zend_lookup_class(ZEND_TYPE_NAME(type));
+#else
+    class = zend_lookup_class(ZEND_TYPE_NAME(type));
+#endif
 
     if (class == zend_ce_closure) {
         return 1;
