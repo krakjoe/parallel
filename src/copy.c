@@ -112,6 +112,7 @@ static void php_parallel_copy_uncached_dtor(zval *zv) {
         php_parallel_copy_hash_dtor(function->op_array.static_variables, 1);
     }
 
+    pefree(function->op_array.opcodes, 1);
     pefree(function, 1);
 }
 
