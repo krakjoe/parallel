@@ -700,8 +700,13 @@ void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persis
     zend_function  *function;
 
     if (persistent) {
-        function = /* always copy uncached, closures may be destroyed */
-            php_parallel_copy_function_uncached(&copy->func);
+        if (copy->func.op_array.refcount) {
+            function =
+                php_parallel_copy_function_uncached(&copy->func);
+        } else {
+            function = (zend_function*) &copy->func;
+        }
+
         function = php_parallel_copy_function(function, 1);
 
         memcpy(
