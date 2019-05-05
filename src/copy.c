@@ -298,11 +298,11 @@ _php_parallel_copy_closure_check_store:
 }
 
 
-zend_bool php_parallel_copy_zval_check(zval *zv, zval **error) {
+zend_bool php_parallel_copy_zval_check(zval *zv, zval **error, zend_bool nesting) {
     switch (Z_TYPE_P(zv)) {
         case IS_OBJECT:
             if (PARALLEL_IS_CLOSURE(zv)) {
-                if (php_parallel_copy_closure_check((zend_closure_t*) Z_OBJ_P(zv))) {
+                if (!nesting && php_parallel_copy_closure_check((zend_closure_t*) Z_OBJ_P(zv))) {
                     if (error) {
                         *error = zv;
                     }
@@ -320,7 +320,7 @@ zend_bool php_parallel_copy_zval_check(zval *zv, zval **error) {
             zval *el;
 
             ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(zv), el) {
-                if (!php_parallel_copy_zval_check(el, error)) {
+                if (!php_parallel_copy_zval_check(el, error, nesting)) {
                     if (error) {
                         *error = el;
                     }
@@ -534,7 +534,7 @@ zend_bool php_parallel_copy_arginfo_check(const zend_function *function) { /* {{
     return 1;
 } /* }}} */
 
-static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval **error) { /* {{{ */
+static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval **error, zend_bool nesting) { /* {{{ */
     zval *arg;
 
     if (*argc == 0) {
@@ -542,7 +542,7 @@ static zend_bool php_parallel_copy_argv_check(zval *args, uint32_t *argc, zval *
     }
 
     ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(args), arg) {
-        if (!PARALLEL_IS_COPYABLE(arg, error)) {
+        if (!PARALLEL_IS_COPYABLE(arg, error, nesting)) {
             return 0;
         }
 
@@ -852,7 +852,7 @@ zend_function* php_parallel_copy_check(php_parallel_runtime_t *runtime, zend_exe
         uint32_t errat = 0;
         zval *errarg;
 
-        if (!php_parallel_copy_argv_check(argv, &errat, &errarg)) {
+        if (!php_parallel_copy_argv_check(argv, &errat, &errarg, 1)) {
             php_parallel_exception_ex(
                 php_parallel_runtime_error_illegal_parameter_ce,
                 "illegal parameter (%s) passed to task at argument %d",

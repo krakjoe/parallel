@@ -137,7 +137,7 @@ PHP_METHOD(Channel, send)
         Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (!PARALLEL_IS_COPYABLE(value, &error)) {
+    if (!PARALLEL_IS_COPYABLE(value, &error, 0)) {
         php_parallel_exception_ex(
             php_parallel_channel_error_illegal_value_ce,
             "value of type %s is illegal",

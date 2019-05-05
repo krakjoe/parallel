@@ -45,7 +45,7 @@ zend_function* php_parallel_copy_check(
 zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent);
 void           php_parallel_copy_function_free(zend_function *function, zend_bool persistent);
 
-zend_bool php_parallel_copy_zval_check(zval *source, zval **error);
+zend_bool php_parallel_copy_zval_check(zval *source, zval **error, zend_bool nesting);
 void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent);
 
 static zend_always_inline void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
