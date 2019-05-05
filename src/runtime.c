@@ -23,14 +23,10 @@
 zend_class_entry *php_parallel_runtime_ce;
 zend_object_handlers php_parallel_runtime_handlers;
 
-static void php_parallel_runtime_functions_dtor(zval *zv) {
-    php_parallel_copy_function_free(Z_FUNC_P(zv), 0);
-}
-
 void php_parallel_runtime_functions_setup(php_parallel_runtime_functions_t *functions, zend_bool thread) {
     if (thread) {
-        zend_hash_init(&functions->lambdas,   16, NULL, php_parallel_runtime_functions_dtor, 0);
-        zend_hash_init(&functions->functions, 16, NULL, php_parallel_runtime_functions_dtor, 0);
+        zend_hash_init(&functions->lambdas,   16, NULL, NULL, 0);
+        zend_hash_init(&functions->functions, 16, NULL, NULL, 0);
     } else {
         zend_hash_init(&functions->lambdas,   16, NULL, NULL, 1);
         zend_hash_init(&functions->functions, 16, NULL, NULL, 1);
