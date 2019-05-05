@@ -35,7 +35,7 @@ $futures[1] = $runtimes[1]->run($thread);
 
 for ($i = 0; $i<10; $i++)
 $channel->send(function(){
-    static $vars = [452];
+    static $vars = [0];
 
     $vars[0]++;
 
@@ -45,7 +45,7 @@ $channel->send(function(){
 foreach ($runtimes as $runtime)
     $channel->send(false);
 
-if (($futures[0]->value() + $futures[1]->value()) == (452 * 2) + 10) {
+if (($futures[0]->value() + $futures[1]->value()) == 10) {
     echo "OK\n";
 }
 ?>
