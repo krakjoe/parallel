@@ -278,8 +278,6 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
             }
         }
 
-        php_parallel_copy_function_free(frame->func, 0);
-
         zend_vm_stack_free_call_frame(frame);
     } zend_end_try ();
 
