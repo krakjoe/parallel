@@ -17,10 +17,11 @@ $runtimes = [
 
 $futures = [];
 
-$channel = Channel::make("channel", Channel::Infinite);
+$channel = Channel::make("channel");
 
 $thread = function(){
     $channel = Channel::open("channel");
+    $result  = 0;
 
     while (($closure = $channel->recv())) {
         $result = $closure();
