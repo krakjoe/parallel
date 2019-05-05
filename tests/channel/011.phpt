@@ -19,7 +19,7 @@ try {
 }
 ?>
 --EXPECT--
-string(31) "value of type object is illegal"
+string(33) "value of type stdClass is illegal"
 
 
 

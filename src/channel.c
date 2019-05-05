@@ -131,20 +131,20 @@ ZEND_END_ARG_INFO()
 PHP_METHOD(Channel, send)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
-    zval *value;
+    zval *value, *error;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (Z_TYPE_P(value) == IS_OBJECT || Z_TYPE_P(value) == IS_NULL) {
-        if (!PARALLEL_IS_CLOSURE(value)) {
-            php_parallel_exception_ex(
-                php_parallel_channel_error_illegal_value_ce,
-                "value of type %s is illegal",
-                zend_get_type_by_const(Z_TYPE_P(value)));
-            return;
-        }
+    if (!PARALLEL_IS_COPYABLE(value, &error)) {
+        php_parallel_exception_ex(
+            php_parallel_channel_error_illegal_value_ce,
+            "value of type %s is illegal",
+            Z_TYPE_P(error) == IS_OBJECT ? 
+                ZSTR_VAL(Z_OBJCE_P(error)->name) : 
+                zend_get_type_by_const(Z_TYPE_P(error)));
+        return;
     }
 
     if (php_parallel_link_closed(channel->link) ||
