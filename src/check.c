@@ -33,11 +33,20 @@ typedef struct _php_parallel_check_t {
 
 static zend_always_inline const char* php_parallel_check_opcode_name(zend_uchar opcode) { /* {{{ */
     switch (opcode) {
-        case ZEND_DECLARE_FUNCTION:
-            return "function";
+        case ZEND_DECLARE_CLASS:
+        case ZEND_DECLARE_INHERITED_CLASS:
+        case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
+            return "class";
 
         case ZEND_DECLARE_ANON_CLASS:
             return "new class";
+
+        case ZEND_YIELD:
+        case ZEND_YIELD_FROM:
+            return "yield";
+
+        case ZEND_DECLARE_FUNCTION:
+            return "function";
         
         default:
             return "class";
@@ -233,33 +242,16 @@ zend_function* php_parallel_check_task(php_parallel_runtime_t *runtime, zend_exe
             } break;
 
             case ZEND_DECLARE_FUNCTION:
-                php_parallel_exception_ex(
-                    php_parallel_runtime_error_illegal_instruction_ce,
-                    "illegal instruction (function) on line %d of task",
-                    it->lineno - function->op_array.line_start);
-                return 0;
-
+            case ZEND_DECLARE_CLASS:
+            case ZEND_DECLARE_ANON_CLASS:
+            case ZEND_DECLARE_INHERITED_CLASS:
+            case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
             case ZEND_YIELD:
             case ZEND_YIELD_FROM:
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_instruction_ce,
-                    "illegal instruction (yield) on line %d of task",
-                    it->lineno - function->op_array.line_start);
-                return 0;
-
-            case ZEND_DECLARE_ANON_CLASS:
-                php_parallel_exception_ex(
-                    php_parallel_runtime_error_illegal_instruction_ce,
-                    "illegal instruction (new class) on line %d of task",
-                    it->lineno - function->op_array.line_start);
-                return 0;
-
-            case ZEND_DECLARE_CLASS:
-            case ZEND_DECLARE_INHERITED_CLASS:
-            case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
-                php_parallel_exception_ex(
-                    php_parallel_runtime_error_illegal_instruction_ce,
-                    "illegal instruction (class) on line %d of task",
+                    "illegal instruction (%s) on line %d of task",
+                    php_parallel_check_opcode_name(it->opcode),
                     it->lineno - function->op_array.line_start);
                 return 0;
 
