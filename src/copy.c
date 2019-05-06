@@ -303,7 +303,9 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
             }
 
             if (p->key) {
-                pefree(p->key, persistent);
+                if (GC_DELREF(p->key) == 0) {
+                    pefree(p->key, persistent);
+                }
             }
 
             if (Z_OPT_REFCOUNTED(p->val)) {
@@ -311,7 +313,7 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
             }
         }
 
-        if (HT_GET_DATA_ADDR(table) != &php_parallel_copy_uninitialized_bucket) {
+        if (HT_GET_DATA_ADDR(table) != (void*) &php_parallel_copy_uninitialized_bucket) {
             pefree(HT_GET_DATA_ADDR(table), persistent);
         }
 
