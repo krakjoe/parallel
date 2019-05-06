@@ -15,19 +15,16 @@ $runtimes = [
     new Runtime
 ];
 
-$futures = [];
-
 $channel = Channel::make("channel");
 
 $thread = function(){
     $channel = Channel::open("channel");
-    $result  = 0;
 
     while (($closure = $channel->recv())) {
-        $result = $closure();
+        if ($closure() != 1) {
+            echo "FAIL\n";
+        }
     }
-
-    return $result;
 };
 
 $futures[0] = $runtimes[0]->run($thread);
@@ -47,12 +44,7 @@ for ($i = 0; $i<10; $i++)
 foreach ($runtimes as $runtime)
     $channel->send(false);
 
-if (($futures[0]->value() + $futures[1]->value()) == 2) {
-    echo "OK\n";
-    exit;
-}
-
-var_dump($futures[0]->value(), $futures[1]->value());
+echo "OK";
 ?>
 --EXPECT--
 OK
