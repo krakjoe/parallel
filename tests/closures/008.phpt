@@ -49,7 +49,10 @@ foreach ($runtimes as $runtime)
 
 if (($futures[0]->value() + $futures[1]->value()) == 2) {
     echo "OK\n";
+    exit;
 }
+
+var_dump($futures[0]->value(), $futures[1]->value());
 ?>
 --EXPECT--
 OK
