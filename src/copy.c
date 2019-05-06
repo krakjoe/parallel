@@ -24,7 +24,6 @@
 #include "php_network.h"
 
 TSRM_TLS struct {
-    HashTable copied;
     HashTable uncopied;
     HashTable used;
     HashTable activated;
@@ -111,9 +110,7 @@ void php_parallel_copy_mshutdown(void) {
     pthread_mutex_destroy(&PCC(mutex));
 }
 
-void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persistent);
-
-static zend_always_inline void php_parallel_copy_resource_cast(zval *dest, zval *source) {
+static zend_always_inline void php_parallel_copy_resource(zval *dest, zval *source) {
     zend_resource *resource = Z_RES_P(source);
 #ifndef _WIN32
     if (resource->type == php_file_le_stream() || resource->type == php_file_le_pstream()) {
@@ -132,46 +129,6 @@ static zend_always_inline void php_parallel_copy_resource_cast(zval *dest, zval 
     }
 #endif
     ZVAL_NULL(dest);
-}
-
-void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent) {
-    switch (Z_TYPE_P(source)) {
-        case IS_NULL:
-        case IS_TRUE:
-        case IS_FALSE:
-        case IS_LONG:
-        case IS_DOUBLE:
-        case IS_UNDEF:
-            if (source != dest) {
-                *dest = *source;
-            }
-        break;
-
-        case IS_STRING:
-            ZVAL_STR(dest, php_parallel_copy_string(Z_STR_P(source), persistent));
-        break;
-
-        case IS_ARRAY:
-            ZVAL_ARR(dest, php_parallel_copy_hash_ctor(Z_ARRVAL_P(source), persistent));
-        break;
-
-        case IS_OBJECT:
-            if (Z_OBJCE_P(source) == zend_ce_closure) {
-                php_parallel_copy_closure(dest, source, persistent);
-            } else {
-                ZVAL_TRUE(dest);
-            }
-        break;
-
-        case IS_RESOURCE:
-            if (php_parallel_check_resource(source)) {
-                php_parallel_copy_resource_cast(dest, source);
-                break;
-            }
-
-        default:
-            ZVAL_BOOL(dest, zend_is_true(source));
-    }
 }
 
 static zend_always_inline HashTable* php_parallel_copy_hash_permanent(HashTable *source) {
@@ -347,7 +304,7 @@ static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zen
     memset(rtc, 0, closure->func.op_array.cache_size);
 }
 
-void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persistent) { /* {{{ */
+static zend_always_inline void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persistent) { /* {{{ */
     zend_closure_t *closure = 
         (zend_closure_t*) Z_OBJ_P(source);
     zend_closure_t *copy =
@@ -400,6 +357,46 @@ void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persis
     destination->u2.extra = persistent;
 } /* }}} */
 
+void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent) {
+    switch (Z_TYPE_P(source)) {
+        case IS_NULL:
+        case IS_TRUE:
+        case IS_FALSE:
+        case IS_LONG:
+        case IS_DOUBLE:
+        case IS_UNDEF:
+            if (source != dest) {
+                *dest = *source;
+            }
+        break;
+
+        case IS_STRING:
+            ZVAL_STR(dest, php_parallel_copy_string(Z_STR_P(source), persistent));
+        break;
+
+        case IS_ARRAY:
+            ZVAL_ARR(dest, php_parallel_copy_hash_ctor(Z_ARRVAL_P(source), persistent));
+        break;
+
+        case IS_OBJECT:
+            if (Z_OBJCE_P(source) == zend_ce_closure) {
+                php_parallel_copy_closure(dest, source, persistent);
+            } else {
+                ZVAL_TRUE(dest);
+            }
+        break;
+
+        case IS_RESOURCE:
+            if (php_parallel_check_resource(source)) {
+                php_parallel_copy_resource(dest, source);
+                break;
+            }
+
+        default:
+            ZVAL_BOOL(dest, zend_is_true(source));
+    }
+}
+
 /* {{{ */
 static zend_always_inline void php_parallel_copy_auto_globals_activate_variables(const zend_function *function) {
     zend_string **variables = function->op_array.vars;
@@ -438,7 +435,7 @@ static zend_always_inline void php_parallel_copy_auto_globals_activate(const zen
     zend_hash_index_add_empty_element(&PCG(activated), (zend_ulong) function->op_array.opcodes);
 } /* }}} */
 
-zend_function* php_parallel_copy_function_permanent(const zend_function *function) { /* {{{ */
+static zend_always_inline zend_function* php_parallel_copy_function_permanent(const zend_function *function) { /* {{{ */
     zend_function *copy;
 
     pthread_mutex_lock(&PCC(mutex));
