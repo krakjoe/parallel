@@ -1141,9 +1141,6 @@ zend_function* php_parallel_copy_function(const zend_function *function, zend_bo
         if ((copy = zend_hash_index_find_ptr(
             &PCG(uncopied),
             (zend_ulong) function->op_array.opcodes))) {
-
-            php_parallel_copy_function_dependencies_load(copy);
-
             return copy;
         }
 
