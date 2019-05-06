@@ -9,27 +9,11 @@ if (!extension_loaded('parallel')) {
 --FILE--
 <?php
 $runtime = new \parallel\Runtime;
-$channel = \parallel\Channel::make("channel");
-
-try {
-    $channel->send(function(){
-        function(){};
-    });
-} catch (\parallel\Channel\Error\IllegalValue $ex) {
-    var_dump($ex->getMessage());
-}
+$channel = \parallel\Channel::make("channel", \parallel\Channel::Infinite);
 
 try {
     $channel->send(function(){
         new class {};
-    });
-} catch (\parallel\Channel\Error\IllegalValue $ex) {
-    var_dump($ex->getMessage());
-}
-
-try {
-    $channel->send(function(){
-        function test(){}
     });
 } catch (\parallel\Channel\Error\IllegalValue $ex) {
     var_dump($ex->getMessage());
@@ -44,7 +28,5 @@ try {
 }
 ?>
 --EXPECT--
-string(32) "value of type Closure is illegal"
-string(32) "value of type Closure is illegal"
 string(32) "value of type Closure is illegal"
 string(32) "value of type Closure is illegal"

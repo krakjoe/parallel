@@ -55,11 +55,12 @@ try {
     var_dump($ex->getMessage());
 }
 ?>
---EXPECTF--
+--EXPECT--
 bool(true)
 bool(true)
-string(%d) "illegal instruction (new class) on line 1 of closure declared on line 26 of %s and scheduled"
-string(%d) "illegal instruction (class) on line 1 of closure declared on line 38 of %s and scheduled"
+string(60) "illegal instruction (new class) in closure on line 2 of task"
+string(56) "illegal instruction (class) in closure on line 2 of task"
+
 
 
 

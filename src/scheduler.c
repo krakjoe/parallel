@@ -264,12 +264,6 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
          if (frame->return_value  && !Z_ISUNDEF_P(frame->return_value)) {
             zval garbage = *frame->return_value;
 
-            if (PARALLEL_IS_CLOSURE(frame->return_value)) {
-                zval_ptr_dtor(frame->return_value);
-
-                ZVAL_NULL(frame->return_value);
-            }
-
             if (Z_OPT_REFCOUNTED(garbage)) {
                 PARALLEL_ZVAL_COPY(
                     frame->return_value, &garbage, 1);
@@ -352,57 +346,12 @@ static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
     return FAILURE;
 }
 
-static zend_always_inline void php_parallel_scheduler_update(php_parallel_runtime_t *runtime, php_parallel_runtime_functions_t *functions) {
-    zend_string *key;
-    zend_function *function;
-
-    if (runtime->functions.lambdas.nNumUsed) {
-        ZEND_HASH_FOREACH_STR_KEY_PTR(&runtime->functions.lambdas, key, function) {
-            zend_function *copy;
-
-            if (zend_hash_exists(EG(function_table), key)) {
-                continue;
-            }
-
-            copy = php_parallel_copy_function(function, 0);
-            copy->common.fn_flags |= ZEND_ACC_CLOSURE;
-            copy->common.function_name = php_parallel_string(key);
-
-            zend_hash_add_ptr(EG(function_table),  copy->common.function_name, copy);
-            zend_hash_add_ptr(&functions->lambdas, copy->common.function_name, copy);
-        } ZEND_HASH_FOREACH_END();
-
-        zend_hash_clean(&runtime->functions.lambdas);
-    }
-
-    if (runtime->functions.functions.nNumUsed) {
-        ZEND_HASH_FOREACH_STR_KEY_PTR(&runtime->functions.functions, key, function) {
-            zend_function *copy;
-
-            if (zend_hash_exists(EG(function_table), key)) {
-                continue;
-            }
-
-            copy = php_parallel_copy_function(function, 0);
-            copy->common.function_name = php_parallel_string(copy->common.function_name);
-
-            zend_hash_add_ptr(EG(function_table),    key, copy);
-            zend_hash_add_ptr(&functions->functions, key, copy);
-        } ZEND_HASH_FOREACH_END();
-
-        zend_hash_clean(&runtime->functions.functions);
-    }
-}
-
 static void* php_parallel_thread(void *arg) {
     int32_t state = 0;
-    php_parallel_runtime_functions_t functions;
 
     php_parallel_runtime_t *runtime =
         php_parallel_scheduler_setup(
             (php_parallel_runtime_t*) arg);
-
-    php_parallel_runtime_functions_setup(&functions, 1);
 
     if (php_parallel_thread_bootstrap(runtime->bootstrap) != SUCCESS) {
         php_parallel_monitor_set(
@@ -447,15 +396,12 @@ _php_parallel_thread_killed:
             }
         }
 
-        php_parallel_scheduler_update(runtime, &functions);
-
         php_parallel_monitor_unlock(runtime->monitor);
 
         php_parallel_scheduler_run(runtime, el.frame);
     } while (1);
 
 _php_parallel_thread_exit:
-    php_parallel_runtime_functions_finish(&functions);
     php_parallel_scheduler_exit(runtime);
 
     return NULL;

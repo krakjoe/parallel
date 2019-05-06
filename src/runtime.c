@@ -23,55 +23,6 @@
 zend_class_entry *php_parallel_runtime_ce;
 zend_object_handlers php_parallel_runtime_handlers;
 
-void php_parallel_runtime_functions_setup(php_parallel_runtime_functions_t *functions, zend_bool thread) {
-    if (thread) {
-        zend_hash_init(&functions->lambdas,   16, NULL, NULL, 0);
-        zend_hash_init(&functions->functions, 16, NULL, NULL, 0);
-    } else {
-        zend_hash_init(&functions->lambdas,   16, NULL, NULL, 1);
-        zend_hash_init(&functions->functions, 16, NULL, NULL, 1);
-    }
-}
-
-void php_parallel_runtime_function_push(php_parallel_runtime_t *runtime, zend_string *name, const zend_function *function, zend_bool lambda) {
-    php_parallel_monitor_lock(runtime->monitor);
-
-    zend_hash_add_ptr(
-        lambda ?
-            &runtime->functions.lambdas :
-            &runtime->functions.functions,
-        name,
-        php_parallel_copy_function(function, 1));
-
-    php_parallel_monitor_unlock(runtime->monitor);
-}
-
-static zend_always_inline void php_parallel_runtime_functions_destroy(php_parallel_runtime_functions_t *functions) {
-    zend_hash_destroy(&functions->lambdas);
-    zend_hash_destroy(&functions->functions);
-}
-
-void php_parallel_runtime_functions_finish(php_parallel_runtime_functions_t *functions) {
-    dtor_func_t dtor = EG(function_table)->pDestructor;
-    zend_string *key, *rtd;
-    zend_function *function;
-
-    EG(function_table)->pDestructor = NULL;
-    ZEND_HASH_FOREACH_STR_KEY(&functions->lambdas, key) {
-        zend_hash_del(EG(function_table), key);
-    } ZEND_HASH_FOREACH_END();
-    ZEND_HASH_FOREACH_STR_KEY_PTR(&functions->functions, rtd, function) {
-        zend_string *key =
-            zend_string_tolower(function->common.function_name);
-        zend_hash_del(EG(function_table), key);
-        zend_hash_del(EG(function_table), rtd);
-        zend_string_release(key);
-    } ZEND_HASH_FOREACH_END();
-    EG(function_table)->pDestructor = dtor;
-
-    php_parallel_runtime_functions_destroy(functions);
-}
-
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_runtime_construct_arginfo, 0, 0, 0)
     ZEND_ARG_TYPE_INFO(0, bootstrap, IS_STRING, 0)
 ZEND_END_ARG_INFO()
@@ -173,8 +124,6 @@ zend_object* php_parallel_runtime_create(zend_class_entry *type) {
 
     runtime->parent.server = SG(server_context);
 
-    php_parallel_runtime_functions_setup(&runtime->functions, 0);
-
     return &runtime->std;
 }
 
@@ -185,8 +134,6 @@ void php_parallel_runtime_destroy(zend_object *o) {
     php_parallel_scheduler_stop(runtime);
 
     php_parallel_scheduler_destroy(runtime);
-
-    php_parallel_runtime_functions_destroy(&runtime->functions);
 
     zend_object_std_dtor(o);
 }

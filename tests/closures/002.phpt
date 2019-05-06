@@ -1,5 +1,5 @@
 --TEST--
-Check closures in arginfo/argv (FAIL)
+Check closures in return
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -10,17 +10,15 @@ if (!extension_loaded('parallel')) {
 <?php
 $runtime = new \parallel\Runtime;
 
-try {
-    $future = $runtime->run(function(Closure $closure) : Closure {
-        return $closure;
-    }, [function(){
-        return true;
-    }]);
-} catch (\parallel\Runtime\Error\IllegalReturn $ex) {
-    var_dump($ex->getMessage());
-}
+$future = $runtime->run(function(Closure $closure) : Closure {
+    return $closure;
+}, [function(){
+    return true;
+}]);
+
+var_dump(($future->value())());
 ?>
 --EXPECT--
-string(33) "illegal return (object) from task"
+bool(true)
 
 

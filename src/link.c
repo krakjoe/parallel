@@ -162,7 +162,7 @@ void php_parallel_link_destroy(php_parallel_link_t *link) {
         if (link->type == PHP_PARALLEL_LINK_BUFFERED) {
             zend_llist_destroy(&link->port.q.l);
         } else {
-            if (PARALLEL_IS_CLOSURE(&link->port.z)) {
+            if (PARALLEL_CONTAINS_CLOSURE(&link->port.z)) {
                 PARALLEL_ZVAL_DTOR(&link->port.z);
             }
         }
@@ -193,7 +193,7 @@ static zend_always_inline zend_bool php_parallel_link_send_unbuffered(php_parall
         return 0;
     }
 
-    if (PARALLEL_IS_CLOSURE(value)) {
+    if (PARALLEL_CONTAINS_CLOSURE(value)) {
         PARALLEL_ZVAL_COPY(&link->port.z, value, 1);
     } else {
         ZVAL_COPY_VALUE(&link->port.z, value);
@@ -268,6 +268,9 @@ static zend_always_inline zend_bool php_parallel_link_recv_unbuffered(php_parall
 
     PARALLEL_ZVAL_COPY(
         value, &link->port.z, 0);
+    if (PARALLEL_CONTAINS_CLOSURE(&link->port.z)) {
+        PARALLEL_ZVAL_DTOR(&link->port.z);
+    }
     ZVAL_UNDEF(&link->port.z);
     link->s.w--;
 
