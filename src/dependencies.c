@@ -33,12 +33,11 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
     pthread_mutex_lock(&PCD(mutex));
 
     if (zend_hash_index_exists(&PCD(table), (zend_ulong) function->op_array.opcodes)) {
-
         pthread_mutex_unlock(&PCD(mutex));
         return;
     }
 
-    zend_hash_init(&dependencies, 32, NULL, NULL, 1);
+    memset(&dependencies, 0, sizeof(HashTable));
     {
         zend_op *opline = function->op_array.opcodes,
                 *end = opline + function->op_array.last;
@@ -54,15 +53,24 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
                     dependency = php_parallel_cache_function(dependency);
                 }
 
+                if (dependencies.nNumUsed == 0) {
+                    zend_hash_init(&dependencies, 8, NULL, NULL, 1);
+                }
+
                 zend_hash_add_ptr(
-                    &dependencies, php_parallel_string(key), dependency);
+                    &dependencies,
+                    php_parallel_string(key), dependency);
 
                 php_parallel_dependencies_store(dependency);
             }
             opline++;
         }
     }
-    zend_hash_index_add_mem(&PCD(table), (zend_ulong) function->op_array.opcodes, &dependencies, sizeof(HashTable)); 
+
+    zend_hash_index_add_mem(
+        &PCD(table),
+        (zend_ulong) function->op_array.opcodes,
+        &dependencies, sizeof(HashTable));
 
     pthread_mutex_unlock(&PCD(mutex));
 } /* }}} */
@@ -73,15 +81,15 @@ void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
     zend_function *dependency;
 
     pthread_mutex_lock(&PCD(mutex));
-
-    if (!(dependencies = zend_hash_index_find_ptr(&PCD(table), (zend_ulong) function->op_array.opcodes))) {
-        pthread_mutex_unlock(&PCD(mutex));
-        return;
-    }
-
+    dependencies = zend_hash_index_find_ptr(
+        &PCD(table), (zend_ulong) function->op_array.opcodes);
     pthread_mutex_unlock(&PCD(mutex));
 
     /* read only table */
+
+    if (!dependencies || !dependencies->nNumUsed) {
+        return;
+    }
 
     ZEND_HASH_FOREACH_STR_KEY_PTR(dependencies, key, dependency) {
         if (!zend_hash_exists(EG(function_table), key)) {
