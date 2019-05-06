@@ -75,7 +75,11 @@ static zend_always_inline zend_string* php_parallel_copy_string(zend_string *sou
         zend_string_alloc(
             ZSTR_LEN(source), persistent);
 
-    memcpy(ZSTR_VAL(dest), ZSTR_VAL(source), ZSTR_LEN(source)+1);
+    memcpy(ZSTR_VAL(dest), 
+           ZSTR_VAL(source), 
+           ZSTR_LEN(source));
+
+    ZSTR_VAL(dest)[ZSTR_LEN(dest)] = 0;
 
     ZSTR_LEN(dest) = ZSTR_LEN(source);
     ZSTR_H(dest)   = ZSTR_H(source);
@@ -84,17 +88,7 @@ static zend_always_inline zend_string* php_parallel_copy_string(zend_string *sou
 } /* }}} */
 
 HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent);
-
-static zend_always_inline void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
-#if PHP_VERSION_ID < 70300
-    if (GC_DELREF(table) == (persistent ? 1 : 0)) {
-#else
-    if (table != &zend_empty_array && GC_DELREF(table) == (persistent ? 1 : 0)) {
-#endif
-        zend_hash_destroy(table);
-        pefree(table, persistent);
-    }
-}
+void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent);
 
 void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent);
 
@@ -124,4 +118,7 @@ static zend_always_inline void php_parallel_copy_zval_dtor(zval *zv) {
 
 void php_parallel_copy_startup(void);
 void php_parallel_copy_shutdown(void);
+
+void php_parallel_copy_minit(void);
+void php_parallel_copy_mshutdown(void);
 #endif

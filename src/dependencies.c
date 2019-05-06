@@ -53,13 +53,16 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
                     dependency = php_parallel_cache_function(dependency);
                 }
 
+                dependency = php_parallel_copy_function(dependency, 1);
+
                 if (dependencies.nNumUsed == 0) {
                     zend_hash_init(&dependencies, 8, NULL, NULL, 1);
                 }
 
                 zend_hash_add_ptr(
                     &dependencies,
-                    php_parallel_string(key), dependency);
+                    php_parallel_string(key), 
+                    dependency);
 
                 php_parallel_dependencies_store(dependency);
             }
