@@ -756,6 +756,8 @@ static zend_function* php_parallel_copy_function_uncached(const zend_function *s
 } /* }}} */
 
 static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zend_closure_t *closure) {
+    void *rtc;
+
 #ifdef ZEND_ACC_HEAP_RT_CACHE
     closure->func.op_array.fn_flags |= ZEND_ACC_HEAP_RT_CACHE;
 #else
@@ -764,7 +766,7 @@ static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zen
 
 #ifdef ZEND_MAP_PTR_SET
     {
-        void *rtc = emalloc(sizeof(void*) + closure->func.op_array.cache_size);
+        rtc = emalloc(sizeof(void*) + closure->func.op_array.cache_size);
 
         ZEND_MAP_PTR_INIT(closure->func.op_array.run_time_cache, rtc);
         
@@ -773,8 +775,10 @@ static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zen
         ZEND_MAP_PTR_SET(closure->func.op_array.run_time_cache, rtc);
     }
 #else
-    closure->func.op_array.run_time_cache = ecalloc(1, closure->func.op_array.cache_size);
+    closure->func.op_array.run_time_cache = rtc = emalloc(closure->func.op_array.cache_size);
 #endif
+
+    memset(rtc, 0, closure->func.op_array.cache_size);
 }
 
 void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persistent) { /* {{{ */
