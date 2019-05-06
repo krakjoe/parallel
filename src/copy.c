@@ -1049,6 +1049,10 @@ static zend_always_inline void php_parallel_copy_function_dependencies_load(cons
         return;
     }
 
+    pthread_mutex_unlock(&PCC(mutex));
+
+    /* read only table */
+
     ZEND_HASH_FOREACH_STR_KEY_PTR(dependencies, key, dependency) {
         if (!zend_hash_exists(EG(function_table), key)) {
             dependency = 
@@ -1060,8 +1064,6 @@ static zend_always_inline void php_parallel_copy_function_dependencies_load(cons
                 (zend_ulong) dependency, key);
         }
     } ZEND_HASH_FOREACH_END();
-
-    pthread_mutex_unlock(&PCC(mutex));
 } /* }}} */
 
 zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent) { /* {{{ */
