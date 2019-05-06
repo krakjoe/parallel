@@ -377,7 +377,7 @@ static zend_always_inline zend_bool php_parallel_check_closure(zend_closure_t *c
 zend_bool php_parallel_check_zval(zval *zv, zval **error) { /* {{{ */
     switch (Z_TYPE_P(zv)) {
         case IS_OBJECT:
-            if (PARALLEL_IS_CLOSURE(zv)) {
+            if (PARALLEL_ZVAL_CHECK_CLOSURE(zv)) {
                 if (!php_parallel_check_closure((zend_closure_t*) Z_OBJ_P(zv))) {
                     if (error) {
                         *error = zv;

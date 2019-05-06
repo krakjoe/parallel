@@ -25,6 +25,28 @@ zend_bool      php_parallel_check_resource(zval *zv);
 zend_bool      php_parallel_check_function(const zend_function *function, zend_function **errf, zend_uchar *erro);
 
 #define PARALLEL_ZVAL_CHECK php_parallel_check_zval
+#define PARALLEL_ZVAL_CHECK_CLOSURES php_parallel_check_zval_closures
+
+#define PARALLEL_ZVAL_CHECK_CLOSURE(zv) \
+    (Z_TYPE_P(zv) == IS_OBJECT && Z_OBJCE_P(zv) == zend_ce_closure)
+
+static zend_always_inline zend_bool php_parallel_check_zval_closures(zval *zv) { /* {{{ */
+    if (PARALLEL_ZVAL_CHECK_CLOSURE(zv)) {
+        return 1;
+    }
+
+    if (Z_TYPE_P(zv) == IS_ARRAY) {
+        zval *val;
+
+        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(zv), val) {
+            if (PARALLEL_ZVAL_CHECK_CLOSURE(val)) {
+                return 1;
+            }
+        } ZEND_HASH_FOREACH_END();
+    }
+
+    return 0;
+} /* }}} */
 
 void php_parallel_check_startup(void);
 void php_parallel_check_shutdown(void);
