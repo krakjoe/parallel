@@ -491,7 +491,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
     if (copy->op_array.static_variables) {
         copy->op_array.static_variables = 
             php_parallel_copy_hash_ctor(copy->op_array.static_variables, 0);
-        GC_ADD_FLAGS(copy->op_array.static_variables, IS_ARRAY_IMMUTABLE);
+
     }
 
 #ifdef ZEND_MAP_PTR_NEW
