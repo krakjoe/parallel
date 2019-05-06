@@ -38,14 +38,20 @@ zval* php_parallel_handlers_read_property(zval *zv, zval *member, int type, void
 #if PHP_VERSION_ID >= 80000
 zval* php_parallel_handlers_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot) {
 #else
+#if PHP_VERSION_ID >= 70400
 zval* php_parallel_handlers_write_property(zval *zv, zval *member, zval *value, void **cache_slot) {
+#else
+void php_parallel_handlers_write_property(zval *zv, zval *member, zval *value, void **cache_slot) {
+#endif
     zend_object *object = Z_OBJ_P(zv);
 #endif
     php_parallel_exception(
         "%s objects do not support properties",
         ZSTR_VAL(object->ce->name));
 
+#if PHP_VERSION_ID >= 70400
     return &EG(uninitialized_zval);
+#endif
 }
 
 #if PHP_VERSION_ID >= 80000
