@@ -203,12 +203,12 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
     return copy;
 } /* }}} */
 
-
+/* {{{ */
 void php_parallel_cache_startup() {
     zend_hash_init(&PCG(table), 32, NULL, php_parallel_cached_dtor, 1);
 }
 
 void php_parallel_cache_shutdown() {
     zend_hash_destroy(&PCG(table));
-}
+} /* }}} */
 #endif

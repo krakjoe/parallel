@@ -51,6 +51,7 @@ PHP_RINIT_FUNCTION(parallel)
 #endif
 
     php_parallel_copy_startup();
+    php_parallel_check_startup();
     php_parallel_strings_startup();
 
 	return SUCCESS;
@@ -63,6 +64,7 @@ PHP_RSHUTDOWN_FUNCTION(parallel)
 {
     if (!CG(unclean_shutdown)) {
         php_parallel_strings_shutdown();
+        php_parallel_check_shutdown();
         php_parallel_copy_shutdown();
     }
 

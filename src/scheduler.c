@@ -473,7 +473,7 @@ void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure,
 
     php_parallel_monitor_lock(runtime->monitor);
 
-    if (!(function = php_parallel_copy_check(runtime, caller, function, argv, &returns))) {
+    if (!(function = php_parallel_check_task(runtime, caller, function, argv, &returns))) {
         php_parallel_monitor_unlock(runtime->monitor);
         return;
     }

@@ -43,6 +43,7 @@
 #include "dependencies.h"
 #include "cache.h"
 #include "copy.h"
+#include "check.h"
 
 #define PARALLEL_PARAMETERS_NONE(r) \
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, 0, 0) \

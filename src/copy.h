@@ -34,8 +34,6 @@
 #define PARALLEL_ZVAL_COPY php_parallel_copy_zval_ctor
 #define PARALLEL_ZVAL_DTOR php_parallel_copy_zval_dtor
 
-#define PARALLEL_IS_COPYABLE php_parallel_copy_zval_check
-
 #define PARALLEL_IS_CLOSURE(zv) (Z_TYPE_P(zv) == IS_OBJECT && Z_OBJCE_P(zv) == zend_ce_closure)
 #define PARALLEL_CONTAINS_CLOSURE php_parallel_copy_contains_closure
 
@@ -54,6 +52,14 @@
     *destination = Z_FUNC_P(_tmp); \
   } while(0)
 #endif
+
+typedef struct _zend_closure_t {
+    zend_object       std;
+    zend_function     func;
+    zval              this_ptr;
+    zend_class_entry *called_scope;
+    zif_handler       orig_internal_handler;
+} zend_closure_t;
 
 zend_function* php_parallel_copy_check(
                     php_parallel_runtime_t *runtime,
