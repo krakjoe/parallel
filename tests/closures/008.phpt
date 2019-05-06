@@ -33,19 +33,21 @@ $thread = function(){
 $futures[0] = $runtimes[0]->run($thread);
 $futures[1] = $runtimes[1]->run($thread);
 
-for ($i = 0; $i<10; $i++)
-$channel->send(function(){
+$closure = function(){
     static $vars = [0];
 
     $vars[0]++;
 
     return $vars[0];
-});
+};
+
+for ($i = 0; $i<10; $i++)
+    $channel->send($closure);
 
 foreach ($runtimes as $runtime)
     $channel->send(false);
 
-if (($futures[0]->value() + $futures[1]->value()) == 10) {
+if (($futures[0]->value() + $futures[1]->value()) == 2) {
     echo "OK\n";
 }
 ?>

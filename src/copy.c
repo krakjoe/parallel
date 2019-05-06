@@ -755,6 +755,28 @@ static zend_function* php_parallel_copy_function_uncached(const zend_function *s
     return copy;
 } /* }}} */
 
+static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zend_closure_t *closure) {
+#ifdef ZEND_ACC_HEAP_RT_CACHE
+    closure->func.op_array.fn_flags |= ZEND_ACC_HEAP_RT_CACHE;
+#else
+    closure->func.op_array.fn_flags |= ZEND_ACC_NO_RT_ARENA;
+#endif
+
+#ifdef ZEND_MAP_PTR_SET
+    {
+        void *rtc = emalloc(sizeof(void*) + closure->func.op_array.cache_size);
+
+        ZEND_MAP_PTR_INIT(closure->func.op_array.run_time_cache, rtc);
+        
+        rtc = (char*)rtc + sizeof(void*);
+        
+        ZEND_MAP_PTR_SET(closure->func.op_array.run_time_cache, rtc);
+    }
+#else
+    closure->func.op_array.run_time_cache = ecalloc(1, closure->func.op_array.cache_size);
+#endif
+}
+
 void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persistent) { /* {{{ */
     zend_closure_t *copy = php_parallel_copy_mem(Z_OBJ_P(source), sizeof(zend_closure_t), persistent);
     zend_function  *function;
@@ -782,6 +804,21 @@ void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persis
             &copy->func,
             function,
             sizeof(zend_op_array));
+
+#ifdef ZEND_ACC_IMMUTABLE
+        copy->func.common.fn_flags &= ~ZEND_ACC_IMMUTABLE;
+#endif
+
+        if (copy->func.op_array.static_variables) {
+            copy->func.op_array.static_variables = 
+                zend_array_dup(copy->func.op_array.static_variables);
+        }
+
+#ifdef ZEND_MAP_PTR_INIT
+        ZEND_MAP_PTR_INIT(copy->func.op_array.static_variables_ptr, &copy->func.op_array.static_variables);
+#endif
+
+        php_parallel_copy_closure_init_run_time_cache(copy);
 
         if (copy->called_scope) {
             copy->called_scope = 
@@ -1022,9 +1059,13 @@ static void php_parallel_copy_function_dependencies_store(const zend_function *f
 
                 PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, &key, &dependency);
 
+                if (dependency->op_array.refcount) {
+                    dependency = php_parallel_copy_function_uncached(dependency);
+                }
+
                 zend_hash_add_ptr(
-                    &dependencies, 
-                    php_parallel_string(key), 
+                    &dependencies,
+                    php_parallel_string(key),
                     dependency);
 
                 php_parallel_copy_function_dependencies_store(dependency);
@@ -1107,7 +1148,6 @@ zend_function* php_parallel_copy_function(const zend_function *function, zend_bo
         if (copy->op_array.static_variables) {
             copy->op_array.static_variables =
                 php_parallel_copy_hash_ctor(copy->op_array.static_variables, 0);
-            GC_ADD_FLAGS(copy->op_array.static_variables, IS_ARRAY_IMMUTABLE);
         }
 
 #ifdef ZEND_MAP_PTR_NEW
