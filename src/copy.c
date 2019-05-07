@@ -351,6 +351,11 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
         copy->func.common.prototype = (void*) copy;
 #endif
 
+        if (copy->called_scope) {
+            copy->called_scope =
+                zend_lookup_class(copy->called_scope->name);
+        }
+
         ZVAL_UNDEF(&copy->this_ptr);
     }
 
