@@ -351,7 +351,7 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
         copy->func.common.prototype = (void*) copy;
 #endif
 
-        if (copy->called_scope) {
+        if (copy->called_scope && copy->called_scope->type == ZEND_USER_CLASS) {
             copy->called_scope =
                 zend_lookup_class(copy->called_scope->name);
         }
@@ -508,7 +508,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
     copy->op_array.run_time_cache = NULL;
 #endif
 
-    if (copy->op_array.scope) {
+    if (copy->op_array.scope && copy->op_array.scope->type == ZEND_USER_CLASS) {
         copy->op_array.scope = zend_lookup_class(copy->op_array.scope->name);
     }
 
