@@ -75,8 +75,8 @@ static zend_always_inline zend_string* php_parallel_copy_string(zend_string *sou
         zend_string_alloc(
             ZSTR_LEN(source), persistent);
 
-    memcpy(ZSTR_VAL(dest), 
-           ZSTR_VAL(source), 
+    memcpy(ZSTR_VAL(dest),
+           ZSTR_VAL(source),
            ZSTR_LEN(source));
 
     ZSTR_VAL(dest)[ZSTR_LEN(dest)] = 0;
@@ -111,14 +111,14 @@ static zend_always_inline void php_parallel_copy_zval_dtor(zval *zv) {
                 }
             } else {
                 zval_ptr_dtor(zv);
-            } 
+            }
         }
     }
 }
 
-void php_parallel_copy_startup(void);
-void php_parallel_copy_shutdown(void);
+PHP_RINIT_FUNCTION(PARALLEL_COPY);
+PHP_RSHUTDOWN_FUNCTION(PARALLEL_COPY);
 
-void php_parallel_copy_minit(void);
-void php_parallel_copy_mshutdown(void);
+PHP_MINIT_FUNCTION(PARALLEL_COPY);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_COPY);
 #endif

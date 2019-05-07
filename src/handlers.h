@@ -18,8 +18,8 @@
 #ifndef HAVE_PARALLEL_HANDLERS_H
 #define HAVE_PARALLEL_HANDLERS_H
 
-void php_parallel_handlers_startup();
-
 const zend_object_handlers* php_parallel_standard_handlers();
 
+PHP_MINIT_FUNCTION(PARALLEL_HANDLERS);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_HANDLERS);
 #endif

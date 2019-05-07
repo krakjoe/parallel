@@ -27,6 +27,6 @@
 
 zend_function* php_parallel_cache_function(const zend_function *source);
 
-void php_parallel_cache_startup(void);
-void php_parallel_cache_shutdown(void);
+PHP_MINIT_FUNCTION(PARALLEL_CACHE);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_CACHE);
 #endif

@@ -172,7 +172,8 @@ zend_bool php_parallel_events_input_remove(zval *zv, zend_string *target) {
     return zend_hash_del(&input->table, target) == SUCCESS;
 }
 
-void php_parallel_events_input_startup(void) {
+PHP_MINIT_FUNCTION(PARALLEL_EVENTS_INPUT)
+{
     zend_class_entry ce;
 
     memcpy(
@@ -188,9 +189,12 @@ void php_parallel_events_input_startup(void) {
     php_parallel_events_input_ce = zend_register_internal_class(&ce);
     php_parallel_events_input_ce->create_object = php_parallel_events_input_create;
     php_parallel_events_input_ce->ce_flags |= ZEND_ACC_FINAL;
+
+    return SUCCESS;
 }
 
-void php_parallel_events_input_shutdown(void) {
-
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS_INPUT)
+{
+    return SUCCESS;
 }
 #endif

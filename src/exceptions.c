@@ -218,7 +218,8 @@ zend_object* php_parallel_exceptions_restore(zval *exception) {
     return object;
 }
 
-void php_parallel_exceptions_startup() {
+PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS)
+{
     zend_class_entry ce;
 
     /*
@@ -337,5 +338,12 @@ void php_parallel_exceptions_startup() {
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Events\\Event", "Error", NULL);
     php_parallel_events_event_error_ce =
         zend_register_internal_class_ex(&ce, php_parallel_error_ce);
+
+    return SUCCESS;
+}
+
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_EXCEPTIONS)
+{
+    return SUCCESS;
 }
 #endif

@@ -20,10 +20,10 @@
 
 extern zend_class_entry* php_parallel_events_input_ce;
 
-void php_parallel_events_input_startup(void);
-void php_parallel_events_input_shutdown(void);
-
 zend_bool php_parallel_events_input_exists(zval *zv, zend_string *target);
 zval*     php_parallel_events_input_find(zval *input, zend_string *target);
 zend_bool php_parallel_events_input_remove(zval *input, zend_string *target);
+
+PHP_MINIT_FUNCTION(PARALLEL_EVENTS_INPUT);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS_INPUT);
 #endif

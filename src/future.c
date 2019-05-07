@@ -37,7 +37,7 @@ void php_parallel_future_value(php_parallel_future_t *future, zval *return_value
             ZVAL_OBJ(return_value,
                 php_parallel_exceptions_restore(&future->value));
             return;
-        } else if (php_parallel_monitor_check(future->monitor, 
+        } else if (php_parallel_monitor_check(future->monitor,
                     PHP_PARALLEL_KILLED|PHP_PARALLEL_CANCELLED)) {
             ZVAL_NULL(return_value);
             return;
@@ -240,7 +240,8 @@ void php_parallel_future_destroy(zend_object *o) {
     zend_object_std_dtor(o);
 }
 
-void php_parallel_future_startup() {
+PHP_MINIT_FUNCTION(PARALLEL_FUTURE)
+{
     zend_class_entry ce;
 
     memcpy(&php_parallel_future_handlers, php_parallel_standard_handlers(), sizeof(zend_object_handlers));
@@ -253,5 +254,12 @@ void php_parallel_future_startup() {
     php_parallel_future_ce = zend_register_internal_class(&ce);
     php_parallel_future_ce->create_object = php_parallel_future_create;
     php_parallel_future_ce->ce_flags |= ZEND_ACC_FINAL;
+
+    return SUCCESS;
+}
+
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_FUTURE)
+{
+    return SUCCESS;
 }
 #endif

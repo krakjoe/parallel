@@ -86,7 +86,8 @@ static uint32_t php_parallel_events_event_offsetof(zend_string *property) {
     return info->offset;
 }
 
-void php_parallel_events_event_startup(void) {
+PHP_MINIT_FUNCTION(PARALLEL_EVENTS_EVENT)
+{
     zend_class_entry ce;
 
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Events", "Event", php_parallel_events_event_methods);
@@ -132,13 +133,17 @@ void php_parallel_events_event_startup(void) {
         php_parallel_events_event_offsetof(php_parallel_events_event_object);
     php_parallel_events_event_value_offset =
         php_parallel_events_event_offsetof(php_parallel_events_event_value);
+
+    return SUCCESS;
 }
 
-void php_parallel_events_event_shutdown(void) {
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS_EVENT)
+{
     zend_string_release(php_parallel_events_event_type);
     zend_string_release(php_parallel_events_event_source);
     zend_string_release(php_parallel_events_event_object);
     zend_string_release(php_parallel_events_event_value);
-}
 
+    return SUCCESS;
+}
 #endif

@@ -20,7 +20,6 @@
 
 zend_string* php_parallel_string(zend_string *string);
 
-void php_parallel_strings_startup(void);
-void php_parallel_strings_shutdown(void);
-
+PHP_RINIT_FUNCTION(PARALLEL_STRINGS);
+PHP_RSHUTDOWN_FUNCTION(PARALLEL_STRINGS);
 #endif

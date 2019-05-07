@@ -22,9 +22,6 @@ typedef struct _php_parallel_schedule_el_t {
     zend_execute_data          *frame;
 } php_parallel_schedule_el_t;
 
-void php_parallel_scheduler_startup(void);
-void php_parallel_scheduler_shutdown(void);
-
 void               php_parallel_scheduler_init(php_parallel_runtime_t *runtime);
 void               php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *bootstrap);
 void               php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure, zval *argv, zval *return_value);
@@ -33,4 +30,7 @@ void               php_parallel_scheduler_join(php_parallel_runtime_t *runtime, 
 void               php_parallel_scheduler_destroy(php_parallel_runtime_t *runtime);
 
 zend_bool          php_parallel_scheduler_cancel(php_parallel_future_t *future);
+
+PHP_MINIT_FUNCTION(PARALLEL_SCHEDULER);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_SCHEDULER);
 #endif

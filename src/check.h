@@ -48,6 +48,6 @@ static zend_always_inline zend_bool php_parallel_check_zval_closures(zval *zv) {
     return 0;
 } /* }}} */
 
-void php_parallel_check_startup(void);
-void php_parallel_check_shutdown(void);
+PHP_RINIT_FUNCTION(PARALLEL_CHECK);
+PHP_RSHUTDOWN_FUNCTION(PARALLEL_CHECK);
 #endif

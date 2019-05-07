@@ -138,7 +138,8 @@ void php_parallel_runtime_destroy(zend_object *o) {
     zend_object_std_dtor(o);
 }
 
-void php_parallel_runtime_startup() {
+PHP_MINIT_FUNCTION(PARALLEL_RUNTIME)
+{
     zend_class_entry ce;
 
     memcpy(&php_parallel_runtime_handlers, php_parallel_standard_handlers(), sizeof(zend_object_handlers));
@@ -151,9 +152,16 @@ void php_parallel_runtime_startup() {
     php_parallel_runtime_ce = zend_register_internal_class(&ce);
     php_parallel_runtime_ce->create_object = php_parallel_runtime_create;
     php_parallel_runtime_ce->ce_flags |= ZEND_ACC_FINAL;
+
+    PHP_MINIT(PARALLEL_FUTURE)(INIT_FUNC_ARGS_PASSTHRU);
+
+    return SUCCESS;
 }
 
-void php_parallel_runtime_shutdown() {
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_RUNTIME)
+{
+    PHP_MSHUTDOWN(PARALLEL_FUTURE)(INIT_FUNC_ARGS_PASSTHRU);
 
+    return SUCCESS;
 }
 #endif

@@ -47,7 +47,7 @@ static zend_always_inline const char* php_parallel_check_opcode_name(zend_uchar 
 
         case ZEND_DECLARE_FUNCTION:
             return "function";
-        
+
         default:
             return "class";
     }
@@ -325,7 +325,7 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
             case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
             case ZEND_DECLARE_ANON_CLASS:
                 if (errf) {
-                    *errf = (zend_function*) function;                
+                    *errf = (zend_function*) function;
                 }
                 if (erro) {
                     *erro = it->opcode;
@@ -351,14 +351,14 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
 
 static zend_always_inline zend_bool php_parallel_check_closure(zend_closure_t *closure) { /* {{{ */
     php_parallel_check_t check, *checked = zend_hash_index_find_ptr(&PCG(checked), (zend_ulong) closure->func.op_array.opcodes);
-    
+
     if (checked) {
         return checked->returns;
     }
 
     checked = &check;
 
-    check.returns = 
+    check.returns =
         php_parallel_check_function(&closure->func, NULL, NULL);
 
     zend_hash_index_add_mem(&PCG(checked), (zend_ulong) closure->func.op_array.opcodes, &check, sizeof(php_parallel_check_t));
@@ -415,12 +415,18 @@ static void php_parallel_checked_dtor(zval *zv) {
     efree(Z_PTR_P(zv));
 }
 
-void php_parallel_check_startup(void) {
+PHP_RINIT_FUNCTION(PARALLEL_CHECK)
+{
     zend_hash_init(&PCG(checked), 32, NULL, php_parallel_checked_dtor, 0);
+
+    return SUCCESS;
 }
 
-void php_parallel_check_shutdown(void) {
+PHP_RSHUTDOWN_FUNCTION(PARALLEL_CHECK)
+{
     zend_hash_destroy(&PCG(checked));
+
+    return SUCCESS;
 }
 /* }}} */
 #endif

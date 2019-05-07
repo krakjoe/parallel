@@ -118,7 +118,7 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         zend_string **heap = pecalloc(copy->op_array.last_var, sizeof(zend_string*), 1);
 
         while (it < end) {
-            heap[it] = 
+            heap[it] =
                 php_parallel_copy_string(vars[it], 1);
             GC_ADDREF(heap[it]);
             it++;
@@ -204,11 +204,17 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
 } /* }}} */
 
 /* {{{ */
-void php_parallel_cache_startup() {
+PHP_MINIT_FUNCTION(PARALLEL_CACHE)
+{
     zend_hash_init(&PCG(table), 32, NULL, php_parallel_cached_dtor, 1);
+
+    return SUCCESS;
 }
 
-void php_parallel_cache_shutdown() {
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_CACHE)
+{
     zend_hash_destroy(&PCG(table));
+
+    return SUCCESS;
 } /* }}} */
 #endif

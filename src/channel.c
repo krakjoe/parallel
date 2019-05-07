@@ -141,8 +141,8 @@ PHP_METHOD(Channel, send)
         php_parallel_exception_ex(
             php_parallel_channel_error_illegal_value_ce,
             "value of type %s is illegal",
-            Z_TYPE_P(error) == IS_OBJECT ? 
-                ZSTR_VAL(Z_OBJCE_P(error)->name) : 
+            Z_TYPE_P(error) == IS_OBJECT ?
+                ZSTR_VAL(Z_OBJCE_P(error)->name) :
                 zend_get_type_by_const(Z_TYPE_P(error)));
         return;
     }
@@ -243,7 +243,8 @@ void php_parallel_channels_link_destroy(zval *zv) {
     php_parallel_link_destroy(link);
 }
 
-void php_parallel_channel_startup() {
+PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
+{
     zend_class_entry ce;
 
     memcpy(
@@ -269,12 +270,17 @@ void php_parallel_channel_startup() {
         32,
         NULL,
         php_parallel_channels_link_destroy, 1);
+
+    return SUCCESS;
 }
 
-void php_parallel_channel_shutdown() {
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_CHANNEL)
+{
     php_parallel_monitor_destroy(
         php_parallel_channels.monitor);
     zend_hash_destroy(&php_parallel_channels.links);
+
+    return SUCCESS;
 }
 
 #endif

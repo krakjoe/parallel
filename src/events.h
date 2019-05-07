@@ -50,10 +50,8 @@ static zend_always_inline php_parallel_events_t* php_parallel_events_from(zval *
     return php_parallel_events_fetch(Z_OBJ_P(z));
 }
 
-void php_parallel_events_startup(void);
-void php_parallel_events_shutdown(void);
-
 extern zend_class_entry* php_parallel_events_ce;
-extern zend_class_entry* php_parallel_events_timeout_ce;
 
+PHP_MINIT_FUNCTION(PARALLEL_EVENTS);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS);
 #endif

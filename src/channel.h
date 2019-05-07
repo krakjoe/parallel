@@ -38,6 +38,6 @@ static zend_always_inline php_parallel_channel_t* php_parallel_channel_from(zval
 zend_object* php_parallel_channel_create(zend_class_entry *);
 void         php_parallel_channel_destroy(zend_object *);
 
-void php_parallel_channel_startup();
-void php_parallel_channel_shutdown();
+PHP_MINIT_FUNCTION(PARALLEL_CHANNEL);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_CHANNEL);
 #endif

@@ -29,35 +29,6 @@ static zend_always_inline int php_parallel_scheduler_list_delete(void *lhs, void
     return lhs == rhs;
 }
 
-void php_parallel_scheduler_interrupt(zend_execute_data *execute_data) {
-    if (php_parallel_scheduler_context) {
-        if (php_parallel_monitor_check(
-            php_parallel_scheduler_context->monitor,
-            PHP_PARALLEL_KILLED)) {
-            zend_bailout();
-        }
-
-        if (php_parallel_monitor_check(
-            php_parallel_scheduler_future->monitor,
-            PHP_PARALLEL_CANCELLED)) {
-            zend_bailout();
-        }
-    }
-
-    if (zend_interrupt_handler) {
-        zend_interrupt_handler(execute_data);
-    }
-}
-
-void php_parallel_scheduler_startup() {
-    zend_interrupt_handler = zend_interrupt_function;
-    zend_interrupt_function = php_parallel_scheduler_interrupt;
-}
-
-void php_parallel_scheduler_shutdown() {
-    zend_interrupt_function = zend_interrupt_handler;
-}
-
 static void php_parallel_schedule_free(void *scheduleed) {
     php_parallel_schedule_el_t *el =
         (php_parallel_schedule_el_t*) scheduleed;
@@ -158,9 +129,9 @@ static zend_always_inline void php_parallel_scheduler_add(
     }
 
     if (future) {
-        frame->return_value = 
+        frame->return_value =
                 &future->value;
-        Z_PTR(frame->This) = 
+        Z_PTR(frame->This) =
                 future;
     }
 
@@ -170,7 +141,7 @@ static zend_always_inline void php_parallel_scheduler_add(
 
     if (future) {
         future->runtime = runtime;
-        future->handle = 
+        future->handle =
             runtime->schedule.tail->data;
         GC_ADDREF(&runtime->std);
     }
@@ -231,7 +202,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
     php_parallel_scheduler_future = (php_parallel_future_t*) Z_PTR(frame->This);
 
     zend_first_try {
-        
+
         zend_try {
             zend_execute_ex(frame);
 
@@ -243,7 +214,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
                     zend_clear_exception();
 
                     php_parallel_monitor_set(
-                        php_parallel_scheduler_future->monitor, 
+                        php_parallel_scheduler_future->monitor,
                         PHP_PARALLEL_ERROR, 1);
                 } else {
                     zend_throw_exception_internal(NULL);
@@ -252,10 +223,10 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
         } zend_catch {
             if (php_parallel_scheduler_future) {
                 if (!php_parallel_monitor_check(
-                        php_parallel_scheduler_future->monitor, 
+                        php_parallel_scheduler_future->monitor,
                         PHP_PARALLEL_CANCELLED)) {
                     php_parallel_monitor_set(
-                        php_parallel_scheduler_future->monitor, 
+                        php_parallel_scheduler_future->monitor,
                         PHP_PARALLEL_KILLED, 0);
                 }
             }
@@ -277,7 +248,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 
     if (php_parallel_scheduler_future) {
         php_parallel_monitor_set(
-            php_parallel_scheduler_future->monitor, 
+            php_parallel_scheduler_future->monitor,
             PHP_PARALLEL_READY, 1);
     }
 }
@@ -552,5 +523,44 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
         php_parallel_monitor_unlock(future->runtime->monitor);
         return 1;
     }
+}
+
+static void php_parallel_scheduler_interrupt(zend_execute_data *execute_data) {
+    if (php_parallel_scheduler_context) {
+        if (php_parallel_monitor_check(
+            php_parallel_scheduler_context->monitor,
+            PHP_PARALLEL_KILLED)) {
+            zend_bailout();
+        }
+
+        if (php_parallel_monitor_check(
+            php_parallel_scheduler_future->monitor,
+            PHP_PARALLEL_CANCELLED)) {
+            zend_bailout();
+        }
+    }
+
+    if (zend_interrupt_handler) {
+        zend_interrupt_handler(execute_data);
+    }
+}
+
+PHP_MINIT_FUNCTION(PARALLEL_SCHEDULER)
+{
+    zend_interrupt_handler = zend_interrupt_function;
+    zend_interrupt_function = php_parallel_scheduler_interrupt;
+
+    PHP_MINIT(PARALLEL_RUNTIME)(INIT_FUNC_ARGS_PASSTHRU);
+
+    return SUCCESS;
+}
+
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_SCHEDULER)
+{
+    zend_interrupt_function = zend_interrupt_handler;
+
+    PHP_MSHUTDOWN(PARALLEL_RUNTIME)(INIT_FUNC_ARGS_PASSTHRU);
+
+    return SUCCESS;
 }
 #endif

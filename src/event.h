@@ -29,8 +29,8 @@ typedef enum {
     PHP_PARALLEL_EVENTS_EVENT_KILL
 } php_parallel_events_event_type_t;
 
-void php_parallel_events_event_startup(void);
-void php_parallel_events_event_shutdown(void);
+PHP_MINIT_FUNCTION(PARALLEL_EVENTS_EVENT);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS_EVENT);
 
 void php_parallel_events_event_construct(
         php_parallel_events_t *events,

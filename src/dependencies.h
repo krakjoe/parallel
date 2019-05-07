@@ -21,6 +21,9 @@
 void php_parallel_dependencies_store(const zend_function *function);
 void php_parallel_dependencies_load(const zend_function *function);
 
-void php_parallel_dependencies_startup(void);
-void php_parallel_dependencies_shutdown(void);
+PHP_MINIT_FUNCTION(PARALLEL_DEPENDENCIES);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES);
+
+PHP_RINIT_FUNCTION(PARALLEL_DEPENDENCIES);
+PHP_RSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES);
 #endif

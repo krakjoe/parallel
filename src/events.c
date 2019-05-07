@@ -250,7 +250,8 @@ zend_function_entry php_parallel_events_methods[] = {
     PHP_FE_END
 };
 
-void php_parallel_events_startup(void) {
+PHP_MINIT_FUNCTION(PARALLEL_EVENTS)
+{
     zend_class_entry ce;
 
     memcpy(
@@ -270,12 +271,17 @@ void php_parallel_events_startup(void) {
 
     zend_class_implements(php_parallel_events_ce, 2, zend_ce_countable, zend_ce_traversable);
 
-    php_parallel_events_event_startup();
-    php_parallel_events_input_startup();
+    PHP_MINIT(PARALLEL_EVENTS_EVENT)(INIT_FUNC_ARGS_PASSTHRU);
+    PHP_MINIT(PARALLEL_EVENTS_INPUT)(INIT_FUNC_ARGS_PASSTHRU);
+
+    return SUCCESS;
 }
 
-void php_parallel_events_shutdown(void) {
-    php_parallel_events_event_shutdown();
-    php_parallel_events_input_shutdown();
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS)
+{
+    PHP_MSHUTDOWN(PARALLEL_EVENTS_EVENT)(INIT_FUNC_ARGS_PASSTHRU);
+    PHP_MSHUTDOWN(PARALLEL_EVENTS_INPUT)(INIT_FUNC_ARGS_PASSTHRU);
+
+    return SUCCESS;
 }
 #endif

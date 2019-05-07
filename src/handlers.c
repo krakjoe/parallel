@@ -91,7 +91,12 @@ zval* php_parallel_handlers_get_property_ptr_ptr(zval *zv, zval *member, int typ
     return &EG(uninitialized_zval);
 }
 
-void php_parallel_handlers_startup() {
+const zend_object_handlers* php_parallel_standard_handlers() {
+    return &_php_parallel_standard_handlers;
+}
+
+PHP_MINIT_FUNCTION(PARALLEL_HANDLERS)
+{
     memcpy(
         &_php_parallel_standard_handlers,
         zend_get_std_object_handlers(),
@@ -102,10 +107,12 @@ void php_parallel_handlers_startup() {
     _php_parallel_standard_handlers.read_dimension = php_parallel_handlers_read_dimension;
     _php_parallel_standard_handlers.write_dimension = php_parallel_handlers_write_dimension;
     _php_parallel_standard_handlers.get_property_ptr_ptr = php_parallel_handlers_get_property_ptr_ptr;
+
+    return SUCCESS;
 }
 
-const zend_object_handlers* php_parallel_standard_handlers() {
-    return &_php_parallel_standard_handlers;
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_HANDLERS)
+{
+    return SUCCESS;
 }
-
 #endif

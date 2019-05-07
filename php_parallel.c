@@ -29,7 +29,7 @@
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
 {
-	php_parallel_startup();
+	PHP_MINIT(PARALLEL_CORE)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 } /* }}} */
@@ -37,7 +37,7 @@ PHP_MINIT_FUNCTION(parallel)
 /* {{{ PHP_MSHUTDOWN_FUNCTION */
 PHP_MSHUTDOWN_FUNCTION(parallel)
 {
-	php_parallel_shutdown();
+	PHP_MSHUTDOWN(PARALLEL_CORE)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 } /* }}} */
@@ -46,13 +46,11 @@ PHP_MSHUTDOWN_FUNCTION(parallel)
  */
 PHP_RINIT_FUNCTION(parallel)
 {
-#if defined(ZTS) && defined(COMPILE_DL_PARALLEL)
+#if defined(COMPILE_DL_PARALLEL)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 
-    php_parallel_copy_startup();
-    php_parallel_check_startup();
-    php_parallel_strings_startup();
+    PHP_RINIT(PARALLEL_CORE)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 }
@@ -62,11 +60,7 @@ PHP_RINIT_FUNCTION(parallel)
  */
 PHP_RSHUTDOWN_FUNCTION(parallel)
 {
-    if (!CG(unclean_shutdown)) {
-        php_parallel_strings_shutdown();
-        php_parallel_check_shutdown();
-        php_parallel_copy_shutdown();
-    }
+    PHP_RSHUTDOWN(PARALLEL_CORE)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 }

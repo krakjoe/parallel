@@ -22,35 +22,41 @@
 
 TSRM_TLS HashTable php_parallel_strings;
 
-void php_parallel_strings_release(zval *zv) {
+zend_string* php_parallel_string(zend_string *source) {
+    zend_string *local =
+        (zend_string*)
+            zend_hash_find_ptr(
+                &php_parallel_strings, source);
+
+    if (!local) {
+        local = zend_string_dup(source, 0);
+
+        zend_hash_add_ptr(
+            &php_parallel_strings,
+            local, local);
+    }
+
+    return local;
+}
+
+static void php_parallel_strings_release(zval *zv) {
     zend_string_release(Z_PTR_P(zv));
 }
 
-void php_parallel_strings_startup() {
+PHP_RINIT_FUNCTION(PARALLEL_STRINGS)
+{
     zend_hash_init(
         &php_parallel_strings,
         32, NULL,
         php_parallel_strings_release, 0);
+
+    return SUCCESS;
 }
 
-zend_string* php_parallel_string(zend_string *source) {
-    zend_string *local = 
-        (zend_string*)
-            zend_hash_find_ptr(
-                &php_parallel_strings, source);
-            
-    if (!local) {
-        local = zend_string_dup(source, 0);
-        
-        zend_hash_add_ptr(
-            &php_parallel_strings, 
-            local, local);
-    }
-    
-    return local;
-}
-
-void php_parallel_strings_shutdown() {
+PHP_RSHUTDOWN_FUNCTION(PARALLEL_STRINGS)
+{
     zend_hash_destroy(&php_parallel_strings);
+
+    return SUCCESS;
 }
 #endif

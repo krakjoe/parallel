@@ -23,17 +23,62 @@
 static struct {
     pthread_mutex_t mutex;
     HashTable       table;
+} php_parallel_dependencies_map;
+
+#define PDM(e) php_parallel_dependencies_map.e
+
+TSRM_TLS struct {
+    HashTable activated;
 } php_parallel_dependencies_globals;
 
-#define PCD(e) php_parallel_dependencies_globals.e
+#define PDG(e) php_parallel_dependencies_globals.e
+
+/* {{{ */
+static zend_always_inline void php_parallel_dependencies_load_globals_vars(const zend_function *function) {
+    zend_string **variables = function->op_array.vars;
+    int it = 0,
+        end = function->op_array.last_var;
+
+    while (it < end) {
+        zend_is_auto_global(variables[it]);
+        it++;
+    }
+} /* }}} */
+
+/* {{{ */
+static zend_always_inline void php_parallel_dependencies_load_globals_literals(const zend_function *function) {
+    zval *literals = function->op_array.literals;
+    int it = 0,
+        end = function->op_array.last_literal;
+
+    while (it < end) {
+        if (Z_TYPE(literals[it]) == IS_STRING) {
+            zend_is_auto_global(Z_STR(literals[it]));
+        }
+        it++;
+    }
+} /* }}} */
+
+/* {{{ */
+static zend_always_inline void php_parallel_dependencies_load_globals(const zend_function *function) {
+    if (zend_hash_index_exists(&PDG(activated), (zend_ulong) function->op_array.opcodes)) {
+        return;
+    }
+
+    php_parallel_dependencies_load_globals_vars(function);
+    php_parallel_dependencies_load_globals_literals(function);
+
+    zend_hash_index_add_empty_element(&PDG(activated), (zend_ulong) function->op_array.opcodes);
+} /* }}} */
+
 
 void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
     HashTable dependencies;
 
-    pthread_mutex_lock(&PCD(mutex));
+    pthread_mutex_lock(&PDM(mutex));
 
-    if (zend_hash_index_exists(&PCD(table), (zend_ulong) function->op_array.opcodes)) {
-        pthread_mutex_unlock(&PCD(mutex));
+    if (zend_hash_index_exists(&PDM(table), (zend_ulong) function->op_array.opcodes)) {
+        pthread_mutex_unlock(&PDM(mutex));
         return;
     }
 
@@ -61,7 +106,7 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
 
                 zend_hash_add_ptr(
                     &dependencies,
-                    php_parallel_string(key), 
+                    php_parallel_string(key),
                     dependency);
 
                 php_parallel_dependencies_store(dependency);
@@ -71,11 +116,11 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
     }
 
     zend_hash_index_add_mem(
-        &PCD(table),
+        &PDM(table),
         (zend_ulong) function->op_array.opcodes,
         &dependencies, sizeof(HashTable));
 
-    pthread_mutex_unlock(&PCD(mutex));
+    pthread_mutex_unlock(&PDM(mutex));
 } /* }}} */
 
 void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
@@ -83,10 +128,12 @@ void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
     zend_string *key;
     zend_function *dependency;
 
-    pthread_mutex_lock(&PCD(mutex));
+    php_parallel_dependencies_load_globals(function);
+
+    pthread_mutex_lock(&PDM(mutex));
     dependencies = zend_hash_index_find_ptr(
-        &PCD(table), (zend_ulong) function->op_array.opcodes);
-    pthread_mutex_unlock(&PCD(mutex));
+        &PDM(table), (zend_ulong) function->op_array.opcodes);
+    pthread_mutex_unlock(&PDM(mutex));
 
     /* read only table */
 
@@ -106,7 +153,22 @@ static void php_parallel_dependencies_dtor(zval *zv) { /* {{{ */
     pefree(Z_PTR_P(zv), 1);
 } /* }}} */
 
-void php_parallel_dependencies_startup(void) { /* {{{ */
+PHP_RINIT_FUNCTION(PARALLEL_DEPENDENCIES)
+{
+    zend_hash_init(&PDG(activated), 32, NULL, NULL, 0);
+
+    return SUCCESS;
+}
+
+PHP_RSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES)
+{
+    zend_hash_destroy(&PDG(activated));
+
+    return SUCCESS;
+}
+
+PHP_MINIT_FUNCTION(PARALLEL_DEPENDENCIES)
+{
     pthread_mutexattr_t attributes;
 
     pthread_mutexattr_init(&attributes);
@@ -117,15 +179,20 @@ void php_parallel_dependencies_startup(void) { /* {{{ */
      pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
 #endif
 
-    pthread_mutex_init(&PCD(mutex), &attributes);
+    pthread_mutex_init(&PDM(mutex), &attributes);
 
     pthread_mutexattr_destroy(&attributes);
 
-    zend_hash_init(&PCD(table), 32, NULL, php_parallel_dependencies_dtor, 1);
-} /* }}} */
+    zend_hash_init(&PDM(table), 32, NULL, php_parallel_dependencies_dtor, 1);
 
-void php_parallel_dependencies_shutdown(void) { /* {{{ */
-    zend_hash_destroy(&PCD(table));
-    pthread_mutex_destroy(&PCD(mutex));
-} /* }}} */
+    return SUCCESS;
+}
+
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES)
+{
+    zend_hash_destroy(&PDM(table));
+
+    return SUCCESS;
+    pthread_mutex_destroy(&PDM(mutex));
+}
 #endif
