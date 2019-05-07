@@ -508,6 +508,10 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
     copy->op_array.run_time_cache = NULL;
 #endif
 
+    if (copy->op_array.scope) {
+        copy->op_array.scope = zend_lookup_class(copy->op_array.scope->name);
+    }
+
     return zend_hash_index_add_ptr(&PCG(uncopied), (zend_ulong) function->op_array.opcodes, copy);
 } /* }}} */
 
