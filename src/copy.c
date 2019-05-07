@@ -335,7 +335,8 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
         copy->func.common.prototype = (void*) copy;
 #endif
 
-        if (copy->called_scope && copy->called_scope->type == ZEND_USER_CLASS) {
+        if (copy->called_scope &&
+            copy->called_scope->type == ZEND_USER_CLASS) {
             copy->called_scope =
                 php_parallel_copy_scope(copy->called_scope);
         }
@@ -443,6 +444,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
     if (copy->op_array.static_variables) {
         copy->op_array.static_variables =
             php_parallel_copy_hash_ctor(copy->op_array.static_variables, 0);
+        GC_ADD_FLAGS(copy->op_array.static_variables, IS_ARRAY_IMMUTABLE);
     }
 
 #ifdef ZEND_MAP_PTR_NEW
@@ -452,8 +454,10 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
     copy->op_array.run_time_cache = NULL;
 #endif
 
-    if (copy->op_array.scope && copy->op_array.scope->type == ZEND_USER_CLASS) {
-        copy->op_array.scope = php_parallel_copy_scope(copy->op_array.scope);
+    if (copy->op_array.scope &&
+        copy->op_array.scope->type == ZEND_USER_CLASS) {
+        copy->op_array.scope =
+            php_parallel_copy_scope(copy->op_array.scope);
     }
 
     return zend_hash_index_add_ptr(&PCG(uncopied), (zend_ulong) function->op_array.opcodes, copy);
