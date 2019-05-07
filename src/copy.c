@@ -329,7 +329,7 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
 
         copy->func.common.fn_flags |= ZEND_ACC_CLOSURE;
     } else {
-        zend_object_std_init(&copy->std, zend_ce_closure);
+        zend_object_std_init(&copy->std, copy->std.ce);
 
         memcpy(
             &copy->func,
@@ -351,7 +351,7 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
         copy->func.common.prototype = (void*) copy;
 #endif
 
-        ZVAL_NULL(&copy->this_ptr);
+        ZVAL_UNDEF(&copy->this_ptr);
     }
 
     ZVAL_OBJ(destination, &copy->std);
