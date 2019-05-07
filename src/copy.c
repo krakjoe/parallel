@@ -350,6 +350,8 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
 #if PHP_VERSION_ID < 70300
         copy->func.common.prototype = (void*) copy;
 #endif
+
+        ZVAL_NULL(&copy->this_ptr);
     }
 
     ZVAL_OBJ(destination, &copy->std);
