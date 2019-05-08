@@ -20,7 +20,7 @@
 
 #include "parallel.h"
 
-typedef struct _php_parallel_exception_t {
+struct _php_parallel_exception_t {
     zval class;
     zval file;
     zval line;

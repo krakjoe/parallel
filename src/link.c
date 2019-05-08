@@ -48,7 +48,7 @@ typedef struct _php_parallel_link_queue_t {
     zend_long  c;
 } php_parallel_link_queue_t;
 
-typedef struct _php_parallel_link_t {
+struct _php_parallel_link_t {
     php_parallel_link_type_t type;
     zend_string *name;
 
