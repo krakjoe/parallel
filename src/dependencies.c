@@ -191,8 +191,8 @@ PHP_MINIT_FUNCTION(PARALLEL_DEPENDENCIES)
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES)
 {
     zend_hash_destroy(&PDM(table));
+    pthread_mutex_destroy(&PDM(mutex));
 
     return SUCCESS;
-    pthread_mutex_destroy(&PDM(mutex));
 }
 #endif
