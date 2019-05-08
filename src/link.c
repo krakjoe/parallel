@@ -62,7 +62,7 @@ typedef struct _php_parallel_link_t {
     } port;
 
     uint32_t refcount;
-} php_parallel_link_t;
+};
 
 static zend_always_inline int32_t php_parallel_link_mutex_init(php_parallel_link_mutex_t *mutex) {
     pthread_mutexattr_t attributes;

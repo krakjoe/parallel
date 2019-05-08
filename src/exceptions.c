@@ -29,7 +29,7 @@ typedef struct _php_parallel_exception_t {
     zval trace;
     zval previous;
     const zend_object_handlers *handlers;
-} php_parallel_exception_t;
+};
 
 zend_class_entry* php_parallel_error_ce;
 zend_class_entry* php_parallel_error_invalid_arguments_ce;

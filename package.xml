@@ -16,10 +16,10 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-03-25</date>
+ <date>2019-05-08</date>
  <version>
-  <release>0.8.3</release>
-  <api>0.8.0</api>
+  <release>0.9.0</release>
+  <api>0.9.0</api>
  </version>
  <stability>
   <release>beta</release>
@@ -27,8 +27,17 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix potential race condition for state on Future::value (where an exception was thrown)
-- Better compatibility with JIT
+- Channels: bi-directional communication between tasks and runtimes
+- Improvements to copying making it vastly more efficient
+- Improvements to runtime stack, making it more efficient
+- Tasks may use lexical scope
+- Events - an experimental, quite primitive event loop for reading/writing sets of channels and futures
+- Support for rethrowing exceptions uncaught in tasks
+- Simplified Runtime constructor
+- Remove Future::select (in favour of the superior events interface)
+- Task cancellation
+- Closure support
+- Drop support for PHP 7.1
  </notes>
  <contents>
   <dir name="/">
@@ -39,14 +48,44 @@
    <file name="php_parallel.h" role="src"/>
    <file name="php_parallel.c" role="src"/>
    <dir name="src">
+    <file name="cache.c" role="src"/>
+    <file name="cache.h" role="src"/>
+    <file name="channel.c" role="src"/>
+    <file name="channel.h" role="src"/>
+    <file name="check.c" role="src"/>
+    <file name="check.h" role="src"/>
     <file name="copy.c" role="src"/>
     <file name="copy.h" role="src"/>
+    <file name="dependencies.c" role="src"/>
+    <file name="dependencies.h" role="src"/>
+    <file name="event.c" role="src"/>
+    <file name="event.h" role="src"/>
+    <file name="events.c" role="src"/>
+    <file name="events.h" role="src"/>
+    <file name="exceptions.c" role="src"/>
+    <file name="exceptions.h" role="src"/>
     <file name="future.c" role="src"/>
     <file name="future.h" role="src"/>
+    <file name="handlers.c" role="src"/>
+    <file name="handlers.h" role="src"/>
+    <file name="input.c" role="src"/>
+    <file name="input.h" role="src"/>
+    <file name="link.c" role="src"/>
+    <file name="link.h" role="src"/>
+    <file name="loop.c" role="src"/>
+    <file name="loop.h" role="src"/>
     <file name="monitor.c" role="src"/>
     <file name="monitor.h" role="src"/>
     <file name="parallel.c" role="src"/>
     <file name="parallel.h" role="src"/>
+    <file name="poll.c" role="src"/>
+    <file name="poll.h" role="src"/>
+    <file name="runtime.c" role="src"/>
+    <file name="runtime.h" role="src"/>
+    <file name="scheduler.c" role="src"/>
+    <file name="scheduler.h" role="src"/>
+    <file name="strings.c" role="src"/>
+    <file name="strings.h" role="src"/>
    </dir> <!-- src -->
    <dir name="tests">
      <dir name="base">
@@ -55,8 +94,6 @@
       <file name="003.phpt" role="test"/>
       <file name="004.phpt" role="test"/>
       <file name="005.phpt" role="test"/>
-      <file name="006.phpt" role="test"/>
-      <file name="007.phpt" role="test"/>
       <file name="008.phpt" role="test"/>
       <file name="009.phpt" role="test"/>
       <file name="010.phpt" role="test"/>
@@ -89,21 +126,81 @@
       <file name="037.phpt" role="test"/>
       <file name="038.phpt" role="test"/>
       <file name="039.phpt" role="test"/>
-      <file name="040.phpt" role="test"/>
       <file name="041.phpt" role="test"/>
       <file name="042.phpt" role="test"/>
       <file name="043.phpt" role="test"/>
+      <file name="044.phpt" role="test"/>
+      <file name="045.phpt" role="test"/>
+      <file name="046.phpt" role="test"/>
+      <file name="047.phpt" role="test"/>
+      <file name="048.phpt" role="test"/>
+      <file name="049.phpt" role="test"/>
+      <file name="050.phpt" role="test"/>
       <file name="bootstrapc.inc" role="test"/>
       <file name="bootstrape.inc" role="test"/>
       <file name="bootstrap.inc" role="test"/>
-    </dir> <!-- base -->
+     </dir> <!-- base -->
+     <dir name="channel">
+      <file name="001.phpt" role="test"/>
+      <file name="002.phpt" role="test"/>
+      <file name="003.phpt" role="test"/>
+      <file name="004.phpt" role="test"/>
+      <file name="005.phpt" role="test"/>
+      <file name="006.phpt" role="test"/>
+      <file name="007.phpt" role="test"/>
+      <file name="008.phpt" role="test"/>
+      <file name="009.phpt" role="test"/>
+      <file name="010.phpt" role="test"/>
+      <file name="011.phpt" role="test"/>
+      <file name="012.phpt" role="test"/>
+      <file name="013.phpt" role="test"/>
+     </dir> <!-- channel -->
+     <dir name="closures">
+      <file name="001.phpt" role="test"/>
+      <file name="002.phpt" role="test"/>
+      <file name="003.phpt" role="test"/>
+      <file name="004.phpt" role="test"/>
+      <file name="005.phpt" role="test"/>
+      <file name="006.phpt" role="test"/>
+      <file name="007.phpt" role="test"/>
+      <file name="008.phpt" role="test"/>
+     </dir> <!-- closures -->
+     <dir name="events">
+      <file name="003.phpt" role="test"/>
+      <file name="004.phpt" role="test"/>
+      <file name="005.phpt" role="test"/>
+      <file name="007.phpt" role="test"/>
+      <file name="009.phpt" role="test"/>
+      <file name="011.phpt" role="test"/>
+      <file name="012.phpt" role="test"/>
+      <file name="013.phpt" role="test"/>
+      <file name="014.phpt" role="test"/>
+      <file name="015.phpt" role="test"/>
+      <file name="016.phpt" role="test"/>
+      <file name="017.phpt" role="test"/>
+       <dir name="wait">
+        <file name="001.phpt" role="test"/>
+        <file name="002.phpt" role="test"/>
+        <file name="003.phpt" role="test"/>
+        <file name="004.phpt" role="test"/>
+        <file name="005.phpt" role="test"/>
+        <file name="006.phpt" role="test"/>
+       </dir> <!-- wait -->
+     </dir> <!-- event -->
+     <dir name="handlers">
+      <file name="001.phpt" role="test"/>
+      <file name="002.phpt" role="test"/>
+      <file name="003.phpt" role="test"/>
+      <file name="004.phpt" role="test"/>
+      <file name="005.phpt" role="test"/>
+     </dir> <!-- handlers -->
    </dir> <!-- tests -->
   </dir>
  </contents>
  <dependencies>
   <required>
    <php>
-    <min>7.1.0</min>
+    <min>7.2.0</min>
    </php>
    <pearinstaller>
     <min>1.10</min>
@@ -113,6 +210,22 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-03-25</date>
+   <version>
+    <release>0.8.3</release>
+    <api>0.8.0</api>
+   </version>
+   <stability>
+    <release>beta</release>
+    <api>beta</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix potential race condition for state on Future::value (where an exception was thrown)
+- Better compatibility with JIT
+   </notes>
+  </release>
   <release>
    <date>2019-02-28</date>
    <version>
