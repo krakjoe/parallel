@@ -15,10 +15,10 @@ try {
 	$parallel->run(function() {
 		yield from [];
 	});
-} catch (Error $ex) {
+} catch (\parallel\Runtime\Error\IllegalInstruction $ex) {
 	var_dump($ex->getMessage());
 }
 ?>
 --EXPECTF--
-string(52) "illegal instruction (yield) on line 1 of entry point"
+string(%d) "illegal instruction (yield) on line 1 of task"
 

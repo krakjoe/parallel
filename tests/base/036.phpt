@@ -14,7 +14,7 @@ try {
 	$parallel->run(function(){
 		return;
 	});
-} catch (Error $ex) {
+} catch (\parallel\Runtime\Error\IllegalReturn $ex) {
 	var_dump($ex->getMessage());
 }
 
@@ -22,7 +22,7 @@ try {
 	$parallel->run(function(){
 		return null;
 	});
-} catch (Error $ex) {
+} catch (\parallel\Runtime\Error\IllegalReturn $ex) {
 	var_dump($ex->getMessage());
 }
 
@@ -30,7 +30,7 @@ try {
 	$parallel->run(function(){
 		return 42;
 	});
-} catch (Error $ex) {
+} catch (\parallel\Runtime\Error\IllegalReturn $ex) {
 	var_dump($ex->getMessage());
 }
 
@@ -38,7 +38,7 @@ try {
 	$parallel->run(function(){
 		return $var;
 	});
-} catch (Error $ex) {
+} catch (\parallel\Runtime\Error\IllegalReturn $ex) {
 	var_dump($ex->getMessage());
 }
 
@@ -50,11 +50,11 @@ try {
 	var_dump($ex->getMessage());
 }
 ?>
---EXPECT--
-string(89) "return on line 1 of entry point ignored by caller, caller must retain reference to Future"
-string(89) "return on line 1 of entry point ignored by caller, caller must retain reference to Future"
-string(89) "return on line 1 of entry point ignored by caller, caller must retain reference to Future"
-string(89) "return on line 1 of entry point ignored by caller, caller must retain reference to Future"
+--EXPECTF--
+string(%d) "return on line 1 of task ignored by caller, caller must retain reference to Future"
+string(%d) "return on line 1 of task ignored by caller, caller must retain reference to Future"
+string(%d) "return on line 1 of task ignored by caller, caller must retain reference to Future"
+string(%d) "return on line 1 of task ignored by caller, caller must retain reference to Future"
 OK
 
 

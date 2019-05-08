@@ -1,5 +1,5 @@
 --TEST--
-parallel Future::select all errors
+parallel Future done
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -9,61 +9,25 @@ if (!extension_loaded('parallel')) {
 --FILE--
 <?php
 $parallel = new \parallel\Runtime();
+$sync  = \parallel\Channel::make("sync");
 
-$i = 0;
-$futures = [];
+$future = $parallel->run(function(){
+    $sync = \parallel\Channel::open("sync");
+    
+    $sync->recv();
+      
+	return [42];
+});
 
-while ($i++ < 5) {
-	$futures[$i] = $parallel->run(function($throw){
-		if ($throw) {
-			throw new Exception();
-		}
-		return true;
-	}, [true]);
-}
+var_dump($future->done());
 
-$resolved = [];
-$errored  = [];
+$sync->send(true);
 
-$storedResolutions = [];
-$storedErrors      = [];
+$parallel->close();
 
-while (\parallel\Future::select($futures, $resolved, $errored)) {
-	$storedResolutions = array_merge($storedResolutions, $resolved);
-	$storedErrors      = array_merge($storedErrors, $errored);
-}
-
-var_dump(count($storedResolutions), count($storedErrors));
+var_dump($future->done());
 ?>
---EXPECTF--
-Fatal error: Uncaught Exception in %s:10
-Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
-  thrown in %s on line 10
+--EXPECT--
+bool(false)
+bool(true)
 
-Fatal error: Uncaught Exception in %s:10
-Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
-  thrown in %s on line 10
-
-Fatal error: Uncaught Exception in %s:10
-Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
-  thrown in %s on line 10
-
-Fatal error: Uncaught Exception in %s:10
-Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
-  thrown in %s on line 10
-
-Fatal error: Uncaught Exception in %s:10
-Stack trace:
-#0 [internal function]: \parallel\Runtime::run(true)
-#1 {main}
-  thrown in %s on line 10
-int(0)
-int(5)

@@ -9,17 +9,28 @@ if (!extension_loaded('parallel')) {
 --FILE--
 <?php
 $parallel = new parallel\Runtime();
-$var     = null;
 
 try {
-	$parallel->run(function() {
-		function test() {}
-	});
-} catch (Error $ex) {
-	var_dump($ex->getMessage());
+    $parallel->run(function(){
+        function test1() {}
+    });
+} catch (\parallel\Runtime\Error\IllegalInstruction $ex) {
+    var_dump($ex->getMessage());
+}
+
+try {
+    $parallel->run(function(){
+        function () {
+            function test2() {
+
+            }
+        };
+    });
+} catch (\parallel\Runtime\Error\IllegalInstruction $ex) {
+    var_dump($ex->getMessage());
 }
 ?>
 --EXPECT--
-string(55) "illegal instruction (function) on line 1 of entry point"
-
+string(48) "illegal instruction (function) on line 1 of task"
+string(59) "illegal instruction (function) in closure on line 1 of task"
 

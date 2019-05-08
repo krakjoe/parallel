@@ -24,22 +24,35 @@
 extern zend_class_entry *php_parallel_future_ce;
 
 typedef struct _php_parallel_future_t {
-	php_parallel_monitor_t *monitor;
-	zval value;
-	zval saved;
-	zend_object std;
+    php_parallel_monitor_t *monitor;
+    php_parallel_runtime_t *runtime;
+    void *handle;
+    zval value;
+    zend_object std;
 } php_parallel_future_t;
 
 static zend_always_inline php_parallel_future_t* php_parallel_future_fetch(zend_object *o) {
-	return (php_parallel_future_t*) (((char*) o) - XtOffsetOf(php_parallel_future_t, std));
+    return (php_parallel_future_t*) (((char*) o) - XtOffsetOf(php_parallel_future_t, std));
 }
 
 static zend_always_inline php_parallel_future_t* php_parallel_future_from(zval *z) {
-	return php_parallel_future_fetch(Z_OBJ_P(z));
+    return php_parallel_future_fetch(Z_OBJ_P(z));
+}
+
+static zend_always_inline php_parallel_future_t* php_parallel_future_construct(zval *retval) {
+        object_init_ex(retval, php_parallel_future_ce);
+
+        return php_parallel_future_from(retval);
 }
 
 zend_object* php_parallel_future_create(zend_class_entry *);
 void         php_parallel_future_destroy(zend_object *);
 
-void         php_parallel_future_startup();
+zend_bool    php_parallel_future_lock(php_parallel_future_t *future);
+zend_bool    php_parallel_future_readable(php_parallel_future_t *future);
+void         php_parallel_future_value(php_parallel_future_t *future, zval *value, zend_bool checked);
+zend_bool    php_parallel_future_unlock(php_parallel_future_t *future);
+
+PHP_MINIT_FUNCTION(PARALLEL_FUTURE);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_FUTURE);
 #endif

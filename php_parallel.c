@@ -25,13 +25,11 @@
 #include "php_parallel.h"
 
 #include "src/parallel.h"
-#include "src/future.h"
 
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
 {
-	php_parallel_startup();
-	php_parallel_future_startup();
+	PHP_MINIT(PARALLEL_CORE)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 } /* }}} */
@@ -39,7 +37,7 @@ PHP_MINIT_FUNCTION(parallel)
 /* {{{ PHP_MSHUTDOWN_FUNCTION */
 PHP_MSHUTDOWN_FUNCTION(parallel)
 {
-	php_parallel_shutdown();
+	PHP_MSHUTDOWN(PARALLEL_CORE)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 } /* }}} */
@@ -48,9 +46,21 @@ PHP_MSHUTDOWN_FUNCTION(parallel)
  */
 PHP_RINIT_FUNCTION(parallel)
 {
-#if defined(ZTS) && defined(COMPILE_DL_PARALLEL)
+#if defined(COMPILE_DL_PARALLEL)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
+
+    PHP_RINIT(PARALLEL_CORE)(INIT_FUNC_ARGS_PASSTHRU);
+
+	return SUCCESS;
+}
+/* }}} */
+
+/* {{{ PHP_RSHUTDOWN_FUNCTION
+ */
+PHP_RSHUTDOWN_FUNCTION(parallel)
+{
+    PHP_RSHUTDOWN(PARALLEL_CORE)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 }
@@ -76,7 +86,7 @@ zend_module_entry parallel_module_entry = {
 	PHP_MINIT(parallel),
 	PHP_MSHUTDOWN(parallel),
 	PHP_RINIT(parallel),
-	NULL,
+	PHP_RSHUTDOWN(parallel),
 	PHP_MINFO(parallel),
 	PHP_PARALLEL_VERSION,
 	STANDARD_MODULE_PROPERTIES

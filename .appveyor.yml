@@ -42,16 +42,6 @@ environment:
         BIN_SDK_VER: 2.1.9
         PTHREADS_VER: 2.9.1
         matrix:
-                - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-                  ARCH: x64
-                  VC: vc14
-                  PHP_VER: 7.1.24
-                  TS: 1
-                - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-                  ARCH: x86
-                  VC: vc14
-                  PHP_VER: 7.1.24
-                  TS: 1
                 - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
                   ARCH: x64
                   VC: vc15

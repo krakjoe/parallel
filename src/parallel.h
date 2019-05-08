@@ -22,51 +22,36 @@
 #include "monitor.h"
 #include "pthread.h"
 
-#define php_parallel_exception(m, ...) zend_throw_exception_ex(php_parallel_exception_ce, 0, m, ##__VA_ARGS__)
+#include "exceptions.h"
+#include "handlers.h"
+#include "runtime.h"
+#include "future.h"
+#include "scheduler.h"
+#include "channel.h"
+#include "events.h"
+#include "event.h"
+#include "input.h"
+#include "strings.h"
 
-extern zend_class_entry *php_parallel_ce;
-extern zend_class_entry *php_parallel_exception_ce;
-extern zend_string *php_parallel_main;
+#include "SAPI.h"
+#include "php_main.h"
+#include "zend_closures.h"
+#include "zend_interfaces.h"
+#include "zend_exceptions.h"
+#include "zend_vm.h"
 
-typedef struct _php_parallel_entry_point_t {
-	zend_function *point;
-	zval argv;
-	zval retval;
-} php_parallel_entry_point_t;
+#include "dependencies.h"
+#include "cache.h"
+#include "copy.h"
+#include "check.h"
 
-typedef struct _php_parallel_stack_el_t {
-	php_parallel_entry_point_t  entry;
-	php_parallel_monitor_t      *monitor;
-	zval                        *future;
-} php_parallel_stack_el_t;
+#define PARALLEL_PARAMETERS_NONE(r) \
+    ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, 0, 0) \
+    ZEND_PARSE_PARAMETERS_END()
 
-typedef struct _php_parallel_t {
-	pthread_t                   thread;
-	php_parallel_monitor_t     *monitor;
-	HashTable                   stack;
-	HashPosition                next;
-	zend_string                *bootstrap;
-	zval                        configuration;
-	struct {
-		zend_bool          *interrupt;
-	} child;
-	struct {
-		void               *server;
-	} parent;
-	zend_object                 std;
-} php_parallel_t;
+PHP_MINIT_FUNCTION(PARALLEL_CORE);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_CORE);
 
-void php_parallel_shutdown(void);
-void php_parallel_startup(void);
-
-static zend_always_inline php_parallel_t* php_parallel_fetch(zend_object *o) {
-	return (php_parallel_t*) (((char*) o) - XtOffsetOf(php_parallel_t, std));
-}
-
-static zend_always_inline php_parallel_t* php_parallel_from(zval *z) {
-	return php_parallel_fetch(Z_OBJ_P(z));
-}
-
-zend_object* php_parallel_create(zend_class_entry *);
-void         php_parallel_destroy(zend_object *);
+PHP_RINIT_FUNCTION(PARALLEL_CORE);
+PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE);
 #endif

@@ -20,13 +20,13 @@ $parallel->close();
 
 try {
 	$parallel->run(function(){});
-} catch (\parallel\Exception $e) {
+} catch (\parallel\Runtime\Error\Closed $e) {
 	echo "OK\n";
 }
 
 try {
 	$parallel->close();
-} catch (\parallel\Exception $e) {
+} catch (\parallel\Runtime\Error\Closed $e) {
 	echo "OK";
 }
 ?>
