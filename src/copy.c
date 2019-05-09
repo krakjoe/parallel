@@ -430,8 +430,6 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
         return copy;
     }
 
-    php_parallel_dependencies_load(function);
-
     pthread_mutex_lock(&PCC(mutex));
 
     copy = zend_hash_index_find_ptr(
@@ -460,6 +458,8 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
             php_parallel_copy_scope(copy->op_array.scope);
     }
 
+    php_parallel_dependencies_load(function);
+
     return zend_hash_index_add_ptr(&PCG(uncopied), (zend_ulong) function->op_array.opcodes, copy);
 } /* }}} */
 
@@ -471,11 +471,13 @@ zend_function* php_parallel_copy_function(const zend_function *function, zend_bo
 } /* }}} */
 
 void php_parallel_copy_function_use(zend_string *key, zend_function *function) { /* {{{ */
-    zend_function *dependency = php_parallel_copy_function(function, 0);
+    function = php_parallel_copy_function(function, 0);
 
-    zend_hash_add_ptr(EG(function_table), key, dependency);
-
-    zend_hash_index_add_ptr(&PCG(used), (zend_ulong) dependency, key);
+    if (zend_hash_add_ptr(EG(function_table), key, function)) {
+        zend_hash_index_add_ptr(
+            &PCG(used),
+            (zend_ulong) function, key);
+    }
 } /* }}} */
 
 PHP_RINIT_FUNCTION(PARALLEL_COPY)
