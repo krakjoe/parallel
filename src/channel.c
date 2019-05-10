@@ -260,8 +260,13 @@ static int php_parallel_channel_compare(zval *lhs, zval *rhs) {
     return 1;
 }
 
+#if PHP_VERSION_ID >= 80000
+static HashTable* php_parallel_channel_debug(zend_object *zo, int *temp) {
+    php_parallel_channel_t *channel = php_parallel_channel_fetch(zo);
+#else
 static HashTable* php_parallel_channel_debug(zval *zv, int *temp) {
     php_parallel_channel_t *channel = php_parallel_channel_from(zv);
+#endif
     HashTable *debug;    
 
     *temp = 1;
