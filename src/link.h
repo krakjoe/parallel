@@ -35,4 +35,7 @@ zend_bool            php_parallel_link_readable(php_parallel_link_t *link);
 zend_bool            php_parallel_link_unlock(php_parallel_link_t *link);
 
 void                 php_parallel_link_debug(php_parallel_link_t *link, HashTable *debug);
+
+PHP_MINIT_FUNCTION(PARALLEL_LINK);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_LINK);
 #endif

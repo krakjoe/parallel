@@ -40,7 +40,6 @@ object(parallel\Events\Event)#%d (%d) {
     ["type"]=>
     string(10) "unbuffered"
   }
-
   ["value"]=>
   NULL
 }

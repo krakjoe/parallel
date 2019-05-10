@@ -217,7 +217,7 @@ zend_function_entry php_parallel_channel_methods[] = {
     PHP_FE_END
 };
 
-zend_object* php_parallel_channel_create(zend_class_entry *type) {
+static zend_object* php_parallel_channel_create(zend_class_entry *type) {
     php_parallel_channel_t *channel = ecalloc(1,
             sizeof(php_parallel_channel_t) + zend_object_properties_size(type));
 
@@ -228,7 +228,7 @@ zend_object* php_parallel_channel_create(zend_class_entry *type) {
     return &channel->std;
 }
 
-void php_parallel_channel_destroy(zend_object *o) {
+static void php_parallel_channel_destroy(zend_object *o) {
     php_parallel_channel_t *channel =
         php_parallel_channel_fetch(o);
 
@@ -274,7 +274,7 @@ static HashTable* php_parallel_channel_debug(zval *zv, int *temp) {
     return debug;
 }
 
-void php_parallel_channels_link_destroy(zval *zv) {
+static void php_parallel_channels_link_destroy(zval *zv) {
     php_parallel_link_t *link = Z_PTR_P(zv);
 
     php_parallel_link_destroy(link);
