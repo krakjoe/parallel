@@ -35,7 +35,12 @@ object(parallel\Events\Event)#%d (%d) {
   string(4) "sync"
   ["object"]=>
   object(parallel\Channel)#%d (%d) {
+    ["name"]=>
+    string(4) "sync"
+    ["type"]=>
+    string(10) "unbuffered"
   }
+
   ["value"]=>
   NULL
 }

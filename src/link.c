@@ -64,6 +64,12 @@ struct _php_parallel_link_t {
     uint32_t refcount;
 };
 
+static zend_string  *php_parallel_link_unbuffered,
+                    *php_parallel_link_buffered,
+                    *php_parallel_link_capacity,
+                    *php_parallel_link_size,
+                    *php_parallel_link_infinite;
+
 static zend_always_inline int32_t php_parallel_link_mutex_init(php_parallel_link_mutex_t *mutex) {
     pthread_mutexattr_t attributes;
 
@@ -381,7 +387,70 @@ zend_bool php_parallel_link_readable(php_parallel_link_t *link) {
     return 0;
 }
 
+void php_parallel_link_debug(php_parallel_link_t *link, HashTable *debug) {
+    zval zdbg;
+
+    ZVAL_STR_COPY(&zdbg, link->name);
+
+    zend_hash_add(debug, ZSTR_KNOWN(ZEND_STR_NAME), &zdbg);
+
+    switch (link->type) {
+        case PHP_PARALLEL_LINK_UNBUFFERED:
+            ZVAL_STR_COPY(&zdbg, 
+                php_parallel_link_unbuffered);
+            zend_hash_add(debug, ZSTR_KNOWN(ZEND_STR_TYPE), &zdbg);
+        break;
+
+        case PHP_PARALLEL_LINK_BUFFERED:
+            ZVAL_STR_COPY(&zdbg, 
+                php_parallel_link_buffered);
+            zend_hash_add(debug, ZSTR_KNOWN(ZEND_STR_TYPE), &zdbg);
+
+            if (link->port.q.c == -1) {
+                ZVAL_STR_COPY(&zdbg,
+                    php_parallel_link_infinite);
+                zend_hash_add(
+                    debug, 
+                    php_parallel_link_capacity, &zdbg);
+            } else {
+                ZVAL_LONG(&zdbg, link->port.q.c);
+                zend_hash_add(
+                    debug, 
+                    php_parallel_link_capacity, &zdbg);
+                if (link->port.q.l.count) {
+                    ZVAL_LONG(&zdbg, link->port.q.l.count);
+                    zend_hash_add(
+                        debug, 
+                        php_parallel_link_size, &zdbg);
+                }
+            }   
+        break;
+    }
+}
+
 zend_bool php_parallel_link_unlock(php_parallel_link_t *link) {
     return pthread_mutex_unlock(&link->m.m) == SUCCESS;
+}
+
+PHP_MINIT_FUNCTION(PARALLEL_LINK)
+{
+    php_parallel_link_unbuffered = zend_string_init(ZEND_STRL("unbuffered"), 1);
+    php_parallel_link_buffered   = zend_string_init(ZEND_STRL("buffered"), 1);
+    php_parallel_link_capacity   = zend_string_init(ZEND_STRL("capacity"), 1);
+    php_parallel_link_size       = zend_string_init(ZEND_STRL("size"), 1);
+    php_parallel_link_infinite   = zend_string_init(ZEND_STRL("infinite"), 1);
+    
+    return SUCCESS;
+}
+
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_LINK)
+{
+    zend_string_release(php_parallel_link_unbuffered);
+    zend_string_release(php_parallel_link_buffered);
+    zend_string_release(php_parallel_link_capacity);
+    zend_string_release(php_parallel_link_size);
+    zend_string_release(php_parallel_link_infinite);
+
+    return SUCCESS;
 }
 #endif

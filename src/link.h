@@ -33,4 +33,6 @@ zend_bool            php_parallel_link_lock(php_parallel_link_t *link);
 zend_bool            php_parallel_link_writable(php_parallel_link_t *link);
 zend_bool            php_parallel_link_readable(php_parallel_link_t *link);
 zend_bool            php_parallel_link_unlock(php_parallel_link_t *link);
+
+void                 php_parallel_link_debug(php_parallel_link_t *link, HashTable *debug);
 #endif
