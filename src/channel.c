@@ -237,6 +237,29 @@ void php_parallel_channel_destroy(zend_object *o) {
     zend_object_std_dtor(o);
 }
 
+static int php_parallel_channel_compare(zval *lhs, zval *rhs) {
+    zend_object *lho = Z_OBJ_P(lhs),
+                *rho = Z_OBJ_P(rhs);
+    php_parallel_channel_t *lhc, *rhc;
+
+    if (lho->ce != rho->ce) {
+        return 1;
+    }
+
+    if (lho == rho) {
+        return 0;
+    }
+
+    lhc = php_parallel_channel_fetch(lho),
+    rhc = php_parallel_channel_fetch(rho);
+
+    if (lhc->link == rhc->link) {
+        return 0;
+    }
+
+    return 1;
+}
+
 void php_parallel_channels_link_destroy(zval *zv) {
     php_parallel_link_t *link = Z_PTR_P(zv);
 
@@ -254,6 +277,7 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
 
     php_parallel_channel_handlers.offset = XtOffsetOf(php_parallel_channel_t, std);
     php_parallel_channel_handlers.free_obj = php_parallel_channel_destroy;
+    php_parallel_channel_handlers.compare_objects = php_parallel_channel_compare;
 
     INIT_NS_CLASS_ENTRY(ce, "parallel", "Channel", php_parallel_channel_methods);
 
