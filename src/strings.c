@@ -61,15 +61,14 @@ zend_string* php_parallel_string_interned(zend_string *string) {
                 &PSI(table), (zend_ulong) string);
 
     if (!cached) {
-        cached = php_parallel_copy_mem(
-            string, _ZSTR_STRUCT_SIZE(ZSTR_LEN(string)), 1);
-
-        zend_string_hash_val(cached);
+        cached = zend_hash_index_add_mem(&PSI(table),
+                    (zend_ulong) string,
+                    string, _ZSTR_STRUCT_SIZE(ZSTR_LEN(string)));
 
         GC_TYPE_INFO(cached) =
             IS_STRING | ((IS_STR_INTERNED | IS_STR_PERMANENT) << GC_FLAGS_SHIFT);
 
-        zend_hash_index_add_ptr(&PSI(table), (zend_ulong) string, cached);
+        zend_string_hash_val(cached);
     }
 
     pthread_mutex_unlock(&PSI(mutex));
