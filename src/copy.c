@@ -220,7 +220,7 @@ static zend_always_inline HashTable* php_parallel_copy_hash_request(HashTable *s
             p->h = q->h;
             if (q->key) {
                 if (ZSTR_IS_INTERNED(q->key)) {
-                    p->key = php_parallel_string_interned(q->key);
+                    p->key = q->key;
                 } else {
                     p->key = php_parallel_copy_string(q->key, 0);
                 }
@@ -373,7 +373,11 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
 
         case IS_STRING:
             if (ZSTR_IS_INTERNED(Z_STR_P(source))) {
-                ZVAL_STR(dest, php_parallel_string_interned(Z_STR_P(source)));
+                if (persistent) {
+                    ZVAL_STR(dest, php_parallel_string_interned(Z_STR_P(source)));
+                } else {
+                    ZVAL_COPY_VALUE(dest, source);
+                }
             } else {
                 ZVAL_STR(dest, php_parallel_copy_string(Z_STR_P(source), persistent));
             }
