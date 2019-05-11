@@ -90,6 +90,10 @@ static zend_always_inline void php_parallel_cache_hash(HashTable *ht) {
            *end = p + ht->nNumUsed;
 
     while (p < end) {
+        if (Z_TYPE(p->val) == IS_UNDEF) {
+            continue;
+        }
+
         if (p->key) {
             php_parallel_cache_string(&p->key);
         }
