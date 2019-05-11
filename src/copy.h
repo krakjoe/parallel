@@ -63,6 +63,7 @@ void           php_parallel_copy_function_use(zend_string *key, zend_function *f
 void           php_parallel_copy_function_free(zend_function *function, zend_bool persistent);
 
 zend_string*   php_parallel_copy_string(zend_string *source, zend_bool persistent);
+zend_string*   php_parallel_copy_string_interned(zend_string *source);
 
 static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) { /* {{{ */
     void *destination = (void*) pemalloc(size, persistent);
