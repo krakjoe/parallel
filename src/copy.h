@@ -102,8 +102,6 @@ static zend_always_inline void php_parallel_copy_zval_dtor(zval *zv) {
     }
 }
 
-zend_bool php_parallel_copy_interning(zend_bool interning);
-
 PHP_RINIT_FUNCTION(PARALLEL_COPY);
 PHP_RSHUTDOWN_FUNCTION(PARALLEL_COPY);
 
