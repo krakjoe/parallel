@@ -154,7 +154,12 @@ static zend_always_inline HashTable* php_parallel_copy_hash_permanent(HashTable 
         }
 
         if (p->key) {
-            p->key = php_parallel_copy_string(p->key, 1);
+            if (ZSTR_IS_INTERNED(p->key)) {
+                p->key = php_parallel_string_interned(p->key);
+            } else {
+                p->key = php_parallel_copy_string(p->key, 1);
+            }
+
             ht->u.flags &= ~HASH_FLAG_STATIC_KEYS;
         } else if ((zend_long) p->h >= (zend_long) ht->nNextFreeElement) {
             ht->nNextFreeElement = p->h + 1;
@@ -214,7 +219,11 @@ static zend_always_inline HashTable* php_parallel_copy_hash_request(HashTable *s
             p->val = q->val;
             p->h = q->h;
             if (q->key) {
-                p->key = php_parallel_copy_string(q->key, 0);
+                if (ZSTR_IS_INTERNED(q->key)) {
+                    p->key = q->key;
+                } else {
+                    p->key = php_parallel_copy_string(q->key, 0);
+                }
             } else {
                 p->key = NULL;
             }
@@ -243,7 +252,7 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
                 continue;
             }
 
-            if (p->key) {
+            if (p->key && !ZSTR_IS_INTERNED(p->key)) {
                 if (GC_DELREF(p->key) == 0) {
                     pefree(p->key, persistent);
                 }
@@ -363,7 +372,11 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
         break;
 
         case IS_STRING:
-            ZVAL_STR(dest, php_parallel_copy_string(Z_STR_P(source), persistent));
+            if (ZSTR_IS_INTERNED(Z_STR_P(source))) {
+                ZVAL_STR(dest, php_parallel_string_interned(Z_STR_P(source)));
+            } else {
+                ZVAL_STR(dest, php_parallel_copy_string(Z_STR_P(source), persistent));
+            }
         break;
 
         case IS_ARRAY:

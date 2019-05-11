@@ -19,7 +19,11 @@
 #define HAVE_PARALLEL_STRINGS_H
 
 zend_string* php_parallel_string(zend_string *string);
+zend_string* php_parallel_string_interned(zend_string *string);
 
 PHP_RINIT_FUNCTION(PARALLEL_STRINGS);
 PHP_RSHUTDOWN_FUNCTION(PARALLEL_STRINGS);
+
+PHP_MINIT_FUNCTION(PARALLEL_STRINGS);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_STRINGS);
 #endif
