@@ -22,16 +22,19 @@ $events->addFuture("future", $future);
 var_dump($events->poll());
 ?>
 --EXPECTF--
-object(parallel\Events\Event)#5 (4) {
+object(parallel\Events\Event)#%d (%d) {
   ["type"]=>
   int(4)
   ["source"]=>
   string(6) "future"
   ["object"]=>
-  object(parallel\Future)#3 (0) {
+  object(parallel\Future)#%d (%d) {
+    ["runtime"]=>
+    object(parallel\Runtime)#%d (%d) {
+    }
   }
   ["value"]=>
-  object(RuntimeException)#4 (7) {
+  object(RuntimeException)#4 (%d) {
     ["message":protected]=>
     string(0) ""
     ["string":"Exception":private]=>

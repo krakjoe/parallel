@@ -35,7 +35,10 @@ object(parallel\Events\Event)#%d (%d) {
   ["source"]=>
   string(6) "future"
   ["object"]=>
-  object(parallel\Future)#%d (0) {
+  object(parallel\Future)#%d (%d) {
+    ["runtime"]=>
+    object(parallel\Runtime)#%d (%d) {
+    }
   }
   ["value"]=>
   NULL
