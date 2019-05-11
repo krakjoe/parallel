@@ -62,29 +62,14 @@ zend_function* php_parallel_copy_function(const zend_function *function, zend_bo
 void           php_parallel_copy_function_use(zend_string *key, zend_function *function);
 void           php_parallel_copy_function_free(zend_function *function, zend_bool persistent);
 
+zend_string*   php_parallel_copy_string(zend_string *source, zend_bool persistent);
+
 static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) { /* {{{ */
     void *destination = (void*) pemalloc(size, persistent);
 
     memcpy(destination, source, size);
 
     return destination;
-} /* }}} */
-
-static zend_always_inline zend_string* php_parallel_copy_string(zend_string *source, zend_bool persistent) { /* {{{ */
-    zend_string *dest =
-        zend_string_alloc(
-            ZSTR_LEN(source), persistent);
-
-    memcpy(ZSTR_VAL(dest),
-           ZSTR_VAL(source),
-           ZSTR_LEN(source));
-
-    ZSTR_VAL(dest)[ZSTR_LEN(dest)] = 0;
-
-    ZSTR_LEN(dest) = ZSTR_LEN(source);
-    ZSTR_H(dest)   = ZSTR_H(source);
-
-    return dest;
 } /* }}} */
 
 HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent);

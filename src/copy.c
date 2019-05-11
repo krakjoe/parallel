@@ -34,10 +34,21 @@ static struct {
     HashTable       table;
 } php_parallel_copy_cache;
 
+static struct {
+    pthread_mutex_t mutex;
+    HashTable       table;
+    HashTable       index;
+} php_parallel_copy_strings = {PTHREAD_MUTEX_INITIALIZER};
+
 #define PCG(e) php_parallel_copy_globals.e
 #define PCC(e) php_parallel_copy_cache.e
+#define PCS(e) php_parallel_copy_strings.e
 
 static const uint32_t php_parallel_copy_uninitialized_bucket[-HT_MIN_MASK] = {HT_INVALID_IDX, HT_INVALID_IDX};
+
+static void php_parallel_copy_string_dtor(zval *zv) {
+    free(Z_PTR_P(zv));
+}
 
 static void php_parallel_copy_cache_dtor(zval *zv) {
     zend_function *function = Z_FUNC_P(zv);
@@ -243,7 +254,7 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
                 continue;
             }
 
-            if (p->key) {
+            if (p->key && !ZSTR_IS_INTERNED(p->key)) {
                 if (GC_DELREF(p->key) == 0) {
                     pefree(p->key, persistent);
                 }
@@ -348,6 +359,60 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
 
     destination->u2.extra = persistent;
 } /* }}} */
+
+static zend_always_inline zend_string* php_parallel_copy_string_ex(zend_string *source, zend_bool persistent) { /* {{{ */
+    zend_string *dest = zend_string_alloc(ZSTR_LEN(source), persistent);
+
+    memcpy(ZSTR_VAL(dest),
+           ZSTR_VAL(source),
+           ZSTR_LEN(source));
+
+    ZSTR_VAL(dest)[ZSTR_LEN(dest)] = 0;
+
+    ZSTR_LEN(dest) = ZSTR_LEN(source);
+    ZSTR_H(dest)   = ZSTR_H(source);
+
+    return dest;
+} /* }}} */
+
+static zend_always_inline zend_string* php_parallel_copy_string_interned(zend_string *source, zend_bool persistent) { /* {{{ */
+    zend_string *dest;
+
+    pthread_mutex_lock(&PCS(mutex));
+
+    if (!zend_hash_index_exists(&PCS(index), (zend_ulong) source)) {
+
+        if (!(dest = zend_hash_index_find_ptr(&PCS(table), (zend_ulong) source))) {
+
+            dest = php_parallel_copy_string_ex(source, 1);
+
+            zend_string_hash_val(dest);
+
+            zend_hash_index_add_ptr(&PCS(table), (zend_ulong) source, dest);
+
+            GC_TYPE_INFO(dest) =
+                IS_STRING |
+                ((IS_STR_INTERNED | IS_STR_PERMANENT) << GC_FLAGS_SHIFT);
+
+            zend_hash_index_add_empty_element(&PCS(index), (zend_ulong) dest);
+        }
+    } else {
+        dest = source;
+    }
+
+    pthread_mutex_unlock(&PCS(mutex));
+
+    return dest;
+} /* }}} */
+
+zend_string* php_parallel_copy_string(zend_string *source, zend_bool persistent) { /* {{{ */
+    if (ZSTR_IS_INTERNED(source)) {
+        return php_parallel_copy_string_interned(source, persistent);
+    }
+
+    return php_parallel_copy_string_ex(source, persistent);
+} /* }}} */
+
 
 void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent) {
     switch (Z_TYPE_P(source)) {
@@ -504,6 +569,14 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_COPY)
     return SUCCESS;
 }
 
+PHP_MINIT_FUNCTION(PARALLEL_COPY_STRINGS)
+{
+    zend_hash_init(&PCS(table), 32, NULL, php_parallel_copy_string_dtor, 1);
+    zend_hash_init(&PCS(index), 32, NULL, NULL, 1);
+
+    return SUCCESS;
+}
+
 PHP_MINIT_FUNCTION(PARALLEL_COPY)
 {
     pthread_mutexattr_t attributes;
@@ -511,9 +584,9 @@ PHP_MINIT_FUNCTION(PARALLEL_COPY)
     pthread_mutexattr_init(&attributes);
 
 #if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
-     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
 #else
-     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
+    pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
 #endif
 
     pthread_mutex_init(&PCC(mutex), &attributes);
@@ -523,6 +596,16 @@ PHP_MINIT_FUNCTION(PARALLEL_COPY)
 
     PHP_MINIT(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_CACHE)(INIT_FUNC_ARGS_PASSTHRU);
+    PHP_MINIT(PARALLEL_COPY_STRINGS)(INIT_FUNC_ARGS_PASSTHRU);
+
+    return SUCCESS;
+}
+
+static PHP_MSHUTDOWN_FUNCTION(PARALLEL_COPY_STRINGS)
+{
+    zend_hash_destroy(&PCS(table));
+    zend_hash_destroy(&PCS(index));
+    pthread_mutex_destroy(&PCS(mutex));
 
     return SUCCESS;
 }
@@ -534,6 +617,7 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_COPY)
 
     PHP_MSHUTDOWN(PARALLEL_CACHE)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MSHUTDOWN(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);
+    PHP_MSHUTDOWN(PARALLEL_COPY_STRINGS)(INIT_FUNC_ARGS_PASSTHRU);
 
     return SUCCESS;
 }
