@@ -27,6 +27,7 @@ TSRM_TLS struct {
     HashTable uncopied;
     HashTable used;
     HashTable scope;
+    zend_bool interning;
 } php_parallel_copy_globals;
 
 static struct {
@@ -375,7 +376,7 @@ static zend_always_inline zend_string* php_parallel_copy_string_ex(zend_string *
     return dest;
 } /* }}} */
 
-static zend_always_inline zend_string* php_parallel_copy_string_interned(zend_string *source, zend_bool persistent) { /* {{{ */
+static zend_always_inline zend_string* php_parallel_copy_string_interned(zend_string *source) { /* {{{ */
     zend_string *dest;
 
     pthread_mutex_lock(&PCS(mutex));
@@ -406,8 +407,8 @@ static zend_always_inline zend_string* php_parallel_copy_string_interned(zend_st
 } /* }}} */
 
 zend_string* php_parallel_copy_string(zend_string *source, zend_bool persistent) { /* {{{ */
-    if (ZSTR_IS_INTERNED(source)) {
-        return php_parallel_copy_string_interned(source, persistent);
+    if (ZSTR_IS_INTERNED(source) || PCG(interning)) {
+        return php_parallel_copy_string_interned(source);
     }
 
     return php_parallel_copy_string_ex(source, persistent);
@@ -545,11 +546,22 @@ void php_parallel_copy_function_use(zend_string *key, zend_function *function) {
     }
 } /* }}} */
 
+zend_bool php_parallel_copy_interning(zend_bool interning) { /* {{{ */
+    zend_bool result =
+        PCG(interning);
+
+    PCG(interning) = 1;
+
+    return result;
+} /* }}} */
+
 PHP_RINIT_FUNCTION(PARALLEL_COPY)
 {
     zend_hash_init(&PCG(uncopied),  32, NULL, php_parallel_copy_uncopied_dtor, 0);
     zend_hash_init(&PCG(used),      32, NULL, NULL, 0);
     zend_hash_init(&PCG(scope),     32, NULL, NULL, 0);
+
+    PCG(interning) = 0;
 
     PHP_RINIT(PARALLEL_CHECK)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_RINIT(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);
