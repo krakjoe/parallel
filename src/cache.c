@@ -162,7 +162,6 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
             literal++;
             slot++;
         }
-
     }
 
     if (cached->last_var) {
@@ -196,6 +195,11 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
                             (int32_t)opline->op1.constant) - source->op_array.literals)) -
                             (char*)opline;
 #endif
+                if (opline->opcode == ZEND_SEND_VAL
+                 || opline->opcode == ZEND_SEND_VAL_EX
+                 || opline->opcode == ZEND_QM_ASSIGN) {
+                    zend_vm_set_opcode_handler_ex(opline, 0, 0, 0);
+                }
             }
 
             if (opline->op2_type == IS_CONST) {
@@ -239,8 +243,6 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
 #endif
             }
 #endif
-
-            zend_vm_set_opcode_handler(opline);
             opline++;
         }
 
