@@ -37,8 +37,8 @@ static void php_parallel_cached_dtor(zval *zv) { /* {{{ */
              *end     = literal + cached->last_literal;
 
         while (literal < end) {
-            if (Z_OPT_REFCOUNTED_P(literal)) {
-                PARALLEL_ZVAL_DTOR(literal);
+            if (Z_TYPE_P(literal) == IS_ARRAY) {
+                php_parallel_copy_hash_dtor(Z_ARRVAL_P(literal), 1);
             }
             literal++;
         }
@@ -250,22 +250,19 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
     }
 
     if (cached->arg_info) {
-        uint32_t       count = cached->num_args;
         zend_arg_info *it    = cached->arg_info,
-                      *end   = it + count,
+                      *end   = it + cached->num_args,
                       *info;
 
         if (cached->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
             it--;
-            count++;
         }
 
         if (cached->fn_flags & ZEND_ACC_VARIADIC) {
             end++;
-            count++;
         }
 
-        cached->arg_info = info = php_parallel_copy_mem(it, sizeof(zend_arg_info) * count, 1);
+        cached->arg_info = info = php_parallel_copy_mem(it, (end - it) * sizeof(zend_arg_info), 1);
 
         while (it < end) {
             if (info->name) {
