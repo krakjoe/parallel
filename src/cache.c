@@ -252,8 +252,8 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
     if (cached->arg_info) {
         uint32_t       count = cached->num_args;
         zend_arg_info *it    = cached->arg_info,
-                      *end   = it + count;
-        zend_arg_info *info, *current;
+                      *end   = it + count,
+                      *info;
 
         if (cached->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
             it--;
@@ -265,41 +265,31 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
             count++;
         }
 
-        current =
-            info =
-                php_parallel_copy_mem(it, sizeof(zend_arg_info) * count, 1);
+        cached->arg_info = info = php_parallel_copy_mem(it, sizeof(zend_arg_info) * count, 1);
 
         while (it < end) {
-            if (current->name) {
-                current->name = php_parallel_copy_string_interned(it->name);
+            if (info->name) {
+                info->name =
+                    php_parallel_copy_string_interned(it->name);
             }
 
             if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_CLASS(it->type)) {
-#ifdef ZEND_TYPE_IS_NAME
-                if (ZEND_TYPE_IS_NAME(it->type)) {
-#endif
-                    current->type = ZEND_TYPE_ENCODE_CLASS(
-                                    php_parallel_copy_string_interned(
-                                        ZEND_TYPE_NAME(it->type)),
-                                    ZEND_TYPE_ALLOW_NULL(it->type));
-#ifdef ZEND_TYPE_IS_NAME
-                } else {
-                    current->type = ZEND_TYPE_ENCODE_CLASS(
-                                    php_parallel_copy_string_interned(
-                                        ZEND_TYPE_CE(it->type)->name),
-                                    ZEND_TYPE_ALLOW_NULL(it->type));
-                }
-#endif
+                zend_bool nulls =
+                    ZEND_TYPE_ALLOW_NULL(it->type);
+
+                zend_string *name =
+                        php_parallel_copy_string_interned(ZEND_TYPE_NAME(it->type));
+
+                info->type = ZEND_TYPE_ENCODE_CLASS(name, nulls);
             }
-            current++;
+
+            info++;
             it++;
         }
 
         if (cached->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
-            info++;
+            cached->arg_info++;
         }
-
-        cached->arg_info = info;
     }
 
     if (cached->try_catch_array) {
