@@ -53,6 +53,11 @@ static void php_parallel_strings_release(zval *zv) {
 zend_string* php_parallel_string_interned(zend_string *string) {
     zend_string *cached;
 
+    if (GC_FLAGS(string) & IS_STR_PERMANENT) {
+        /* we don't care where a permanent string comes from */
+        return string;
+    }
+
     pthread_mutex_lock(&PSI(mutex));
 
     cached =
