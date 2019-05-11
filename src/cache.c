@@ -47,15 +47,6 @@ static void php_parallel_cached_dtor(zval *zv) {
     }
 
     if (function->op_array.last_var) {
-        zend_string **var = function->op_array.vars,
-                    **end = var + function->op_array.last_var;
-
-        while (var < end) {
-            if (GC_DELREF(*var) == 1) {
-                zend_string_release(*var);
-            }
-            var++;
-        }
         pefree(function->op_array.vars, 1);
     }
 
@@ -120,7 +111,6 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         while (it < end) {
             heap[it] =
                 php_parallel_copy_string(vars[it], 1);
-            GC_ADDREF(heap[it]);
             it++;
         }
 
