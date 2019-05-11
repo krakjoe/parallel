@@ -220,7 +220,7 @@ static zend_always_inline HashTable* php_parallel_copy_hash_request(HashTable *s
             p->h = q->h;
             if (q->key) {
                 if (ZSTR_IS_INTERNED(q->key)) {
-                    p->key = php_parallel_string_interned(q->key);
+                    p->key = q->key;
                 } else {
                     p->key = php_parallel_copy_string(q->key, 0);
                 }
