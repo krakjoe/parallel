@@ -30,11 +30,11 @@ static struct {
 static void php_parallel_cache_zval(zval *zv);
 
 static void php_parallel_cached_dtor(zval *zv) { /* {{{ */
-    zend_function *function = Z_PTR_P(zv);
+    zend_op_array *cached = (zend_op_array*) Z_PTR_P(zv);
 
-    if (function->op_array.last_literal) {
-        zval *literal = function->op_array.literals,
-             *end     = literal + function->op_array.last_literal;
+    if (cached->last_literal) {
+        zval *literal = cached->literals,
+             *end     = literal + cached->last_literal;
 
         while (literal < end) {
             if (Z_OPT_REFCOUNTED_P(literal)) {
@@ -43,37 +43,37 @@ static void php_parallel_cached_dtor(zval *zv) { /* {{{ */
             literal++;
         }
 
-        pefree(function->op_array.literals, 1);
+        pefree(cached->literals, 1);
     }
 
-    if (function->op_array.last_var) {
-        pefree(function->op_array.vars, 1);
+    if (cached->last_var) {
+        pefree(cached->vars, 1);
     }
 
-    if (function->op_array.arg_info) {
-        zend_arg_info *info = function->op_array.arg_info;
+    if (cached->arg_info) {
+        zend_arg_info *info = cached->arg_info;
 
-        if (function->op_array.fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
+        if (cached->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
             info--;
         }
 
         pefree(info, 1);
     }
 
-    if (function->op_array.try_catch_array) {
-        pefree(function->op_array.try_catch_array, 1);
+    if (cached->try_catch_array) {
+        pefree(cached->try_catch_array, 1);
     }
 
-    if (function->op_array.live_range) {
-        pefree(function->op_array.live_range, 1);
+    if (cached->live_range) {
+        pefree(cached->live_range, 1);
     }
 
-    if (function->op_array.static_variables) {
-        php_parallel_copy_hash_dtor(function->op_array.static_variables, 1);
+    if (cached->static_variables) {
+        php_parallel_copy_hash_dtor(cached->static_variables, 1);
     }
 
-    pefree(function->op_array.opcodes, 1);
-    pefree(function, 1);
+    pefree(cached->opcodes, 1);
+    pefree(cached, 1);
 } /* }}} */
 
 /* {{{ */
@@ -114,37 +114,37 @@ static void php_parallel_cache_zval(zval *zv) {
 
 /* {{{ */
 zend_function* php_parallel_cache_function(const zend_function *source) {
-    zend_function *copy;
+    zend_op_array *cached;
 
     pthread_mutex_lock(&PCG(mutex));
 
-    if ((copy = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) source->op_array.opcodes))) {
+    if ((cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) source->op_array.opcodes))) {
         pthread_mutex_unlock(&PCG(mutex));
 
-        return copy;
+        return (zend_function*) cached;
     }
 
-    copy = php_parallel_copy_mem((void*) source, sizeof(zend_op_array), 1);
-    copy->op_array.refcount  = NULL;
-    copy->op_array.fn_flags &= ~ZEND_ACC_CLOSURE;
+    cached = php_parallel_copy_mem((void*) source, sizeof(zend_op_array), 1);
+    cached->refcount  = NULL;
+    cached->fn_flags &= ~ZEND_ACC_CLOSURE;
 
-    if (copy->op_array.static_variables) {
-        copy->op_array.static_variables =
-            php_parallel_copy_hash_ctor(copy->op_array.static_variables, 1);
-        php_parallel_cache_hash(copy->op_array.static_variables);
+    if (cached->static_variables) {
+        cached->static_variables =
+            php_parallel_copy_hash_ctor(cached->static_variables, 1);
+        php_parallel_cache_hash(cached->static_variables);
     }
 
 #ifdef ZEND_ACC_IMMUTABLE
-    copy->common.fn_flags |= ZEND_ACC_IMMUTABLE;
+    cached->fn_flags |= ZEND_ACC_IMMUTABLE;
 #endif
 
-    if (copy->op_array.last_literal) {
-        zval     *literal = copy->op_array.literals,
-                 *end     = literal + copy->op_array.last_literal;
-        zval     *slot    = copy->op_array.literals =
+    if (cached->last_literal) {
+        zval     *literal = cached->literals,
+                 *end     = literal + cached->last_literal;
+        zval     *slot    = cached->literals =
                                 php_parallel_copy_mem(
-                                    copy->op_array.literals,
-                                        sizeof(zval) * copy->op_array.last_literal, 1);
+                                    cached->literals,
+                                        sizeof(zval) * cached->last_literal, 1);
 
         while (literal < end) {
             if (Z_OPT_REFCOUNTED_P(literal)) {
@@ -161,11 +161,11 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
 
     }
 
-    if (copy->op_array.last_var) {
-        zend_string **vars = copy->op_array.vars;
+    if (cached->last_var) {
+        zend_string **vars = cached->vars;
         uint32_t      it = 0,
-                      end = copy->op_array.last_var;
-        zend_string **heap = pecalloc(copy->op_array.last_var, sizeof(zend_string*), 1);
+                      end = cached->last_var;
+        zend_string **heap = pecalloc(cached->last_var, sizeof(zend_string*), 1);
 
         while (it < end) {
             heap[it] =
@@ -173,21 +173,21 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
             it++;
         }
 
-        copy->op_array.vars = heap;
+        cached->vars = heap;
     }
 
-    if (copy->op_array.last) {
-        zend_op *opcodes = php_parallel_copy_mem(copy->op_array.opcodes, sizeof(zend_op) * copy->op_array.last, 1);
+    if (cached->last) {
+        zend_op *opcodes = php_parallel_copy_mem(cached->opcodes, sizeof(zend_op) * cached->last, 1);
         zend_op *opline  = opcodes,
-                *end     = opline + copy->op_array.last;
+                *end     = opline + cached->last;
 
         while (opline < end) {
             if (opline->op1_type == IS_CONST) {
 #if ZEND_USE_ABS_CONST_ADDR
-                opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)copy->op_array.literals - (char*)source->op_array.literals));
+                opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)cached->literals - (char*)source->op_array.literals));
 #elif PHP_VERSION_ID >= 70300
                 opline->op1.constant =
-                    (char*)(copy->op_array.literals +
+                    (char*)(cached->literals +
                             ((zval*)((char*)(source->op_array.opcodes + (opline - opcodes)) +
                             (int32_t)opline->op1.constant) - source->op_array.literals)) -
                             (char*)opline;
@@ -196,10 +196,10 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
 
             if (opline->op2_type == IS_CONST) {
 #if ZEND_USE_ABS_CONST_ADDR
-                opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)copy->op_array.literals - (char*)source->op_array.literals));
+                opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)cached->literals - (char*)source->op_array.literals));
 #elif PHP_VERSION_ID >= 70300
                 opline->op2.constant =
-                    (char*)(copy->op_array.literals +
+                    (char*)(cached->literals +
                             ((zval*)((char*)(source->op_array.opcodes + (opline - opcodes)) +
                             (int32_t)opline->op2.constant) - source->op_array.literals)) -
                             (char*)opline;
@@ -240,21 +240,21 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
             opline++;
         }
 
-        copy->op_array.opcodes = opcodes;
+        cached->opcodes = opcodes;
     }
 
-    if (copy->op_array.arg_info) {
-        uint32_t       count = copy->op_array.num_args;
-        zend_arg_info *it    = copy->op_array.arg_info,
+    if (cached->arg_info) {
+        uint32_t       count = cached->num_args;
+        zend_arg_info *it    = cached->arg_info,
                       *end   = it + count;
         zend_arg_info *info, *current;
 
-        if (copy->op_array.fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
+        if (cached->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
             it--;
             count++;
         }
 
-        if (copy->op_array.fn_flags & ZEND_ACC_VARIADIC) {
+        if (cached->fn_flags & ZEND_ACC_VARIADIC) {
             end++;
             count++;
         }
@@ -289,46 +289,46 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
             it++;
         }
 
-        if (copy->op_array.fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
+        if (cached->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
             info++;
         }
 
-        copy->op_array.arg_info = info;
+        cached->arg_info = info;
     }
 
-    if (copy->op_array.try_catch_array) {
-        copy->op_array.try_catch_array =
+    if (cached->try_catch_array) {
+        cached->try_catch_array =
             php_parallel_copy_mem(
-                copy->op_array.try_catch_array,
-                    sizeof(zend_try_catch_element) * copy->op_array.last_try_catch, 1);
+                cached->try_catch_array,
+                    sizeof(zend_try_catch_element) * cached->last_try_catch, 1);
     }
 
-    if (copy->op_array.live_range) {
-        copy->op_array.live_range =
+    if (cached->live_range) {
+        cached->live_range =
             php_parallel_copy_mem(
-                copy->op_array.live_range,
-                sizeof(zend_live_range) * copy->op_array.last_live_range, 1);
+                cached->live_range,
+                sizeof(zend_live_range) * cached->last_live_range, 1);
     }
 
-    if (copy->op_array.function_name)
-        copy->op_array.function_name =
-            php_parallel_copy_string_interned(copy->op_array.function_name);
+    if (cached->function_name)
+        cached->function_name =
+            php_parallel_copy_string_interned(cached->function_name);
 
-    if (copy->op_array.filename)
-        copy->op_array.filename =
-            php_parallel_copy_string_interned(copy->op_array.filename);
+    if (cached->filename)
+        cached->filename =
+            php_parallel_copy_string_interned(cached->filename);
 
-    if (copy->op_array.doc_comment)
-        copy->op_array.doc_comment =
-            php_parallel_copy_string_interned(copy->op_array.doc_comment);
+    if (cached->doc_comment)
+        cached->doc_comment =
+            php_parallel_copy_string_interned(cached->doc_comment);
 
     zend_hash_index_add_ptr(
         &PCG(table),
-        (zend_ulong) source->op_array.opcodes, copy);
+        (zend_ulong) source->op_array.opcodes, cached);
 
     pthread_mutex_unlock(&PCG(mutex));
 
-    return copy;
+    return (zend_function*) cached;
 } /* }}} */
 
 /* {{{ */
