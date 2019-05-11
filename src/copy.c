@@ -605,7 +605,6 @@ static PHP_MSHUTDOWN_FUNCTION(PARALLEL_COPY_STRINGS)
 {
     zend_hash_destroy(&PCS(table));
     zend_hash_destroy(&PCS(index));
-    pthread_mutex_destroy(&PCS(mutex));
 
     return SUCCESS;
 }
