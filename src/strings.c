@@ -57,8 +57,8 @@ zend_string* php_parallel_string_interned(zend_string *string) {
 
     cached =
         (zend_string*)
-            zend_hash_find_ptr(
-                &PSI(table), string);
+            zend_hash_index_find_ptr(
+                &PSI(table), (zend_ulong) string);
 
     if (!cached) {
         cached = php_parallel_copy_mem(
@@ -69,7 +69,7 @@ zend_string* php_parallel_string_interned(zend_string *string) {
         GC_TYPE_INFO(cached) =
             IS_STRING | ((IS_STR_INTERNED | IS_STR_PERMANENT) << GC_FLAGS_SHIFT);
 
-        zend_hash_add_ptr(&PSI(table), cached, cached);
+        zend_hash_index_add_ptr(&PSI(table), (zend_ulong) string, cached);
     }
 
     pthread_mutex_unlock(&PSI(mutex));
