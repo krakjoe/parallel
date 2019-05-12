@@ -349,11 +349,23 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
     } else {
         zend_object_std_init(&copy->std, copy->std.ce);
 
+        if (copy->called_scope &&
+            copy->called_scope->type == ZEND_USER_CLASS) {
+            /* allow the autoloader (and so opcache) to be the source
+                of truth for dependencies of this closure */
+            copy->called_scope =
+                php_parallel_copy_scope(copy->called_scope);
+        }
+
+        ZVAL_UNDEF(&copy->this_ptr);
+
+        /* at this time dependencies have been autoloaded, if possible */
         memcpy(
             &copy->func,
             php_parallel_copy_function(&copy->func, 0),
             sizeof(zend_op_array));
 
+        /* a closure may not have an immutable array as static properties */
         if (copy->func.op_array.static_variables) {
             copy->func.op_array.static_variables =
                 php_parallel_copy_hash_ctor(copy->func.op_array.static_variables, 0);
@@ -368,14 +380,6 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
 #if PHP_VERSION_ID < 70300
         copy->func.common.prototype = (void*) copy;
 #endif
-
-        if (copy->called_scope &&
-            copy->called_scope->type == ZEND_USER_CLASS) {
-            copy->called_scope =
-                php_parallel_copy_scope(copy->called_scope);
-        }
-
-        ZVAL_UNDEF(&copy->this_ptr);
     }
 
     ZVAL_OBJ(destination, &copy->std);
@@ -406,18 +410,16 @@ zend_string* php_parallel_copy_string_interned(zend_string *source) { /* {{{ */
     if (!zend_hash_index_exists(&PCS(index), (zend_ulong) source)) {
 
         if (!(dest = zend_hash_index_find_ptr(&PCS(table), (zend_ulong) source))) {
-
             dest = php_parallel_copy_string_ex(source, 1);
 
             zend_string_hash_val(dest);
-
-            zend_hash_index_add_ptr(&PCS(table), (zend_ulong) source, dest);
 
             GC_TYPE_INFO(dest) =
                 IS_STRING |
                 ((IS_STR_INTERNED | IS_STR_PERMANENT) << GC_FLAGS_SHIFT);
 
             zend_hash_index_add_empty_element(&PCS(index), (zend_ulong) dest);
+            zend_hash_index_add_ptr(&PCS(table), (zend_ulong) source, dest);
         }
     } else {
         dest = source;
