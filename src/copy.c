@@ -260,19 +260,31 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
 #endif
         }
 
-        for (p = table->arData, end = p + table->nNumUsed; p < end; p++) {
-            if (Z_ISUNDEF(p->val)) {
-                continue;
-            }
-
-            if (p->key && !ZSTR_IS_INTERNED(p->key)) {
-                if (GC_DELREF(p->key) == 0) {
-                    pefree(p->key, persistent);
+        if (HT_HAS_STATIC_KEYS_ONLY(table)) {
+            while (p < end) {
+                if (Z_OPT_REFCOUNTED(p->val)) {
+                    PARALLEL_ZVAL_DTOR(&p->val);
                 }
+                p++;
             }
+        } else {
+            while (p < end) {
+                if (Z_ISUNDEF(p->val)) {
+                    p++;
+                    continue;
+                }
 
-            if (Z_OPT_REFCOUNTED(p->val)) {
-                php_parallel_copy_zval_dtor(&p->val);
+                if (p->key && !ZSTR_IS_INTERNED(p->key)) {
+                    if (GC_DELREF(p->key) == 0) {
+                        pefree(p->key, persistent);
+                    }
+                }
+
+                if (Z_OPT_REFCOUNTED(p->val)) {
+                    php_parallel_copy_zval_dtor(&p->val);
+                }
+
+                p++;
             }
         }
 
