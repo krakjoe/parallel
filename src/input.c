@@ -84,6 +84,8 @@ PHP_METHOD(Input, add)
         return;
     }
 
+    target = php_parallel_copy_string_interned(target);
+
     if (!zend_hash_add(&input->table, target, value)) {
         php_parallel_exception_ex(
             php_parallel_events_input_error_existence_ce,
