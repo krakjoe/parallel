@@ -460,10 +460,9 @@ static zend_always_inline zend_function* php_parallel_copy_function_permanent(co
 
 #ifdef ZEND_ACC_IMMUTABLE
     /*
-    * The function must already be immutable either because it's in opcache
-    * or because it's in l2
+    * The function must already be in opcache or l2
     */
-    ZEND_ASSERT(function->common.fn_flags & ZEND_ACC_IMMUTABLE);
+    ZEND_ASSERT(!function->op_array.refcount);
 #endif
 
     pthread_mutex_lock(&PCC(mutex));
