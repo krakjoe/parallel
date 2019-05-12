@@ -540,8 +540,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_thread(const
     /*
     * It may not have changed, possibly check ZEND_ACC_IMMUTABLE on class entry
     */
-    if (copy->scope &&
-        copy->scope->type == ZEND_USER_CLASS) {
+    if (copy->scope) {
         copy->scope =
             php_parallel_copy_scope(copy->scope);
     }
