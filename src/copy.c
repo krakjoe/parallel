@@ -458,6 +458,13 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
 static zend_always_inline zend_function* php_parallel_copy_function_permanent(const zend_function *function) { /* {{{ */
     zend_op_array *copy;
 
+    if (!(function->common.fn_flags & ZEND_ACC_CLOSURE)) {
+        /* prevent double buffering in l2 and opcache */
+        php_parallel_dependencies_store(function);
+
+        return (zend_function*) function;
+    }
+
     pthread_mutex_lock(&PCC(mutex));
 
     if ((copy = zend_hash_index_find_ptr(&PCC(table), (zend_ulong) function->op_array.opcodes))) {
@@ -490,9 +497,9 @@ _php_parallel_copied_function_permanent:
 } /* }}} */
 
 static zend_always_inline zend_function* php_parallel_copy_function_request(const zend_function *function) { /* {{{ */
-    zend_op_array *copy = zend_hash_index_find_ptr(&PCG(uncopied), (zend_ulong) function->op_array.opcodes);
+    zend_op_array *copy;
 
-    if (copy) {
+    if ((copy = zend_hash_index_find_ptr(&PCG(uncopied), (zend_ulong) function->op_array.opcodes))) {
         return (zend_function*) copy;
     }
 
