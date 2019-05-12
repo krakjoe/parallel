@@ -154,15 +154,11 @@ static zend_always_inline HashTable* php_parallel_copy_hash_permanent(HashTable 
     }
 
     ht->nNextFreeElement = 0;
-    ht->nInternalPointer = HT_INVALID_IDX;
+    ht->nInternalPointer = 0;
     HT_SET_DATA_ADDR(ht, php_parallel_copy_mem(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht), 1));
     for (idx = 0; idx < ht->nNumUsed; idx++) {
         Bucket *p = ht->arData + idx;
         if (Z_TYPE(p->val) == IS_UNDEF) continue;
-
-        if (ht->nInternalPointer == HT_INVALID_IDX) {
-            ht->nInternalPointer = idx;
-        }
 
         if (p->key) {
             p->key = php_parallel_copy_string_interned(p->key);
@@ -171,7 +167,9 @@ static zend_always_inline HashTable* php_parallel_copy_hash_permanent(HashTable 
             ht->nNextFreeElement = p->h + 1;
         }
 
-        PARALLEL_ZVAL_COPY(&p->val, &p->val, 1);
+        if (Z_OPT_REFCOUNTED(p->val)) {
+            PARALLEL_ZVAL_COPY(&p->val, &p->val, 1);
+        }
     }
 
     return ht;
@@ -230,7 +228,9 @@ static zend_always_inline HashTable* php_parallel_copy_hash_request(HashTable *s
                 p->key = NULL;
             }
 
-            PARALLEL_ZVAL_COPY(&p->val, &p->val, 0);
+            if (Z_OPT_REFCOUNTED(p->val)) {
+                PARALLEL_ZVAL_COPY(&p->val, &p->val, 0);
+            }
         }
     }
 
