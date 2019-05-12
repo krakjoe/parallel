@@ -54,10 +54,6 @@ static void php_parallel_copy_cache_dtor(zval *zv) {
     zend_op_array *cached = 
         (zend_op_array*) Z_FUNC_P(zv);
 
-    if (cached->static_variables) {
-        php_parallel_copy_hash_dtor(cached->static_variables, 1);
-    }
-
     pefree(cached, 1);
 }
 
@@ -476,15 +472,6 @@ static zend_always_inline zend_function* php_parallel_copy_function_permanent(co
     copy->fn_flags &= ~ZEND_ACC_CLOSURE;
 #ifdef ZEND_ACC_IMMUTABLE
     copy->fn_flags |= ZEND_ACC_IMMUTABLE;
-#endif
-
-    if (copy->static_variables) {
-        copy->static_variables =
-            php_parallel_copy_hash_ctor(copy->static_variables, 1);
-    }
-
-#ifdef ZEND_MAP_PTR_INIT
-    ZEND_MAP_PTR_INIT(copy->static_variables_ptr, &copy->static_variables);
 #endif
 
     php_parallel_dependencies_store((zend_function*)copy);
