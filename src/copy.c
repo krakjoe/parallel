@@ -466,15 +466,6 @@ static zend_always_inline zend_function* php_parallel_copy_function_permanent(co
     ZEND_ASSERT(function->common.fn_flags & ZEND_ACC_IMMUTABLE);
 #endif
 
-    /*
-    * If this is not a closure, it does not need to be modified
-    */
-    if (!(function->common.fn_flags & ZEND_ACC_CLOSURE)) {
-        php_parallel_dependencies_store(function);
-
-        return (zend_function*) function;
-    }
-
     pthread_mutex_lock(&PCC(mutex));
 
     if ((copy = zend_hash_index_find_ptr(&PCC(table), (zend_ulong) function->op_array.opcodes))) {
@@ -482,7 +473,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_permanent(co
     }
 
     /*
-    * Buffer the function (exclusively) in process wide memory
+    * Cache the function (exclusively) in process wide memory
     */
     copy = zend_hash_index_add_mem(
             &PCC(table),
@@ -492,11 +483,11 @@ static zend_always_inline zend_function* php_parallel_copy_function_permanent(co
     copy->fn_flags &= ~ZEND_ACC_CLOSURE;
 
     /*
-    * Must buffer statics because the closure may be destroyed
+    * Must cache statics because the closure may be destroyed
     */
     if (copy->static_variables) {
         copy->static_variables = 
-            php_parallel_copy_hash_ctor(copy->static_variables, 1);
+            php_parallel_copy_hash_permanent(copy->static_variables);
     }
 
     /*
@@ -526,7 +517,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_thread(const
     if (copy->static_variables) {
         /* TODO see if this can be eliminated */
         copy->static_variables =
-            php_parallel_copy_hash_ctor(copy->static_variables, 0);
+            php_parallel_copy_hash_thread(copy->static_variables);
         GC_ADD_FLAGS(copy->static_variables, IS_ARRAY_IMMUTABLE);
     }
 
