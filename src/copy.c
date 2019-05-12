@@ -51,7 +51,7 @@ static void php_parallel_copy_string_dtor(zval *zv) {
 }
 
 static void php_parallel_copy_cache_dtor(zval *zv) {
-    zend_op_array *cached = 
+    zend_op_array *cached =
         (zend_op_array*) Z_FUNC_P(zv);
 
     if (cached->static_variables) {
@@ -62,7 +62,7 @@ static void php_parallel_copy_cache_dtor(zval *zv) {
 }
 
 static void php_parallel_copy_uncopied_dtor(zval *zv) {
-    zend_op_array *uncopied = 
+    zend_op_array *uncopied =
         (zend_op_array*) Z_FUNC_P(zv);
     zend_string *key =
         (zend_string*) zend_hash_index_find_ptr(
@@ -494,7 +494,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_permanent(co
     * Must cache statics because the closure may be destroyed
     */
     if (copy->static_variables) {
-        copy->static_variables = 
+        copy->static_variables =
             php_parallel_copy_hash_permanent(copy->static_variables);
     }
 

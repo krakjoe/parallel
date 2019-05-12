@@ -267,10 +267,10 @@ static HashTable* php_parallel_channel_debug(zend_object *zo, int *temp) {
 static HashTable* php_parallel_channel_debug(zval *zv, int *temp) {
     php_parallel_channel_t *channel = php_parallel_channel_from(zv);
 #endif
-    HashTable *debug;    
+    HashTable *debug;
 
     *temp = 1;
-    
+
     ALLOC_HASHTABLE(debug);
     zend_hash_init(debug, 3, NULL, ZVAL_PTR_DTOR, 0);
 

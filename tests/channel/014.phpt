@@ -21,7 +21,7 @@ if ($lhs == $ohs) {
     exit;
 }
 
-var_dump($lhs, $rhs, $ohs, 
+var_dump($lhs, $rhs, $ohs,
         ($lhs == $ohs), ($lhs == $rhs));
 ?>
 --EXPECT--
