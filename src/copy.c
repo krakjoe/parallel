@@ -495,14 +495,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
         return copy;
     }
 
-    pthread_mutex_lock(&PCC(mutex));
-
-    copy = zend_hash_index_find_ptr(
-        &PCC(table), (zend_ulong) function->op_array.opcodes);
-
-    pthread_mutex_unlock(&PCC(mutex));
-
-    copy = php_parallel_copy_mem(copy, sizeof(zend_op_array), 0);
+    copy = php_parallel_copy_mem((void*) function, sizeof(zend_op_array), 0);
 
     if (copy->op_array.static_variables) {
         copy->op_array.static_variables =
