@@ -54,6 +54,10 @@ static void php_parallel_copy_cache_dtor(zval *zv) {
     zend_op_array *cached = 
         (zend_op_array*) Z_FUNC_P(zv);
 
+    if (cached->static_variables) {
+        php_parallel_copy_hash_dtor(cached->static_variables, 1);
+    }
+
     pefree(cached, 1);
 }
 
@@ -172,7 +176,7 @@ static zend_always_inline HashTable* php_parallel_copy_hash_permanent(HashTable 
     return ht;
 }
 
-static zend_always_inline HashTable* php_parallel_copy_hash_request(HashTable *source) {
+static zend_always_inline HashTable* php_parallel_copy_hash_thread(HashTable *source) {
     HashTable *ht = php_parallel_copy_mem(source, sizeof(HashTable), 0);
 
     GC_SET_REFCOUNT(ht, 1);
@@ -238,7 +242,7 @@ HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent) 
     if (persistent) {
         return php_parallel_copy_hash_permanent(source);
     }
-    return php_parallel_copy_hash_request(source);
+    return php_parallel_copy_hash_thread(source);
 }
 
 void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
@@ -454,8 +458,18 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
 static zend_always_inline zend_function* php_parallel_copy_function_permanent(const zend_function *function) { /* {{{ */
     zend_op_array *copy;
 
+#ifdef ZEND_ACC_IMMUTABLE
+    /*
+    * The function must already be immutable either because it's in opcache
+    * or because it's in l2
+    */
+    ZEND_ASSERT(function->common.fn_flags & ZEND_ACC_IMMUTABLE);
+#endif
+
+    /*
+    * If this is not a closure, it does not need to be modified
+    */
     if (!(function->common.fn_flags & ZEND_ACC_CLOSURE)) {
-        /* prevent double buffering in l2 and opcache */
         php_parallel_dependencies_store(function);
 
         return (zend_function*) function;
@@ -467,25 +481,42 @@ static zend_always_inline zend_function* php_parallel_copy_function_permanent(co
         goto _php_parallel_copied_function_permanent;
     }
 
-    copy = php_parallel_copy_mem((void*) function, sizeof(zend_op_array), 1);
-    copy->refcount = NULL;
-    copy->fn_flags &= ~ZEND_ACC_CLOSURE;
-#ifdef ZEND_ACC_IMMUTABLE
-    copy->fn_flags |= ZEND_ACC_IMMUTABLE;
-#endif
+    /*
+    * Buffer the function (exclusively) in process wide memory
+    */
+    copy = zend_hash_index_add_mem(
+            &PCC(table),
+            (zend_ulong) function->op_array.opcodes,
+            (void*) function, sizeof(zend_op_array));
 
+    copy->fn_flags &= ~ZEND_ACC_CLOSURE;
+
+    /*
+    * Must buffer statics because the closure may be destroyed
+    */
+    if (copy->static_variables) {
+        copy->static_variables = 
+            php_parallel_copy_hash_ctor(copy->static_variables, 1);
+    }
+
+    /*
+    * Create dependency tree (nested lambdas currently)
+    */
     php_parallel_dependencies_store((zend_function*)copy);
 
-    zend_hash_index_update_ptr(&PCC(table), (zend_ulong) function->op_array.opcodes, copy);
-
 _php_parallel_copied_function_permanent:
+
     pthread_mutex_unlock(&PCC(mutex));
+
     return (zend_function*) copy;
 } /* }}} */
 
-static zend_always_inline zend_function* php_parallel_copy_function_request(const zend_function *function) { /* {{{ */
+static zend_always_inline zend_function* php_parallel_copy_function_thread(const zend_function *function) { /* {{{ */
     zend_op_array *copy;
 
+    /*
+    * Unbuffer once per thread
+    */
     if ((copy = zend_hash_index_find_ptr(&PCG(uncopied), (zend_ulong) function->op_array.opcodes))) {
         return (zend_function*) copy;
     }
@@ -493,6 +524,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
     copy = php_parallel_copy_mem((void*) function, sizeof(zend_op_array), 0);
 
     if (copy->static_variables) {
+        /* TODO see if this can be eliminated */
         copy->static_variables =
             php_parallel_copy_hash_ctor(copy->static_variables, 0);
         GC_ADD_FLAGS(copy->static_variables, IS_ARRAY_IMMUTABLE);
@@ -505,12 +537,18 @@ static zend_always_inline zend_function* php_parallel_copy_function_request(cons
     copy->run_time_cache = NULL;
 #endif
 
+    /*
+    * It may not have changed, possibly check ZEND_ACC_IMMUTABLE on class entry
+    */
     if (copy->scope &&
         copy->scope->type == ZEND_USER_CLASS) {
         copy->scope =
             php_parallel_copy_scope(copy->scope);
     }
 
+    /*
+    * Must load depdendencies
+    */
     php_parallel_dependencies_load(function);
 
     return zend_hash_index_add_ptr(&PCG(uncopied), (zend_ulong) function->op_array.opcodes, copy);
@@ -520,7 +558,7 @@ zend_function* php_parallel_copy_function(const zend_function *function, zend_bo
     if (persistent) {
         return php_parallel_copy_function_permanent(function);
     }
-    return php_parallel_copy_function_request(function);
+    return php_parallel_copy_function_thread(function);
 } /* }}} */
 
 void php_parallel_copy_function_use(zend_string *key, zend_function *function) { /* {{{ */
