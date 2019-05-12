@@ -20,9 +20,7 @@
 
 /*
 * parallel is intended to be used with opcache, this code will only be used
-* where opcache is not available
-*
-* TODO(krakjoe) probably want to copy arginfo
+* where opcache is not available.
 */
 
 zend_function* php_parallel_cache_function(const zend_function *source);
