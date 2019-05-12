@@ -458,12 +458,21 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
 static zend_always_inline zend_function* php_parallel_copy_function_permanent(const zend_function *function) { /* {{{ */
     zend_op_array *copy;
 
-#ifdef ZEND_ACC_IMMUTABLE
     /*
     * The function must already be in opcache or l2
     */
     ZEND_ASSERT(!function->op_array.refcount);
-#endif
+
+    /*
+    * Non closures are allocated in permanent memory already by opcache or l2
+    */
+    if (!(function->op_array.fn_flags & ZEND_ACC_CLOSURE)) {
+        ZEND_ASSERT((function->op_array.static_variables == NULL) ||
+            (GC_FLAGS(function->op_array.static_variables) & IS_ARRAY_IMMUTABLE));
+
+        php_parallel_dependencies_store(function);
+        return (zend_function*) function;
+    }
 
     pthread_mutex_lock(&PCC(mutex));
 
