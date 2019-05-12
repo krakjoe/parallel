@@ -31,7 +31,6 @@
 #include "events.h"
 #include "event.h"
 #include "input.h"
-#include "strings.h"
 
 #include "SAPI.h"
 #include "php_main.h"
