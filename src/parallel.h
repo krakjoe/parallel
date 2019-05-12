@@ -36,6 +36,7 @@
 #include "SAPI.h"
 #include "php_main.h"
 #include "zend_closures.h"
+#include "zend_gc.h"
 #include "zend_interfaces.h"
 #include "zend_exceptions.h"
 #include "zend_vm.h"

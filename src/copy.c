@@ -250,6 +250,16 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
         Bucket *p = table->arData,
                *end = p + table->nNumUsed;
 
+        if (!persistent) {
+            GC_REMOVE_FROM_BUFFER(table);
+            GC_TYPE_INFO(table) =
+#ifdef GC_WHITE
+                IS_NULL | (GC_WHITE << 16);
+#else
+                IS_NULL;
+#endif
+        }
+
         for (p = table->arData, end = p + table->nNumUsed; p < end; p++) {
             if (Z_ISUNDEF(p->val)) {
                 continue;
