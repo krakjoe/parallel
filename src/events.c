@@ -51,8 +51,7 @@ static zend_always_inline zend_bool php_parallel_events_add(php_parallel_events_
             (php_parallel_channel_t*)
                  php_parallel_channel_from(object);
 
-        name = php_parallel_string(
-                php_parallel_link_name(channel->link));
+        name = php_parallel_link_name(channel->link);
     }
 
     *key = name;

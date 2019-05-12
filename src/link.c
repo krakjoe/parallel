@@ -151,8 +151,7 @@ php_parallel_link_t* php_parallel_link_init(zend_string *name, zend_bool buffere
     } else {
         link->type = PHP_PARALLEL_LINK_UNBUFFERED;
     }
-    link->name = zend_string_init(
-        ZSTR_VAL(name), ZSTR_LEN(name), 1);
+    link->name = php_parallel_copy_string_interned(name);
     link->refcount = 1;
 
     return link;
@@ -174,7 +173,6 @@ void php_parallel_link_destroy(php_parallel_link_t *link) {
                 PARALLEL_ZVAL_DTOR(&link->port.z);
             }
         }
-        zend_string_release(link->name);
         pefree(link, 1);
     } else {
         pthread_mutex_unlock(&link->m.m);
@@ -392,7 +390,7 @@ zend_bool php_parallel_link_readable(php_parallel_link_t *link) {
 void php_parallel_link_debug(php_parallel_link_t *link, HashTable *debug) {
     zval zdbg;
 
-    ZVAL_STR_COPY(&zdbg, link->name);
+    ZVAL_STR(&zdbg, link->name);
 
     zend_hash_add(debug, php_parallel_link_string_name, &zdbg);
 

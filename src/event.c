@@ -49,12 +49,8 @@ void php_parallel_events_event_construct(
 
     GC_ADDREF(object);
 
-    if (object->ce == php_parallel_channel_ce) {
-        source = php_parallel_string(source);
-    }
-
     PHP_PARALLEL_EVENTS_EVENT_PROPERTY(LONG,      type);
-    PHP_PARALLEL_EVENTS_EVENT_PROPERTY(STR_COPY,  source);
+    PHP_PARALLEL_EVENTS_EVENT_PROPERTY(STR,       source);
     PHP_PARALLEL_EVENTS_EVENT_PROPERTY(OBJ,       object);
 
     if (type == PHP_PARALLEL_EVENTS_EVENT_WRITE) {

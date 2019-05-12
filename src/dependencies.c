@@ -106,7 +106,7 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
 
                 zend_hash_add_ptr(
                     &dependencies,
-                    php_parallel_string(key),
+                    php_parallel_copy_string_interned(key),
                     dependency);
 
                 php_parallel_dependencies_store(dependency);
