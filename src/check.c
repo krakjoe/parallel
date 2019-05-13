@@ -292,9 +292,11 @@ zend_function* php_parallel_check_task(php_parallel_runtime_t *runtime, zend_exe
     check.function = php_parallel_copy_function(function, 1);
 
     zend_hash_index_add_mem(
-        &PCG(checked), (zend_ulong) function->op_array.opcodes, &check, sizeof(php_parallel_check_t));
+        &PCG(checked),
+        (zend_ulong) function->op_array.opcodes,
+        &check, sizeof(php_parallel_check_t));
 
-    return (zend_function*) (check.function ? check.function : function);
+    return (zend_function*) check.function;
 } /* }}} */
 
 zend_bool php_parallel_check_resource(zval *zv) { /* {{{ */
