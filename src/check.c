@@ -25,7 +25,7 @@ TSRM_TLS struct {
 } php_parallel_check_globals;
 
 typedef struct _php_parallel_check_t {
-    const zend_function *function;
+    zend_function *function;
     zend_bool      returns;
 } php_parallel_check_t;
 
@@ -289,7 +289,7 @@ zend_function* php_parallel_check_task(php_parallel_runtime_t *runtime, zend_exe
     }
 
     check.returns = *returns;
-    check.function = function;
+    check.function = php_parallel_copy_function(function, 1);
 
     zend_hash_index_add_mem(
         &PCG(checked),
