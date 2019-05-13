@@ -94,10 +94,6 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
 
                 PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, &key, &dependency);
 
-                if (dependency->op_array.refcount) {
-                    dependency = php_parallel_cache_function(dependency);
-                }
-
                 dependency = php_parallel_copy_function(dependency, 1);
 
                 if (dependencies.nNumUsed == 0) {

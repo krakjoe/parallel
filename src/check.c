@@ -289,12 +289,7 @@ zend_function* php_parallel_check_task(php_parallel_runtime_t *runtime, zend_exe
     }
 
     check.returns = *returns;
-    if (function->op_array.refcount) {
-        check.function =
-            php_parallel_cache_function(function);
-    } else {
-        check.function = NULL;
-    }
+    check.function = php_parallel_copy_function(function, 1);
 
     zend_hash_index_add_mem(
         &PCG(checked), (zend_ulong) function->op_array.opcodes, &check, sizeof(php_parallel_check_t));

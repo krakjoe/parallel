@@ -23,14 +23,44 @@
 static struct {
     pthread_mutex_t mutex;
     HashTable       table;
+    struct {
+        HashTable   functions;
+        HashTable   statics;
+    } foreign;
 } php_parallel_cache_globals = {PTHREAD_MUTEX_INITIALIZER};
 
 #define PCG(e) php_parallel_cache_globals.e
+#define PCGF(e) PCG(foreign).e
 
 static void php_parallel_cache_zval(zval *zv);
 
 static void php_parallel_cached_dtor(zval *zv) { /* {{{ */
     zend_op_array *cached = (zend_op_array*) Z_PTR_P(zv);
+
+    /*
+    * Check for foreign function
+    */
+    if (zend_hash_index_exists(&PCGF(functions), (zend_ulong) cached)) {
+        /*
+        * This is a foreign function but we may own the statics ...
+        */
+        if (cached->static_variables) {
+      	
+            if (zend_hash_index_exists(&PCGF(statics), (zend_ulong) cached->static_variables)) {
+                /*
+                * We own the statics
+                */
+                php_parallel_copy_hash_dtor(cached->static_variables, 1);
+            }
+        }
+
+        pefree(cached, 1);
+        return;
+    }
+
+    /*
+    * This is a function cached by parallel
+    */
 
     if (cached->last_literal) {
         zval *literal = cached->literals,
@@ -123,24 +153,59 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
     pthread_mutex_lock(&PCG(mutex));
 
     if ((cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) source->op_array.opcodes))) {
-        pthread_mutex_unlock(&PCG(mutex));
-
-        return (zend_function*) cached;
+        goto _php_parallel_cached_function_return;
     }
 
     cached = php_parallel_copy_mem((void*) source, sizeof(zend_op_array), 1);
+
+    if (!cached->refcount) {
+        /*
+        * This must already exist in opcache but may be a closure
+        */
+        cached->fn_flags &= ~ZEND_ACC_CLOSURE;
+#ifdef ZEND_ACC_IMMUTABLE
+        cached->fn_flags |= ZEND_ACC_IMMUTABLE;
+#endif
+
+        if (cached->static_variables) {
+            if (!(GC_FLAGS(cached->static_variables) & IS_ARRAY_IMMUTABLE)) {
+                /*
+                * Copy and persist statics
+                */
+                cached->static_variables =      	
+                    php_parallel_copy_hash_ctor(cached->static_variables, 1);
+                php_parallel_cache_hash(cached->static_variables);
+
+                /*
+                * Record that we own the statics
+                */
+                zend_hash_index_add_empty_element(
+                    &PCGF(statics), (zend_ulong) cached->static_variables);
+            }
+        }
+      	
+        /*
+        * Record that the function is foreign
+        */
+        zend_hash_index_add_empty_element(&PCGF(functions), (zend_ulong) cached);
+
+        goto _php_parallel_cached_function;
+    }
+
+    /*
+    * This doesn't exist in opcache, make a deep copy
+    */
     cached->refcount  = NULL;
     cached->fn_flags &= ~ZEND_ACC_CLOSURE;
+#ifdef ZEND_ACC_IMMUTABLE
+    cached->fn_flags |= ZEND_ACC_IMMUTABLE;
+#endif
 
     if (cached->static_variables) {
         cached->static_variables =
             php_parallel_copy_hash_ctor(cached->static_variables, 1);
         php_parallel_cache_hash(cached->static_variables);
     }
-
-#ifdef ZEND_ACC_IMMUTABLE
-    cached->fn_flags |= ZEND_ACC_IMMUTABLE;
-#endif
 
     if (cached->last_literal) {
         zval     *literal = cached->literals,
@@ -315,10 +380,12 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         cached->doc_comment =
             php_parallel_copy_string_interned(cached->doc_comment);
 
+_php_parallel_cached_function:
     zend_hash_index_add_ptr(
         &PCG(table),
         (zend_ulong) source->op_array.opcodes, cached);
 
+_php_parallel_cached_function_return:
     pthread_mutex_unlock(&PCG(mutex));
 
     return (zend_function*) cached;
@@ -328,6 +395,8 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
 PHP_MINIT_FUNCTION(PARALLEL_CACHE)
 {
     zend_hash_init(&PCG(table), 32, NULL, php_parallel_cached_dtor, 1);
+    zend_hash_init(&PCGF(functions), 32, NULL, NULL, 1);
+    zend_hash_init(&PCGF(statics), 32, NULL, NULL, 1);
 
     return SUCCESS;
 }
@@ -335,6 +404,8 @@ PHP_MINIT_FUNCTION(PARALLEL_CACHE)
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_CACHE)
 {
     zend_hash_destroy(&PCG(table));
+    zend_hash_destroy(&PCGF(functions));
+    zend_hash_destroy(&PCGF(statics));
 
     return SUCCESS;
 } /* }}} */
