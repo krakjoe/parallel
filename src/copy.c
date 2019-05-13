@@ -32,15 +32,9 @@ TSRM_TLS struct {
 static struct {
     pthread_mutex_t mutex;
     HashTable       table;
-} php_parallel_copy_cache;
-
-static struct {
-    pthread_mutex_t mutex;
-    HashTable       table;
 } php_parallel_copy_strings = {PTHREAD_MUTEX_INITIALIZER};
 
 #define PCG(e) php_parallel_copy_globals.e
-#define PCC(e) php_parallel_copy_cache.e
 #define PCS(e) php_parallel_copy_strings.e
 
 static const uint32_t php_parallel_copy_uninitialized_bucket[-HT_MIN_MASK] = {HT_INVALID_IDX, HT_INVALID_IDX};
@@ -49,23 +43,11 @@ static void php_parallel_copy_string_dtor(zval *zv) {
     free(Z_PTR_P(zv));
 }
 
-static void php_parallel_copy_cache_dtor(zval *zv) {
-    zend_op_array *cached =
-        (zend_op_array*) Z_FUNC_P(zv);
-
-    if (cached->static_variables) {
-        php_parallel_copy_hash_dtor(cached->static_variables, 1);
-    }
-
-    pefree(cached, 1);
-}
-
 static void php_parallel_copy_uncopied_dtor(zval *zv) {
     zend_op_array *uncopied =
         (zend_op_array*) Z_FUNC_P(zv);
-    zend_string *key =
-        (zend_string*) zend_hash_index_find_ptr(
-            &PCG(used), (zend_ulong) uncopied);
+    zend_string *key =      	
+        zend_hash_index_find_ptr(&PCG(used), (zend_ulong) uncopied);
 
     if (key) {
         if (zend_hash_exists(EG(function_table), key)) {
@@ -81,7 +63,9 @@ static void php_parallel_copy_uncopied_dtor(zval *zv) {
     }
 
     if (uncopied->static_variables) {
-        php_parallel_copy_hash_dtor(uncopied->static_variables, 0);
+        if (!(GC_FLAGS(uncopied->static_variables) & IS_ARRAY_IMMUTABLE)) {
+            zend_array_destroy(uncopied->static_variables);
+        }
     }
 
     pefree(uncopied, 0);
@@ -332,18 +316,9 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
                 closure, sizeof(zend_closure_t), persistent);
 
     if (persistent) {
-        zend_function  *function;
-
-        if (copy->func.op_array.refcount) {
-            function =
-                php_parallel_cache_function(&copy->func);
-        } else {
-            function = (zend_function*) &copy->func;
-        }
-
         memcpy(
             &copy->func,
-            php_parallel_copy_function(function, 1),
+            php_parallel_copy_function(&copy->func, 1),
             sizeof(zend_op_array));
 
         copy->func.common.fn_flags |= ZEND_ACC_CLOSURE;
@@ -476,58 +451,17 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
 }
 
 static zend_always_inline zend_function* php_parallel_copy_function_permanent(const zend_function *function) { /* {{{ */
-    zend_op_array *copy;
-
     /*
-    * The function must already be in opcache or l2
+    * Ensure function exists in cache
     */
-    ZEND_ASSERT(!function->op_array.refcount);
-
-    /*
-    * Non closures are allocated in permanent memory already by opcache or l2
-    */
-    if (!(function->op_array.fn_flags & ZEND_ACC_CLOSURE)) {
-        ZEND_ASSERT((function->op_array.static_variables == NULL) ||
-            (GC_FLAGS(function->op_array.static_variables) & IS_ARRAY_IMMUTABLE));
-
-        php_parallel_dependencies_store(function);
-        return (zend_function*) function;
-    }
-
-    pthread_mutex_lock(&PCC(mutex));
-
-    if ((copy = zend_hash_index_find_ptr(&PCC(table), (zend_ulong) function->op_array.opcodes))) {
-        goto _php_parallel_copied_function_permanent;
-    }
-
-    /*
-    * Cache the function (exclusively) in process wide memory
-    */
-    copy = zend_hash_index_add_mem(
-            &PCC(table),
-            (zend_ulong) function->op_array.opcodes,
-            (void*) function, sizeof(zend_op_array));
-
-    copy->fn_flags &= ~ZEND_ACC_CLOSURE;
-
-    /*
-    * Must cache statics because the closure may be destroyed
-    */
-    if (copy->static_variables) {
-        copy->static_variables =
-            php_parallel_copy_hash_permanent(copy->static_variables);
-    }
+    zend_function *cached = php_parallel_cache_function(function);
 
     /*
     * Create dependency tree (nested lambdas currently)
     */
-    php_parallel_dependencies_store((zend_function*)copy);
+    php_parallel_dependencies_store(cached);
 
-_php_parallel_copied_function_permanent:
-
-    pthread_mutex_unlock(&PCC(mutex));
-
-    return (zend_function*) copy;
+    return (zend_function*) cached;
 } /* }}} */
 
 static zend_always_inline zend_function* php_parallel_copy_function_thread(const zend_function *function) { /* {{{ */
@@ -536,18 +470,17 @@ static zend_always_inline zend_function* php_parallel_copy_function_thread(const
     /*
     * Unbuffer once per thread
     */
-    if ((copy = zend_hash_index_find_ptr(&PCG(uncopied), (zend_ulong) function->op_array.opcodes))) {
+    if ((copy = zend_hash_index_find_ptr(&PCG(uncopied), (zend_ulong) function))) {
         return (zend_function*) copy;
     }
 
-    copy = php_parallel_copy_mem((void*) function, sizeof(zend_op_array), 0);
-
-    if (copy->static_variables) {
-        /* TODO see if this can be eliminated */
-        copy->static_variables =
-            php_parallel_copy_hash_thread(copy->static_variables);
-        GC_ADD_FLAGS(copy->static_variables, IS_ARRAY_IMMUTABLE);
-    }
+    /*
+    * Copy to thread local buffer
+    */
+    copy = zend_hash_index_add_mem(
+                &PCG(uncopied),
+                (zend_ulong) function,
+                (void*) function, sizeof(zend_op_array));
 
 #ifdef ZEND_MAP_PTR_NEW
     ZEND_MAP_PTR_INIT(copy->static_variables_ptr, &copy->static_variables);
@@ -556,12 +489,18 @@ static zend_always_inline zend_function* php_parallel_copy_function_thread(const
     copy->run_time_cache = NULL;
 #endif
 
-    /*
-    * It may not have changed, possibly check ZEND_ACC_IMMUTABLE on class entry
-    */
     if (copy->scope) {
-        copy->scope =
-            php_parallel_copy_scope(copy->scope);
+        /*
+        * If scope is immutable it's address must not have changed
+        */
+#ifdef ZEND_ACC_IMMUTABLE
+        if (!(copy->scope->ce_flags & ZEND_ACC_IMMUTABLE)) {
+#endif
+            copy->scope =
+                php_parallel_copy_scope(copy->scope);
+#ifdef ZEND_ACC_IMMUTABLE
+        }
+#endif
     }
 
     /*
@@ -569,7 +508,7 @@ static zend_always_inline zend_function* php_parallel_copy_function_thread(const
     */
     php_parallel_dependencies_load(function);
 
-    return zend_hash_index_add_ptr(&PCG(uncopied), (zend_ulong) function->op_array.opcodes, copy);
+    return (zend_function*) copy;
 } /* }}} */
 
 zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent) { /* {{{ */
@@ -583,9 +522,7 @@ void php_parallel_copy_function_use(zend_string *key, zend_function *function) {
     function = php_parallel_copy_function(function, 0);
 
     if (zend_hash_add_ptr(EG(function_table), key, function)) {
-        zend_hash_index_add_ptr(
-            &PCG(used),
-            (zend_ulong) function, key);
+        zend_hash_index_add_ptr(&PCG(used), (zend_ulong) function, key);
     }
 } /* }}} */
 
@@ -622,21 +559,6 @@ PHP_MINIT_FUNCTION(PARALLEL_COPY_STRINGS)
 
 PHP_MINIT_FUNCTION(PARALLEL_COPY)
 {
-    pthread_mutexattr_t attributes;
-
-    pthread_mutexattr_init(&attributes);
-
-#if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
-    pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
-#else
-    pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
-#endif
-
-    pthread_mutex_init(&PCC(mutex), &attributes);
-    pthread_mutexattr_destroy(&attributes);
-
-    zend_hash_init(&PCC(table), 32, NULL, php_parallel_copy_cache_dtor, 1);
-
     PHP_MINIT(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_CACHE)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_COPY_STRINGS)(INIT_FUNC_ARGS_PASSTHRU);
@@ -653,9 +575,6 @@ static PHP_MSHUTDOWN_FUNCTION(PARALLEL_COPY_STRINGS)
 
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_COPY)
 {
-    zend_hash_destroy(&PCC(table));
-    pthread_mutex_destroy(&PCC(mutex));
-
     PHP_MSHUTDOWN(PARALLEL_CACHE)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MSHUTDOWN(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MSHUTDOWN(PARALLEL_COPY_STRINGS)(INIT_FUNC_ARGS_PASSTHRU);
