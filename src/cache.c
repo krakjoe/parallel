@@ -156,7 +156,11 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         goto _php_parallel_cached_function_return;
     }
 
-    cached = php_parallel_copy_mem((void*) source, sizeof(zend_op_array), 1);
+    /* Buffer in persistent memory */
+    cached = zend_hash_index_add_mem(
+                &PCG(table),
+                (zend_ulong) source->op_array.opcodes,
+                (void*) source, sizeof(zend_op_array));
 
     if (!cached->refcount) {
         /*
@@ -189,7 +193,7 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         */
         zend_hash_index_add_empty_element(&PCGF(functions), (zend_ulong) cached);
 
-        goto _php_parallel_cached_function;
+        goto _php_parallel_cached_function_return;
     }
 
     /*
@@ -379,11 +383,6 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
     if (cached->doc_comment)
         cached->doc_comment =
             php_parallel_copy_string_interned(cached->doc_comment);
-
-_php_parallel_cached_function:
-    zend_hash_index_add_ptr(
-        &PCG(table),
-        (zend_ulong) source->op_array.opcodes, cached);
 
 _php_parallel_cached_function_return:
     pthread_mutex_unlock(&PCG(mutex));
