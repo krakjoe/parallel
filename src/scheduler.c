@@ -111,7 +111,7 @@ static zend_always_inline void php_parallel_scheduler_add(
         (zend_execute_data*)
             pecalloc(1, zend_vm_calc_used_stack(argc, (zend_function*) function), 1);
 
-    frame->func = (zend_function*) function;
+    frame->func = php_parallel_copy_function(function, 1);
 
     if (argv && Z_TYPE_P(argv) == IS_ARRAY) {
         zval *slot = ZEND_CALL_ARG(frame, 1);
