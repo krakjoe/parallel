@@ -53,7 +53,7 @@ typedef union _php_parallel_cache_align_test {
 #endif
 
 #define PARALLEL_CACHE_ALIGNED(size) ZEND_MM_ALIGNED_SIZE_EX(size, PARALLEL_PLATFORM_ALIGNMENT)
-#define PARALLEL_CACHE_CHUNK         PARALLEL_CACHE_ALIGNED(1024 * 1024)
+#define PARALLEL_CACHE_CHUNK         PARALLEL_CACHE_ALIGNED((1024 * 1024) * 8)
 
 static void php_parallel_cache_zval(zval *zv);
 
@@ -102,8 +102,10 @@ static zend_always_inline void* php_parallel_cache_alloc(size_t size) {
     void *mem;
     size_t aligned =
         PARALLEL_CACHE_ALIGNED(size);
+    
+    ZEND_ASSERT(size < PARALLEL_CACHE_CHUNK);    
 
-    if (UNEXPECTED(PCM(used) + aligned) >= PCM(size)) {
+    if ((PCM(used) + aligned) >= PCM(size)) {
         PCM(size) = PARALLEL_CACHE_ALIGNED(
             PCM(size) + PARALLEL_CACHE_CHUNK);
         PCM(mem) = (void*) realloc(PCM(mem), PCM(size));
@@ -112,6 +114,8 @@ static zend_always_inline void* php_parallel_cache_alloc(size_t size) {
             /* out of memory */
             return NULL;
         }
+
+        PCM(block) = (void*)(((char*)PCM(mem)) + PCM(used));
     }
 
     mem = PCM(block);
