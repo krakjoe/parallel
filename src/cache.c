@@ -32,7 +32,7 @@ static struct {
         size_t      used;
         void       *mem;
         void       *block;
-        HashTable   memoize;
+        HashTable   map;
     } memory;
 } php_parallel_cache_globals = {PTHREAD_MUTEX_INITIALIZER};
 
@@ -122,28 +122,28 @@ static zend_always_inline void* php_parallel_cache_alloc(size_t size) {
     return mem;
 }
 
-static zend_always_inline void* php_parallel_cache_memoize(const void *source, const void *destination) {
-    return zend_hash_index_update_ptr(&PCM(memoize), (zend_ulong) source, (void*) destination);
+static zend_always_inline void* php_parallel_cache_store(const void *source, const void *destination) {
+    return zend_hash_index_update_ptr(&PCM(map), (zend_ulong) source, (void*) destination);
 }
 
-static zend_always_inline zend_bool php_parallel_cache_memoized(void **source) {
-    void *memoized = zend_hash_index_find_ptr(&PCM(memoize), (zend_ulong) *source);
+static zend_always_inline zend_bool php_parallel_cache_load(void **source) {
+    void *stored = zend_hash_index_find_ptr(&PCM(map), (zend_ulong) *source);
 
-    if (memoized) {
-        *source = memoized;
+    if (stored) {
+        *source = stored;
         return 1;
     }
 
     return 0;
 }
 
-static zend_always_inline void* php_parallel_cache_copy_mem(const void *source, size_t size, zend_bool memoize) {
+static zend_always_inline void* php_parallel_cache_copy_mem(const void *source, size_t size, zend_bool store) {
     void *destination = php_parallel_cache_alloc(size);
 
     memcpy(destination, source, size);
 
-    if (memoize) {
-        return php_parallel_cache_memoize(source, destination);
+    if (store) {
+        return php_parallel_cache_store(source, destination);
     }
 
     return destination;
@@ -195,13 +195,13 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         php_parallel_cache_hash(cached->static_variables);
     }
 
-    if (cached->last_literal && !php_parallel_cache_memoized((void**) &cached->literals)) {
+    if (cached->last_literal) {
         zval     *literal = cached->literals,
                  *end     = literal + cached->last_literal;
         zval     *slot    = cached->literals =
                                 php_parallel_cache_copy_mem(
                                     cached->literals,
-                                        sizeof(zval) * cached->last_literal, 1);
+                                        sizeof(zval) * cached->last_literal, 0);
 
         while (literal < end) {
             if (Z_OPT_REFCOUNTED_P(literal)) {
@@ -217,7 +217,7 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         }
     }
 
-    if (cached->last_var && !php_parallel_cache_memoized((void**) &cached->vars)) {
+    if (cached->last_var && !php_parallel_cache_load((void**) &cached->vars)) {
         zend_string **vars = cached->vars;
         uint32_t      it = 0,
                       end = cached->last_var;
@@ -229,11 +229,11 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
             it++;
         }
 
-        cached->vars = php_parallel_cache_memoize(cached->vars, heap);
+        cached->vars = php_parallel_cache_store(cached->vars, heap);
     }
 
-    if (cached->last && !php_parallel_cache_memoized((void**) &cached->opcodes)) {
-        zend_op *opcodes = php_parallel_cache_copy_mem(cached->opcodes, sizeof(zend_op) * cached->last, 1);
+    if (cached->last) {
+        zend_op *opcodes = php_parallel_cache_copy_mem(cached->opcodes, sizeof(zend_op) * cached->last, 0);
         zend_op *opline  = opcodes,
                 *end     = opline + cached->last;
 
@@ -302,7 +302,7 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         cached->opcodes = opcodes;
     }
 
-    if (cached->arg_info && !php_parallel_cache_memoized((void**) &cached->arg_info)) {
+    if (cached->arg_info && !php_parallel_cache_load((void**) &cached->arg_info)) {
         zend_arg_info *it    = cached->arg_info,
                       *end   = it + cached->num_args,
                       *info;
@@ -342,14 +342,14 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         }
     }
 
-    if (cached->try_catch_array && !php_parallel_cache_memoized((void**) &cached->try_catch_array)) {
+    if (cached->try_catch_array && !php_parallel_cache_load((void**) &cached->try_catch_array)) {
         cached->try_catch_array =
             php_parallel_cache_copy_mem(
                 cached->try_catch_array,
                     sizeof(zend_try_catch_element) * cached->last_try_catch, 1);
     }
 
-    if (cached->live_range && !php_parallel_cache_memoized((void**) &cached->live_range)) {
+    if (cached->live_range && !php_parallel_cache_load((void**) &cached->live_range)) {
         cached->live_range =
             php_parallel_cache_copy_mem(
                 cached->live_range,
@@ -420,7 +420,7 @@ PHP_MINIT_FUNCTION(PARALLEL_CACHE)
     PCM(mem) =
         PCM(block) =
             malloc(PCM(size));
-    zend_hash_init(&PCM(memoize), 32, NULL, NULL, 1);
+    zend_hash_init(&PCM(map), 32, NULL, NULL, 1);
 
     if (!PCM(mem)) {
         /* out of memory */
@@ -435,7 +435,7 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CACHE)
     zend_hash_destroy(&PCGF(functions));
     zend_hash_destroy(&PCGF(statics));
 
-    zend_hash_destroy(&PCM(memoize));
+    zend_hash_destroy(&PCM(map));
     free(PCM(mem));
 
     return SUCCESS;
