@@ -34,78 +34,6 @@ static struct {
 
 static void php_parallel_cache_zval(zval *zv);
 
-static void php_parallel_cached_dtor(zval *zv) { /* {{{ */
-    zend_op_array *cached = (zend_op_array*) Z_PTR_P(zv);
-
-    /*
-    * Check for foreign function
-    */
-    if (zend_hash_index_exists(&PCGF(functions), (zend_ulong) cached)) {
-        /*
-        * This is a foreign function but we may own the statics ...
-        */
-        if (cached->static_variables) {
-      	
-            if (zend_hash_index_exists(&PCGF(statics), (zend_ulong) cached->static_variables)) {
-                /*
-                * We own the statics
-                */
-                php_parallel_copy_hash_dtor(cached->static_variables, 1);
-            }
-        }
-
-        pefree(cached, 1);
-        return;
-    }
-
-    /*
-    * This is a function cached by parallel
-    */
-
-    if (cached->last_literal) {
-        zval *literal = cached->literals,
-             *end     = literal + cached->last_literal;
-
-        while (literal < end) {
-            if (Z_TYPE_P(literal) == IS_ARRAY) {
-                php_parallel_copy_hash_dtor(Z_ARRVAL_P(literal), 1);
-            }
-            literal++;
-        }
-
-        pefree(cached->literals, 1);
-    }
-
-    if (cached->last_var) {
-        pefree(cached->vars, 1);
-    }
-
-    if (cached->arg_info) {
-        zend_arg_info *info = cached->arg_info;
-
-        if (cached->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
-            info--;
-        }
-
-        pefree(info, 1);
-    }
-
-    if (cached->try_catch_array) {
-        pefree(cached->try_catch_array, 1);
-    }
-
-    if (cached->live_range) {
-        pefree(cached->live_range, 1);
-    }
-
-    if (cached->static_variables) {
-        php_parallel_copy_hash_dtor(cached->static_variables, 1);
-    }
-
-    pefree(cached->opcodes, 1);
-    pefree(cached, 1);
-} /* }}} */
-
 /* {{{ */
 static zend_always_inline void php_parallel_cache_string(zend_string **string) {
     zend_string *value = *string;
@@ -156,16 +84,12 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         goto _php_parallel_cached_function_return;
     }
 
-    /* Buffer in persistent memory */
     cached = zend_hash_index_add_mem(
                 &PCG(table),
                 (zend_ulong) source->op_array.opcodes,
                 (void*) source, sizeof(zend_op_array));
 
     if (!cached->refcount) {
-        /*
-        * This must already exist in opcache but may be a closure
-        */
         cached->fn_flags &= ~ZEND_ACC_CLOSURE;
 #ifdef ZEND_ACC_IMMUTABLE
         cached->fn_flags |= ZEND_ACC_IMMUTABLE;
@@ -173,32 +97,20 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
 
         if (cached->static_variables) {
             if (!(GC_FLAGS(cached->static_variables) & IS_ARRAY_IMMUTABLE)) {
-                /*
-                * Copy and persist statics
-                */
-                cached->static_variables =      	
+                cached->static_variables =
                     php_parallel_copy_hash_ctor(cached->static_variables, 1);
                 php_parallel_cache_hash(cached->static_variables);
 
-                /*
-                * Record that we own the statics
-                */
                 zend_hash_index_add_empty_element(
                     &PCGF(statics), (zend_ulong) cached->static_variables);
             }
         }
-      	
-        /*
-        * Record that the function is foreign
-        */
+
         zend_hash_index_add_empty_element(&PCGF(functions), (zend_ulong) cached);
 
         goto _php_parallel_cached_function_return;
     }
 
-    /*
-    * This doesn't exist in opcache, make a deep copy
-    */
     cached->refcount  = NULL;
     cached->fn_flags &= ~ZEND_ACC_CLOSURE;
 #ifdef ZEND_ACC_IMMUTABLE
@@ -390,10 +302,68 @@ _php_parallel_cached_function_return:
     return (zend_function*) cached;
 } /* }}} */
 
+static void php_parallel_cache_free(zval *zv) { /* {{{ */
+    zend_op_array *cached = (zend_op_array*) Z_PTR_P(zv);
+
+    if (zend_hash_index_exists(&PCGF(functions), (zend_ulong) cached)) {
+        if (cached->static_variables) {
+            if (zend_hash_index_exists(&PCGF(statics), (zend_ulong) cached->static_variables)) {
+                php_parallel_copy_hash_dtor(cached->static_variables, 1);
+            }
+        }
+
+        pefree(cached, 1);
+        return;
+    }
+
+    if (cached->last_literal) {
+        zval *literal = cached->literals,
+             *end     = literal + cached->last_literal;
+
+        while (literal < end) {
+            if (Z_TYPE_P(literal) == IS_ARRAY) {
+                php_parallel_copy_hash_dtor(Z_ARRVAL_P(literal), 1);
+            }
+            literal++;
+        }
+
+        pefree(cached->literals, 1);
+    }
+
+    if (cached->last_var) {
+        pefree(cached->vars, 1);
+    }
+
+    if (cached->arg_info) {
+        zend_arg_info *info = cached->arg_info;
+
+        if (cached->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
+            info--;
+        }
+
+        pefree(info, 1);
+    }
+
+    if (cached->try_catch_array) {
+        pefree(cached->try_catch_array, 1);
+    }
+
+    if (cached->live_range) {
+        pefree(cached->live_range, 1);
+    }
+
+    if (cached->static_variables) {
+        php_parallel_copy_hash_dtor(cached->static_variables, 1);
+    }
+
+    pefree(cached->opcodes, 1);
+    pefree(cached, 1);
+} /* }}} */
+
 /* {{{ */
 PHP_MINIT_FUNCTION(PARALLEL_CACHE)
 {
-    zend_hash_init(&PCG(table), 32, NULL, php_parallel_cached_dtor, 1);
+    zend_hash_init(&PCG(table), 32, NULL, php_parallel_cache_free, 1);
     zend_hash_init(&PCGF(functions), 32, NULL, NULL, 1);
     zend_hash_init(&PCGF(statics), 32, NULL, NULL, 1);
 

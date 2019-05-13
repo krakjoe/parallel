@@ -327,21 +327,17 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
 
         if (copy->called_scope &&
             copy->called_scope->type == ZEND_USER_CLASS) {
-            /* allow the autoloader (and so opcache) to be the source
-                of truth for dependencies of this closure */
             copy->called_scope =
                 php_parallel_copy_scope(copy->called_scope);
         }
 
         ZVAL_UNDEF(&copy->this_ptr);
 
-        /* at this time dependencies have been autoloaded, if possible */
         memcpy(
             &copy->func,
             php_parallel_copy_function(&copy->func, 0),
             sizeof(zend_op_array));
 
-        /* a closure may not have an immutable array as static properties */
         if (copy->func.op_array.static_variables) {
             copy->func.op_array.static_variables =
                 php_parallel_copy_hash_ctor(copy->func.op_array.static_variables, 0);
@@ -451,32 +447,21 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
 }
 
 static zend_always_inline zend_function* php_parallel_copy_function_permanent(const zend_function *function) { /* {{{ */
-    /*
-    * Ensure function exists in cache
-    */
-    zend_function *cached = php_parallel_cache_function(function);
+    zend_function *cached =      	
+        php_parallel_cache_function(function);
 
-    /*
-    * Create dependency tree (nested lambdas currently)
-    */
     php_parallel_dependencies_store(cached);
 
     return (zend_function*) cached;
 } /* }}} */
 
 static zend_always_inline zend_function* php_parallel_copy_function_thread(const zend_function *function) { /* {{{ */
-    zend_op_array *copy;
+    zend_op_array *copy = zend_hash_index_find_ptr(&PCG(uncopied), (zend_ulong) function);
 
-    /*
-    * Unbuffer once per thread
-    */
-    if ((copy = zend_hash_index_find_ptr(&PCG(uncopied), (zend_ulong) function))) {
+    if (copy) {
         return (zend_function*) copy;
     }
 
-    /*
-    * Copy to thread local buffer
-    */
     copy = zend_hash_index_add_mem(
                 &PCG(uncopied),
                 (zend_ulong) function,
@@ -489,23 +474,11 @@ static zend_always_inline zend_function* php_parallel_copy_function_thread(const
     copy->run_time_cache = NULL;
 #endif
 
-    if (copy->scope) {
-        /*
-        * If scope is immutable it's address must not have changed
-        */
-#ifdef ZEND_ACC_IMMUTABLE
-        if (!(copy->scope->ce_flags & ZEND_ACC_IMMUTABLE)) {
-#endif
-            copy->scope =
-                php_parallel_copy_scope(copy->scope);
-#ifdef ZEND_ACC_IMMUTABLE
-        }
-#endif
+    if (copy->scope &&
+        copy->scope->type == ZEND_USER_CLASS) {
+        copy->scope = php_parallel_copy_scope(copy->scope);
     }
 
-    /*
-    * Must load depdendencies
-    */
     php_parallel_dependencies_load(function);
 
     return (zend_function*) copy;
