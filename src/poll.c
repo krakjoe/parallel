@@ -278,6 +278,12 @@ _php_parallel_events_poll_null:
     }
 
     do {
+#if 0
+        if (php_parallel_scheduler_killed()) {
+            break;
+        }
+#endif
+
         if (!php_parallel_events_poll_begin(events, &selected)) {
             if (!events->blocking) {
                 goto _php_parallel_events_poll_null;

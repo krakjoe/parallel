@@ -27,7 +27,9 @@ try {
     $future->cancel();
 } catch (\parallel\Future\Error\Killed $ex) {
     var_dump($ex->getMessage());
+    exit;
 }
+echo "FAIL";
 ?>
 --EXPECT--
 string(33) "runtime executing task was killed"
