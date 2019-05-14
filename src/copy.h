@@ -58,28 +58,26 @@ typedef struct _zend_closure_t {
     zif_handler       orig_internal_handler;
 } zend_closure_t;
 
-zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent);
-void           php_parallel_copy_function_use(zend_string *key, zend_function *function);
-void           php_parallel_copy_function_free(zend_function *function, zend_bool persistent);
-
-zend_string*   php_parallel_copy_string(zend_string *source, zend_bool persistent);
-zend_string*   php_parallel_copy_string_interned(zend_string *source);
-
-static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) { /* {{{ */
+static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) {
     void *destination = (void*) pemalloc(size, persistent);
 
     memcpy(destination, source, size);
 
     return destination;
-} /* }}} */
+}
+
+zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent);
+void           php_parallel_copy_function_use(zend_string *key, zend_function *function);
+
+zend_string*   php_parallel_copy_string(zend_string *source, zend_bool persistent);
+zend_string*   php_parallel_copy_string_interned(zend_string *source);
 
 HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent);
 void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent);
 
 HashTable *php_parallel_copy_hash_persistent(HashTable *source, zend_string* (*)(zend_string*), void* (*)(void *source, zend_long size));
 
-void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent);
-
+void                           php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent);
 static zend_always_inline void php_parallel_copy_zval_dtor(zval *zv) {
     if (Z_TYPE_P(zv) == IS_ARRAY) {
 #if PHP_VERSION_ID < 70300
