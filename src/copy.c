@@ -24,8 +24,6 @@
 #include "php_network.h"
 
 TSRM_TLS struct {
-    HashTable uncopied;
-    HashTable used;
     HashTable scope;
 } php_parallel_copy_globals;
 
@@ -43,35 +41,7 @@ static void php_parallel_copy_string_dtor(zval *zv) {
     free(Z_PTR_P(zv));
 }
 
-static void php_parallel_copy_uncopied_dtor(zval *zv) {
-    zend_op_array *uncopied =
-        (zend_op_array*) Z_FUNC_P(zv);
-    zend_string *key =      	
-        zend_hash_index_find_ptr(&PCG(used), (zend_ulong) uncopied);
-
-    if (key) {
-        if (zend_hash_exists(EG(function_table), key)) {
-            dtor_func_t dtor = /* temporarily remove destructor */
-                EG(function_table)->pDestructor;
-
-            EG(function_table)->pDestructor = NULL;
-
-            zend_hash_del(EG(function_table), key);
-
-            EG(function_table)->pDestructor = dtor;
-        }
-    }
-
-    if (uncopied->static_variables) {
-        if (!(GC_FLAGS(uncopied->static_variables) & IS_ARRAY_IMMUTABLE)) {
-            zend_array_destroy(uncopied->static_variables);
-        }
-    }
-
-    pefree(uncopied, 0);
-}
-
-static zend_always_inline zend_class_entry* php_parallel_copy_scope(zend_class_entry *class) { /* {{{ */
+zend_class_entry* php_parallel_copy_scope(zend_class_entry *class) { /* {{{ */
     zend_class_entry *scope =
         (zend_class_entry*)
             zend_hash_index_find_ptr(&PCG(scope), (zend_ulong) class);
@@ -110,8 +80,12 @@ static zend_always_inline void php_parallel_copy_resource(zval *dest, zval *sour
     ZVAL_NULL(dest);
 }
 
-static zend_always_inline HashTable* php_parallel_copy_hash_permanent(HashTable *source) {
-    HashTable *ht = php_parallel_copy_mem(source, sizeof(HashTable), 1);
+static zend_always_inline void* php_parallel_copy_mem_permanent(void *source, zend_long size) {
+    return php_parallel_copy_mem(source, size, 1);
+}
+
+static zend_always_inline HashTable* php_parallel_copy_hash_permanent_inline(HashTable *source, void* (*php_parallel_copy_hash_memory_permanent)(void *source, zend_long size)) {
+    HashTable *ht = php_parallel_copy_hash_memory_permanent(source, sizeof(HashTable));
     uint32_t idx;
 
     GC_SET_REFCOUNT(ht, 2);
@@ -139,10 +113,12 @@ static zend_always_inline HashTable* php_parallel_copy_hash_permanent(HashTable 
 
     ht->nNextFreeElement = 0;
     ht->nInternalPointer = 0;
-    HT_SET_DATA_ADDR(ht, php_parallel_copy_mem(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht), 1));
+    HT_SET_DATA_ADDR(ht, php_parallel_copy_hash_memory_permanent(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht)));
     for (idx = 0; idx < ht->nNumUsed; idx++) {
         Bucket *p = ht->arData + idx;
-        if (Z_TYPE(p->val) == IS_UNDEF) continue;
+
+        if (Z_TYPE(p->val) == IS_UNDEF)
+            continue;
 
         if (p->key) {
             p->key = php_parallel_copy_string_interned(p->key);
@@ -152,7 +128,13 @@ static zend_always_inline HashTable* php_parallel_copy_hash_permanent(HashTable 
         }
 
         if (Z_OPT_REFCOUNTED(p->val)) {
-            PARALLEL_ZVAL_COPY(&p->val, &p->val, 1);
+            if (Z_TYPE(p->val) == IS_ARRAY) {
+                ZVAL_ARR(&p->val,
+                    php_parallel_copy_hash_permanent(
+                        Z_ARRVAL(p->val), php_parallel_copy_hash_memory_permanent));
+            } else {
+                PARALLEL_ZVAL_COPY(&p->val, &p->val, 1);
+            }
         }
     }
 
@@ -223,9 +205,13 @@ static zend_always_inline HashTable* php_parallel_copy_hash_thread(HashTable *so
 
 HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent) {
     if (persistent) {
-        return php_parallel_copy_hash_permanent(source);
+        return php_parallel_copy_hash_permanent_inline(source, php_parallel_copy_mem_permanent);
     }
     return php_parallel_copy_hash_thread(source);
+}
+
+HashTable *php_parallel_copy_hash_permanent(HashTable *source, void* (*php_parallel_copy_hash_memory_permanent)(void *source, zend_long size)) {
+        return php_parallel_copy_hash_permanent_inline(source, php_parallel_copy_hash_memory_permanent);
 }
 
 void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
@@ -446,63 +432,33 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
     }
 }
 
-static zend_always_inline zend_function* php_parallel_copy_function_permanent(const zend_function *function) { /* {{{ */
-    zend_function *cached =      	
-        php_parallel_cache_function(function);
-
-    php_parallel_dependencies_store(cached);
-
-    return (zend_function*) cached;
-} /* }}} */
-
-static zend_always_inline zend_function* php_parallel_copy_function_thread(const zend_function *function) { /* {{{ */
-    zend_op_array *copy = zend_hash_index_find_ptr(&PCG(uncopied), (zend_ulong) function);
-
-    if (copy) {
-        return (zend_function*) copy;
-    }
-
-    copy = zend_hash_index_add_mem(
-                &PCG(uncopied),
-                (zend_ulong) function,
-                (void*) function, sizeof(zend_op_array));
-
-#ifdef ZEND_MAP_PTR_NEW
-    ZEND_MAP_PTR_INIT(copy->static_variables_ptr, &copy->static_variables);
-    ZEND_MAP_PTR_NEW(copy->run_time_cache);
-#else
-    copy->run_time_cache = NULL;
-#endif
-
-    if (copy->scope &&
-        copy->scope->type == ZEND_USER_CLASS) {
-        copy->scope = php_parallel_copy_scope(copy->scope);
-    }
-
-    php_parallel_dependencies_load(function);
-
-    return (zend_function*) copy;
-} /* }}} */
-
 zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent) { /* {{{ */
     if (persistent) {
-        return php_parallel_copy_function_permanent(function);
+        function =      	
+            php_parallel_cache_function(function);
+
+        php_parallel_dependencies_store(function);
+    } else {
+        php_parallel_dependencies_load(function);
     }
-    return php_parallel_copy_function_thread(function);
+
+    return (zend_function*) function;
 } /* }}} */
 
 void php_parallel_copy_function_use(zend_string *key, zend_function *function) { /* {{{ */
-    function = php_parallel_copy_function(function, 0);
+    zend_op_array *used =
+        (zend_op_array*)
+            php_parallel_copy_function(function, 0);
 
-    if (zend_hash_add_ptr(EG(function_table), key, function)) {
-        zend_hash_index_add_ptr(&PCG(used), (zend_ulong) function, key);
-    }
+    zend_hash_add_ptr(EG(function_table), key, used);
+
+#ifdef ZEND_MAP_PTR_NEW
+    ZEND_MAP_PTR_NEW(used->run_time_cache);
+#endif
 } /* }}} */
 
 PHP_RINIT_FUNCTION(PARALLEL_COPY)
 {
-    zend_hash_init(&PCG(uncopied),  32, NULL, php_parallel_copy_uncopied_dtor, 0);
-    zend_hash_init(&PCG(used),      32, NULL, NULL, 0);
     zend_hash_init(&PCG(scope),     32, NULL, NULL, 0);
 
     PHP_RINIT(PARALLEL_CHECK)(INIT_FUNC_ARGS_PASSTHRU);
@@ -513,8 +469,6 @@ PHP_RINIT_FUNCTION(PARALLEL_COPY)
 
 PHP_RSHUTDOWN_FUNCTION(PARALLEL_COPY)
 {
-    zend_hash_destroy(&PCG(uncopied));
-    zend_hash_destroy(&PCG(used));
     zend_hash_destroy(&PCG(scope));
 
     PHP_RSHUTDOWN(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);

@@ -154,6 +154,7 @@ static zend_always_inline zend_bool php_parallel_scheduler_empty(php_parallel_ru
 
 static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parallel_schedule_el_t *el) {
     php_parallel_schedule_el_t *head;
+    zend_function *function;
 
     if (zend_llist_count(&runtime->schedule) == 0) {
         return 0;
@@ -163,14 +164,25 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
 
     *el = *head;
 
+    function = php_parallel_copy_function(head->frame->func, 0);
+
     el->frame = zend_vm_stack_push_call_frame(
         ZEND_CALL_TOP_FUNCTION,
-        php_parallel_copy_function(head->frame->func, 0),
+        function,
         ZEND_CALL_NUM_ARGS(head->frame),
 #if PHP_VERSION_ID < 70400
         NULL,
 #endif
         NULL);
+
+    el->frame->func = emalloc(sizeof(zend_op_array));
+    *el->frame->func = *function;
+
+    if (el->frame->func->op_array.scope &&
+        el->frame->func->op_array.scope->type == ZEND_USER_CLASS) {
+        el->frame->func->op_array.scope =
+            php_parallel_copy_scope(el->frame->func->op_array.scope);
+    }
 
     if (ZEND_CALL_NUM_ARGS(head->frame)) {
         zval *slot = (zval*) ZEND_CALL_ARG(head->frame, 1),
@@ -183,6 +195,16 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
             param++;
         }
     }
+
+#ifdef ZEND_MAP_PTR_INIT
+    if (el->frame->func->op_array.static_variables) {
+        ZEND_MAP_PTR_INIT(
+            el->frame->func->op_array.static_variables_ptr,
+            &el->frame->func->op_array.static_variables);
+    }
+
+    ZEND_MAP_PTR_NEW(el->frame->func->op_array.run_time_cache);
+#endif
 
     zend_init_func_execute_data(
         el->frame,
@@ -238,6 +260,22 @@ php_parallel_scheduler_cleanup_start(php_parallel_scheduler_run_end, zend_execut
         }
     }
 
+    if (frame->func->op_array.static_variables) {
+#ifdef ZEND_MAP_PTR_GET
+        HashTable *statics =
+            ZEND_MAP_PTR_GET(
+                frame->func->op_array.static_variables_ptr);
+#else
+        HashTable *statics =
+            frame->func->op_array.static_variables;
+#endif
+        if (!(GC_FLAGS(statics) & IS_ARRAY_IMMUTABLE)) {
+            zend_array_destroy(statics);
+        }
+    }
+
+    efree(frame->func);
+
     zend_vm_stack_free_call_frame(frame);
 
     if (php_parallel_scheduler_future) {
@@ -254,7 +292,6 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 
     zend_first_try {
         zend_try {
-
             zend_execute_ex(frame);
 
             if (UNEXPECTED(EG(exception))) {
@@ -282,7 +319,6 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
                 }
             }
         } zend_end_try();
-
     } zend_end_try ();
 
     pthread_cleanup_pop(1);
