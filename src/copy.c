@@ -80,12 +80,19 @@ static zend_always_inline void php_parallel_copy_resource(zval *dest, zval *sour
     ZVAL_NULL(dest);
 }
 
-static zend_always_inline void* php_parallel_copy_mem_permanent(void *source, zend_long size) {
+static zend_always_inline void* php_parallel_copy_mem_persistent(void *source, zend_long size) {
     return php_parallel_copy_mem(source, size, 1);
 }
 
-static zend_always_inline HashTable* php_parallel_copy_hash_permanent_inline(HashTable *source, void* (*php_parallel_copy_hash_memory_permanent)(void *source, zend_long size)) {
-    HashTable *ht = php_parallel_copy_hash_memory_permanent(source, sizeof(HashTable));
+static zend_always_inline zend_string* php_parallel_copy_string_persistent(zend_string *string) {
+    return php_parallel_copy_string(string, 1);
+}
+
+static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
+                HashTable *source,
+                zend_string* (*php_parallel_copy_string_func)(zend_string*),
+                void* (*php_parallel_copy_hash_memory_func)(void *source, zend_long size)) {
+    HashTable *ht = php_parallel_copy_hash_memory_func(source, sizeof(HashTable));
     uint32_t idx;
 
     GC_SET_REFCOUNT(ht, 2);
@@ -113,7 +120,7 @@ static zend_always_inline HashTable* php_parallel_copy_hash_permanent_inline(Has
 
     ht->nNextFreeElement = 0;
     ht->nInternalPointer = 0;
-    HT_SET_DATA_ADDR(ht, php_parallel_copy_hash_memory_permanent(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht)));
+    HT_SET_DATA_ADDR(ht, php_parallel_copy_hash_memory_func(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht)));
     for (idx = 0; idx < ht->nNumUsed; idx++) {
         Bucket *p = ht->arData + idx;
 
@@ -130,8 +137,12 @@ static zend_always_inline HashTable* php_parallel_copy_hash_permanent_inline(Has
         if (Z_OPT_REFCOUNTED(p->val)) {
             if (Z_TYPE(p->val) == IS_ARRAY) {
                 ZVAL_ARR(&p->val,
-                    php_parallel_copy_hash_permanent(
-                        Z_ARRVAL(p->val), php_parallel_copy_hash_memory_permanent));
+                    php_parallel_copy_hash_persistent(
+                        Z_ARRVAL(p->val),
+                        php_parallel_copy_string_func,
+                        php_parallel_copy_hash_memory_func));
+            } else if (Z_TYPE(p->val) == IS_STRING) {
+                ZVAL_STR(&p->val, php_parallel_copy_string_func(Z_STR(p->val)));
             } else {
                 PARALLEL_ZVAL_COPY(&p->val, &p->val, 1);
             }
@@ -205,13 +216,20 @@ static zend_always_inline HashTable* php_parallel_copy_hash_thread(HashTable *so
 
 HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent) {
     if (persistent) {
-        return php_parallel_copy_hash_permanent_inline(source, php_parallel_copy_mem_permanent);
+        return php_parallel_copy_hash_persistent_inline(
+                source,
+                php_parallel_copy_string_persistent,
+                php_parallel_copy_mem_persistent);
     }
     return php_parallel_copy_hash_thread(source);
 }
 
-HashTable *php_parallel_copy_hash_permanent(HashTable *source, void* (*php_parallel_copy_hash_memory_permanent)(void *source, zend_long size)) {
-        return php_parallel_copy_hash_permanent_inline(source, php_parallel_copy_hash_memory_permanent);
+HashTable *php_parallel_copy_hash_persistent(HashTable *source,
+            zend_string* (*php_parallel_copy_string_func)(zend_string*),
+            void* (*php_parallel_copy_hash_memory_func)(void *source, zend_long size)) {
+        return php_parallel_copy_hash_persistent_inline(source,
+                php_parallel_copy_string_func,
+                php_parallel_copy_hash_memory_func);
 }
 
 void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {

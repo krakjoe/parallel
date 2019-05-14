@@ -76,8 +76,7 @@ static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size,
 HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent);
 void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent);
 
-HashTable *php_parallel_copy_hash_permanent(HashTable *source,
-        void* (*php_parallel_copy_hash_memory_permanent)(void *source, zend_long size));
+HashTable *php_parallel_copy_hash_persistent(HashTable *source, zend_string* (*)(zend_string*), void* (*)(void *source, zend_long size));
 
 void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent);
 

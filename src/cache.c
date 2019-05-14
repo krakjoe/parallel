@@ -32,7 +32,6 @@ static struct {
 } php_parallel_cache_globals = {PTHREAD_MUTEX_INITIALIZER};
 
 #define PCG(e) php_parallel_cache_globals.e
-#define PCGF(e) PCG(foreign).e
 #define PCM(e) PCG(memory).e
 
 typedef union _php_parallel_cache_align_test {
@@ -49,48 +48,6 @@ typedef union _php_parallel_cache_align_test {
 
 #define PARALLEL_CACHE_ALIGNED(size) ZEND_MM_ALIGNED_SIZE_EX(size, PARALLEL_PLATFORM_ALIGNMENT)
 #define PARALLEL_CACHE_CHUNK         PARALLEL_CACHE_ALIGNED((1024 * 1024) * 8)
-
-static void php_parallel_cache_zval(zval *zv);
-
-/* {{{ */
-static zend_always_inline void php_parallel_cache_string(zend_string **string) {
-    zend_string *value = *string;
-
-    *string = php_parallel_copy_string_interned(value);
-
-    zend_string_release(value);
-}
-
-static zend_always_inline void php_parallel_cache_hash(HashTable *ht) {
-    Bucket *p = ht->arData,
-           *end = p + ht->nNumUsed;
-
-    while (p < end) {
-        if (Z_TYPE(p->val) == IS_UNDEF) {
-            continue;
-        }
-
-        if (p->key) {
-            php_parallel_cache_string(&p->key);
-        }
-
-        if (Z_TYPE(p->val) == IS_STRING ||
-            Z_TYPE(p->val) == IS_ARRAY) {
-            php_parallel_cache_zval(&p->val);
-        }
-        p++;
-    }
-}
-
-static void php_parallel_cache_zval(zval *zv) {
-    switch (Z_TYPE_P(zv)) {
-        case IS_ARRAY: php_parallel_cache_hash(Z_ARRVAL_P(zv)); break;
-        case IS_STRING: php_parallel_cache_string(&Z_STR_P(zv)); break;
-
-        EMPTY_SWITCH_DEFAULT_CASE();
-    }
-}
-/* }}} */
 
 /* {{{ */
 static zend_always_inline void* php_parallel_cache_alloc(size_t size) {
@@ -151,10 +108,10 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
         if ((cached->static_variables != NULL) &&
            !(GC_FLAGS(cached->static_variables) & IS_ARRAY_IMMUTABLE)) {
             cached->static_variables =
-                php_parallel_copy_hash_permanent(
+                php_parallel_copy_hash_persistent(
                     cached->static_variables,
+                    php_parallel_copy_string_interned,
                     php_parallel_cache_copy_mem);
-            php_parallel_cache_hash(cached->static_variables);
         }
 
         goto _php_parallel_cached_function_add;
@@ -168,10 +125,10 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
 
     if (cached->static_variables) {
         cached->static_variables =
-            php_parallel_copy_hash_permanent(
+            php_parallel_copy_hash_persistent(
                 cached->static_variables,
+                php_parallel_copy_string_interned,
                 php_parallel_cache_copy_mem);
-        php_parallel_cache_hash(cached->static_variables);
     }
 
     if (cached->last_literal) {
@@ -186,16 +143,13 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
             if (Z_OPT_REFCOUNTED_P(literal)) {
                 if (Z_TYPE_P(literal) == IS_ARRAY) {
                     ZVAL_ARR(slot,
-                        php_parallel_copy_hash_permanent(
+                        php_parallel_copy_hash_persistent(
                             Z_ARRVAL_P(literal),
+                            php_parallel_copy_string_interned,
                             php_parallel_cache_copy_mem));
-                } else {
-                    PARALLEL_ZVAL_COPY(slot, literal, 1);
-                }
-
-                if (Z_TYPE_P(slot) == IS_STRING ||
-                    Z_TYPE_P(slot) == IS_ARRAY) {
-                    php_parallel_cache_zval(slot);
+                } else if (Z_TYPE_P(literal) == IS_STRING) {
+                    ZVAL_STR(slot,
+                        php_parallel_copy_string_interned(Z_STR_P(literal)));
                 }
             }
             literal++;
