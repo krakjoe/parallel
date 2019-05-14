@@ -80,14 +80,6 @@ static zend_always_inline void php_parallel_copy_resource(zval *dest, zval *sour
     ZVAL_NULL(dest);
 }
 
-static zend_always_inline void* php_parallel_copy_mem_persistent(void *source, zend_long size) {
-    return php_parallel_copy_mem(source, size, 1);
-}
-
-static zend_always_inline zend_string* php_parallel_copy_string_persistent(zend_string *string) {
-    return php_parallel_copy_string(string, 1);
-}
-
 static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
                 HashTable *source,
                 zend_string* (*php_parallel_copy_string_func)(zend_string*),
@@ -212,6 +204,14 @@ static zend_always_inline HashTable* php_parallel_copy_hash_thread(HashTable *so
     }
 
     return ht;
+}
+
+static void* php_parallel_copy_mem_persistent(void *source, zend_long size) {
+    return php_parallel_copy_mem(source, size, 1);
+}
+
+static zend_string* php_parallel_copy_string_persistent(zend_string *string) {
+    return php_parallel_copy_string(string, 1);
 }
 
 HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent) {
