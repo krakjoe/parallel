@@ -18,8 +18,7 @@
 #ifndef HAVE_PARALLEL_CHECK_H
 #define HAVE_PARALLEL_CHECK_H
 
-zend_function* php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_data *execute_data, const zend_function * function, zval *argv, zend_bool *returns);
-
+zend_bool      php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_data *execute_data, const zend_function * function, zval *argv, zend_bool *returns);
 zend_bool      php_parallel_check_zval(zval *zv, zval **error);
 zend_bool      php_parallel_check_resource(zval *zv);
 zend_bool      php_parallel_check_function(const zend_function *function, zend_function **errf, zend_uchar *erro);

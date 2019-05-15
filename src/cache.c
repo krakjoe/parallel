@@ -91,6 +91,55 @@ static zend_always_inline void* php_parallel_cache_copy_mem(void *source, zend_l
     return destination;
 } /* }}} */
 
+zend_function* php_parallel_cache_closure(const zend_function *source, zend_function *closure) { /* {{{ */
+    zend_op_array *cache;
+
+    cache =
+        (zend_op_array*)
+            php_parallel_cache_function(
+                (zend_function*) source);
+
+    if (!closure) {
+        closure = php_parallel_copy_mem(
+            cache, sizeof(zend_op_array), 1);
+    } else {
+        memcpy(closure, cache, sizeof(zend_op_array));
+    }
+
+    /*
+    * TODO update statics
+    */
+
+#ifdef ZEND_MAP_PTR_INIT
+    ZEND_MAP_PTR_INIT(
+        closure->op_array.static_variables_ptr,
+        &closure->op_array.static_variables);
+#endif
+
+#ifdef ZEND_MAP_PTR_NEW
+    ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
+#else
+    closure->op_array.run_time_cache = NULL;
+#endif
+
+    return closure;
+} /* }}} */
+
+static zend_always_inline HashTable* php_parallel_cache_statics(HashTable *statics) { /* {{{ */
+    HashTable *cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) statics);
+    
+    if (cached) {
+        return cached;
+    }
+
+    cached = php_parallel_copy_hash_persistent(
+                statics,
+                php_parallel_copy_string_interned,
+                php_parallel_cache_copy_mem);
+
+    return zend_hash_index_update_ptr(&PCG(table), (zend_ulong) statics, cached);
+} /* }}} */
+
 /* {{{ */
 zend_function* php_parallel_cache_function(const zend_function *source) {
     zend_op_array *cached;
@@ -100,38 +149,28 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
     if ((cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) source->op_array.opcodes))) {
         goto _php_parallel_cached_function_return;
     }
+
     cached = php_parallel_cache_copy_mem((void*) source, sizeof(zend_op_array));
 
-    if (!cached->refcount) {
-        cached->fn_flags &= ~ZEND_ACC_CLOSURE;
 #ifdef ZEND_ACC_IMMUTABLE
-        cached->fn_flags |= ZEND_ACC_IMMUTABLE;
+    cached->fn_flags |= ZEND_ACC_IMMUTABLE;
 #endif
 
+    if (!cached->refcount) {
         if ((cached->static_variables != NULL) &&
            !(GC_FLAGS(cached->static_variables) & IS_ARRAY_IMMUTABLE)) {
             cached->static_variables =
-                php_parallel_copy_hash_persistent(
-                    cached->static_variables,
-                    php_parallel_copy_string_interned,
-                    php_parallel_cache_copy_mem);
+                php_parallel_cache_statics(cached->static_variables);
         }
 
         goto _php_parallel_cached_function_add;
     }
 
     cached->refcount  = NULL;
-    cached->fn_flags &= ~ZEND_ACC_CLOSURE;
-#ifdef ZEND_ACC_IMMUTABLE
-    cached->fn_flags |= ZEND_ACC_IMMUTABLE;
-#endif
 
     if (cached->static_variables) {
         cached->static_variables =
-            php_parallel_copy_hash_persistent(
-                cached->static_variables,
-                php_parallel_copy_string_interned,
-                php_parallel_cache_copy_mem);
+            php_parallel_cache_statics(cached->static_variables);
     }
 
     if (cached->last_literal) {

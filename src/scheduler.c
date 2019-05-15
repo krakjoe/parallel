@@ -45,6 +45,10 @@ static void php_parallel_schedule_free(void *scheduleed) {
         slot++;
     }
 
+    if (el->frame->func) {
+        pefree(el->frame->func, 1);
+    }
+
     pefree(el->frame, 1);
 }
 
@@ -111,7 +115,10 @@ static zend_always_inline void php_parallel_scheduler_add(
         (zend_execute_data*)
             pecalloc(1, zend_vm_calc_used_stack(argc, (zend_function*) function), 1);
 
-    frame->func = (zend_function*) function;
+    frame->func = 
+        php_parallel_cache_closure(function, NULL);
+
+    php_parallel_dependencies_store(frame->func);
 
     if (argv && Z_TYPE_P(argv) == IS_ARRAY) {
         zval *slot = ZEND_CALL_ARG(frame, 1);
@@ -155,35 +162,36 @@ static zend_always_inline zend_bool php_parallel_scheduler_empty(php_parallel_ru
 static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parallel_schedule_el_t *el) {
     php_parallel_schedule_el_t *head;
     zend_class_entry *scope = NULL;
+    zend_function    *function = NULL;
 
     if (zend_llist_count(&runtime->schedule) == 0) {
         return 0;
     }
 
     head = zend_llist_get_first(&runtime->schedule);
+    function = 
+        head->frame->func;
+    head->frame->func = NULL;
 
-    *el = *head;
-
-    if (el->frame->func->op_array.scope &&
-        el->frame->func->op_array.scope->type == ZEND_USER_CLASS) {
+    if (function->op_array.scope &&
+        function->op_array.scope->type == ZEND_USER_CLASS) {
         scope =
             php_parallel_copy_scope(
-                el->frame->func->op_array.scope);
+                function->op_array.scope);
     }
 
     el->frame = zend_vm_stack_push_call_frame(
         ZEND_CALL_TOP_FUNCTION,
-        php_parallel_copy_function(head->frame->func, 0),
+        php_parallel_copy_function(function, 0),
         ZEND_CALL_NUM_ARGS(head->frame),
 #if PHP_VERSION_ID < 70400
         NULL,
 #endif
         NULL);
 
-    el->frame->func =
-        php_parallel_copy_mem(
-            el->frame->func, sizeof(zend_op_array), 0);
-    el->frame->func->op_array.scope = scope;
+    if (scope != function->op_array.scope) {
+        el->frame->func->op_array.scope = scope;
+    }
 
     if (ZEND_CALL_NUM_ARGS(head->frame)) {
         zval *slot = (zval*) ZEND_CALL_ARG(head->frame, 1),
@@ -275,7 +283,7 @@ php_parallel_scheduler_cleanup_start(php_parallel_scheduler_run_end, zend_execut
         }
     }
 
-    efree(frame->func);
+    pefree(frame->func, 1);
 
     zend_vm_stack_free_call_frame(frame);
 
@@ -284,6 +292,7 @@ php_parallel_scheduler_cleanup_start(php_parallel_scheduler_run_end, zend_execut
             php_parallel_scheduler_future->monitor,
             PHP_PARALLEL_READY, 1);
     }
+
 } php_parallel_scheduler_cleanup_end()
 
 static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame) {
@@ -507,7 +516,7 @@ void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure,
 
     php_parallel_monitor_lock(runtime->monitor);
 
-    if (!(function = php_parallel_check_task(runtime, caller, function, argv, &returns))) {
+    if (!php_parallel_check_task(runtime, caller, function, argv, &returns)) {
         php_parallel_monitor_unlock(runtime->monitor);
         return;
     }

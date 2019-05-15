@@ -287,10 +287,8 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
     }
 }
 
-static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zend_closure_t *closure) {
+static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zend_op_array *function) {
     void *rtc;
-    zend_op_array *function =
-        (zend_op_array*) &closure->func;
 
 #ifdef ZEND_ACC_HEAP_RT_CACHE
     function->fn_flags |= ZEND_ACC_HEAP_RT_CACHE;
@@ -324,15 +322,17 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
                 closure, sizeof(zend_closure_t), persistent);
 
     if (persistent) {
-        memcpy(
-            &copy->func,
-            php_parallel_copy_function(&copy->func, 1),
-            sizeof(zend_op_array));
+        php_parallel_cache_closure(
+            &closure->func, &copy->func);
 
         copy->func.common.fn_flags |= ZEND_ACC_CLOSURE;
+
+        php_parallel_dependencies_store(&copy->func);
     } else {
         zend_class_entry *scope =
             copy->func.op_array.scope;
+        zend_op_array *function = 
+            (zend_op_array*) &copy->func;
 
         zend_object_std_init(&copy->std, zend_ce_closure);
 
@@ -346,30 +346,25 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
 
         if (scope &&
             scope->type == ZEND_USER_CLASS) {
-            scope = php_parallel_copy_scope(scope);
+            function->scope = php_parallel_copy_scope(scope);
         }
 
-        memcpy(
-            &copy->func,
-            php_parallel_copy_function(&copy->func, 0),
-            sizeof(zend_op_array));
-
-        copy->func.op_array.scope = scope;
-
-        if (copy->func.op_array.static_variables) {
-            copy->func.op_array.static_variables =
-                php_parallel_copy_hash_ctor(copy->func.op_array.static_variables, 0);
+        if (function->static_variables) {
+            function->static_variables =
+                php_parallel_copy_hash_ctor(function->static_variables, 0);
         }
 
 #ifdef ZEND_MAP_PTR_INIT
-        ZEND_MAP_PTR_INIT(copy->func.op_array.static_variables_ptr, &copy->func.op_array.static_variables);
+        ZEND_MAP_PTR_INIT(function->static_variables_ptr, &function->static_variables);
 #endif
 
-        php_parallel_copy_closure_init_run_time_cache(copy);
+        php_parallel_copy_closure_init_run_time_cache(function);
 
 #if PHP_VERSION_ID < 70300
-        copy->func.common.prototype = (void*) copy;
+        function->prototype = (void*) copy;
 #endif
+
+        php_parallel_dependencies_load((zend_function*) function);
     }
 
     ZVAL_OBJ(destination, &copy->std);
