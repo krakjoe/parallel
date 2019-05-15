@@ -331,7 +331,10 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
 
         copy->func.common.fn_flags |= ZEND_ACC_CLOSURE;
     } else {
-        zend_object_std_init(&copy->std, copy->std.ce);
+        zend_class_entry *scope =
+            copy->func.op_array.scope;
+
+        zend_object_std_init(&copy->std, zend_ce_closure);
 
         if (copy->called_scope &&
             copy->called_scope->type == ZEND_USER_CLASS) {
@@ -341,16 +344,17 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
 
         ZVAL_UNDEF(&copy->this_ptr);
 
+        if (scope &&
+            scope->type == ZEND_USER_CLASS) {
+            scope = php_parallel_copy_scope(scope);
+        }
+
         memcpy(
             &copy->func,
             php_parallel_copy_function(&copy->func, 0),
             sizeof(zend_op_array));
 
-        if (copy->func.op_array.scope &&
-            copy->func.op_array.scope->type == ZEND_USER_CLASS) {
-            copy->func.op_array.scope =
-                php_parallel_copy_scope(copy->func.op_array.scope);
-        }
+        copy->func.op_array.scope = scope;
 
         if (copy->func.op_array.static_variables) {
             copy->func.op_array.static_variables =
