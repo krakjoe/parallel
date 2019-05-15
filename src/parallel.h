@@ -49,6 +49,40 @@
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, 0, 0) \
     ZEND_PARSE_PARAMETERS_END()
 
+static zend_always_inline zend_bool php_parallel_mutex_init(pthread_mutex_t *mutex, zend_bool recursive) {
+    if (recursive) {
+        zend_bool result = 0;
+        pthread_mutexattr_t attributes;
+
+        pthread_mutexattr_init(&attributes);
+#if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
+        pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
+#else
+        pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
+#endif
+        if (pthread_mutex_init(mutex, &attributes) == SUCCESS) {
+            result = 1;
+        }
+
+        pthread_mutexattr_destroy(&attributes);
+        return result;
+    }
+
+    return (pthread_mutex_init(mutex, NULL) == SUCCESS);
+}
+
+static zend_always_inline void php_parallel_mutex_destroy(pthread_mutex_t *mutex) {
+    pthread_mutex_destroy(mutex);
+}
+
+static zend_always_inline zend_bool php_parallel_cond_init(pthread_cond_t *cond) {
+    return (pthread_cond_init(cond, NULL) == SUCCESS);
+}
+
+static zend_always_inline void php_parallel_cond_destroy(pthread_cond_t *cond) {
+    pthread_cond_destroy(cond);
+}
+
 PHP_MINIT_FUNCTION(PARALLEL_CORE);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_CORE);
 

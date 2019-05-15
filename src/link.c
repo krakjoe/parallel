@@ -73,29 +73,19 @@ static zend_string  *php_parallel_link_string_name,
                     *php_parallel_link_string_infinite;
 
 static zend_always_inline int32_t php_parallel_link_mutex_init(php_parallel_link_mutex_t *mutex) {
-    pthread_mutexattr_t attributes;
-
-    pthread_mutexattr_init(&attributes);
-
-#if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
-     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
-#else
-     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
-#endif
-
-    if (pthread_mutex_init(&mutex->m, &attributes) != SUCCESS) {
+    if (!php_parallel_mutex_init(&mutex->m, 1)) {
         return FAILURE;
     }
 
-    if (pthread_mutex_init(&mutex->r, &attributes) != SUCCESS) {
-        pthread_mutex_destroy(&mutex->m);
+    if (!php_parallel_mutex_init(&mutex->r, 1)) {
+        php_parallel_mutex_destroy(&mutex->m);
 
         return FAILURE;
     }
 
-    if (pthread_mutex_init(&mutex->w, &attributes) != SUCCESS) {
-        pthread_mutex_destroy(&mutex->m);
-        pthread_mutex_destroy(&mutex->r);
+    if (!php_parallel_mutex_init(&mutex->w, 1)) {
+        php_parallel_mutex_destroy(&mutex->m);
+        php_parallel_mutex_destroy(&mutex->r);
 
         return FAILURE;
     }
@@ -104,18 +94,18 @@ static zend_always_inline int32_t php_parallel_link_mutex_init(php_parallel_link
 }
 
 static zend_always_inline void php_parallel_link_mutex_destroy(php_parallel_link_mutex_t *mutex) {
-    pthread_mutex_destroy(&mutex->m);
-    pthread_mutex_destroy(&mutex->r);
-    pthread_mutex_destroy(&mutex->w);
+    php_parallel_mutex_destroy(&mutex->m);
+    php_parallel_mutex_destroy(&mutex->r);
+    php_parallel_mutex_destroy(&mutex->w);
 }
 
 static zend_always_inline int32_t php_parallel_link_cond_init(php_parallel_link_cond_t *condition) {
-    if (pthread_cond_init(&condition->r, NULL) != SUCCESS) {
+    if (!php_parallel_cond_init(&condition->r)) {
         return FAILURE;
     }
 
-    if (pthread_cond_init(&condition->w, NULL) != SUCCESS) {
-        pthread_cond_destroy(&condition->r);
+    if (!php_parallel_cond_init(&condition->w)) {
+        php_parallel_cond_destroy(&condition->r);
 
         return FAILURE;
     }

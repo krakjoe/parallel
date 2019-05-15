@@ -18,27 +18,15 @@
 #ifndef HAVE_PARALLEL_MONITOR
 #define HAVE_PARALLEL_MONITOR
 
-#include "php.h"
-#include "monitor.h"
+#include "parallel.h"
 
 php_parallel_monitor_t* php_parallel_monitor_create(void) {
-    pthread_mutexattr_t attributes;
     php_parallel_monitor_t *monitor =
         (php_parallel_monitor_t*)
             calloc(1, sizeof(php_parallel_monitor_t));
 
-    pthread_mutexattr_init(&attributes);
-
-#if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
-     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
-#else
-     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
-#endif
-
-    pthread_mutex_init(&monitor->mutex, &attributes);
-    pthread_mutexattr_destroy(&attributes);
-
-    pthread_cond_init(&monitor->condition, NULL);
+    php_parallel_mutex_init(&monitor->mutex, 1);
+    php_parallel_cond_init(&monitor->condition);
 
     return monitor;
 }
@@ -113,8 +101,8 @@ void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state, ze
 }
 
 void php_parallel_monitor_destroy(php_parallel_monitor_t *monitor) {
-    pthread_mutex_destroy(&monitor->mutex);
-    pthread_cond_destroy(&monitor->condition);
+    php_parallel_mutex_destroy(&monitor->mutex);
+    php_parallel_cond_destroy(&monitor->condition);
 
     free(monitor);
 }
