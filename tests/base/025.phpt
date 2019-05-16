@@ -47,7 +47,8 @@ array(7) {
     int(6)
   }
   ["seven"]=>
-  bool(true)
+  object(stdClass)#%d (%d) {
+  }
   ["eight"]=>
   string(11) "string here"
   ["stdin"]=>
