@@ -345,8 +345,10 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
                     continue;
                 }
 
-                if (p->key && !ZSTR_IS_INTERNED(p->key)) {
-                    php_parallel_copy_string_dtor(p->key, GC_FLAGS(p->key) & IS_STR_PERSISTENT);
+                if (p->key) {
+                    php_parallel_copy_string_dtor(
+                        p->key,
+                        GC_FLAGS(p->key) & IS_STR_PERSISTENT);
                 }
 
                 if (Z_OPT_REFCOUNTED(p->val)) {
