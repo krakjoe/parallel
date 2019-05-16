@@ -29,6 +29,10 @@ typedef struct _php_parallel_check_t {
     zend_bool      returns;
 } php_parallel_check_t;
 
+typedef struct _php_parallel_check_type_t {
+    zend_bool valid;
+} php_parallel_check_type_t;
+
 #define PCG(e) php_parallel_check_globals.e
 
 static zend_always_inline const char* php_parallel_check_opcode_name(zend_uchar opcode) { /* {{{ */
@@ -53,22 +57,41 @@ static zend_always_inline const char* php_parallel_check_opcode_name(zend_uchar 
     }
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_check_type_closure(zend_type type) { /* {{{ */
+static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /* {{{ */
+    zend_string      *name;
     zend_class_entry *class;
+    php_parallel_check_type_t check, *checked;
 
 #ifdef ZEND_TYPE_IS_CE
     if (ZEND_TYPE_IS_CE(type)) {
-        class = ZEND_TYPE_CE(type);
-    } else class = zend_lookup_class(ZEND_TYPE_NAME(type));
+        name = ZEND_TYPE_CE(type)->name;
+    } else name = ZEND_TYPE_NAME(type);
 #else
-    class = zend_lookup_class(ZEND_TYPE_NAME(type));
+    name = ZEND_TYPE_NAME(type);
 #endif
 
-    if (class == zend_ce_closure) {
-        return 1;
+    if ((checked = zend_hash_find_ptr(&PCG(checked), name))) {
+        return checked->valid;
     }
 
-    return 0;
+    class = zend_lookup_class(name);
+
+    if (!class) {
+        return 0;
+    }
+
+    memset(&check, 0, sizeof(php_parallel_check_type_t));
+
+    if (class == zend_ce_closure ||
+        class == php_parallel_channel_ce ||
+        !class->create_object) {
+
+        check.valid = 1;
+    }
+
+    zend_hash_add_mem(&PCG(checked), name, &check, sizeof(php_parallel_check_type_t));
+
+    return check.valid;
 } /* }}} */
 
 static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_function *function) { /* {{{ */
@@ -83,10 +106,11 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
         it = function->op_array.arg_info - 1;
 
         if (ZEND_TYPE_IS_SET(it->type) && (ZEND_TYPE_CODE(it->type) == IS_OBJECT || ZEND_TYPE_IS_CLASS(it->type))) {
-            if (!php_parallel_check_type_closure(it->type)) {
+            if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_return_ce,
-                    "illegal return (object) from task");
+                    "illegal return (%s) from task",
+                    ZSTR_VAL(ZEND_TYPE_NAME(it->type)));
                 return 0;
             }
         }
@@ -108,10 +132,11 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
 
     while (it < end) {
         if (ZEND_TYPE_IS_SET(it->type) && (ZEND_TYPE_CODE(it->type) == IS_OBJECT || ZEND_TYPE_IS_CLASS(it->type))) {
-            if (!php_parallel_check_type_closure(it->type)) {
+            if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_parameter_ce,
-                    "illegal parameter (object) accepted by task at argument %d", argc);
+                    "illegal parameter (%s) accepted by task at argument %d",
+                    ZSTR_VAL(ZEND_TYPE_NAME(it->type)), argc);
                 return 0;
             }
         }
@@ -362,6 +387,14 @@ static zend_always_inline zend_bool php_parallel_check_closure(zend_closure_t *c
     return checked->returns;
 } /* }}} */
 
+static zend_always_inline zend_bool php_parallel_check_object(zend_object *object) { /* {{{ */
+    if (object->ce == php_parallel_channel_ce) {
+        return 1;
+    }
+
+    return !object->ce->create_object;
+} /* }}} */
+
 zend_bool php_parallel_check_zval(zval *zv, zval **error) { /* {{{ */
     switch (Z_TYPE_P(zv)) {
         case IS_OBJECT:
@@ -372,6 +405,8 @@ zend_bool php_parallel_check_zval(zval *zv, zval **error) { /* {{{ */
                     }
                     return 0;
                 }
+                return 1;
+            } else if (php_parallel_check_object(Z_OBJ_P(zv))) {
                 return 1;
             }
 

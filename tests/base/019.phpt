@@ -12,7 +12,7 @@ $parallel = new parallel\Runtime();
 
 try {
 	$parallel->run(function($arg) {}, [
-		new stdClass
+		new DateTime
 	]);
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
@@ -20,7 +20,7 @@ try {
 
 try {
 	$parallel->run(function($arg, $arg2) {}, [
-		1, new stdClass
+		1, new DateTime
 	]);
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
@@ -28,7 +28,7 @@ try {
 
 try {
 	$parallel->run(function($arg, $arg2, ... $arg3) {}, [
-		1, 2, new stdClass
+		1, 2, new DateTime
 	]);
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
@@ -36,7 +36,7 @@ try {
 
 try {
 	$parallel->run(function($array) {}, [
-		[new stdClass]
+		[new DateTime]
 	]);
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
