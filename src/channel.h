@@ -26,6 +26,7 @@ typedef struct _php_parallel_channel_t {
 } php_parallel_channel_t;
 
 extern zend_class_entry *php_parallel_channel_ce;
+extern zend_object_handlers php_parallel_channel_handlers;
 
 static zend_always_inline php_parallel_channel_t* php_parallel_channel_fetch(zend_object *o) {
     return (php_parallel_channel_t*) (((char*) o) - XtOffsetOf(php_parallel_channel_t, std));

@@ -512,6 +512,52 @@ static zend_always_inline void php_parallel_copy_reference_dtor(zend_reference *
     }
 }
 
+static zend_always_inline zend_object* php_parallel_copy_channel_persistent(zend_object *source) {
+    php_parallel_channel_t *channel = php_parallel_channel_fetch(source),
+                           *dest    = php_parallel_copy_mem(channel, sizeof(php_parallel_channel_t), 1);
+
+    GC_ADD_FLAGS(&dest->std, GC_IMMUTABLE);
+
+    dest->link = php_parallel_link_copy(channel->link);
+
+    return &dest->std;
+}
+
+static zend_always_inline zend_object* php_parallel_copy_channel_thread(zend_object *source) {
+    php_parallel_channel_t *channel = php_parallel_channel_fetch(source),
+                           *dest    = php_parallel_copy_mem(channel, sizeof(php_parallel_channel_t), 0);
+
+    GC_DEL_FLAGS(&dest->std, GC_IMMUTABLE);
+
+    zend_object_std_init(&dest->std, php_parallel_channel_ce);
+
+    dest->std.handlers = &php_parallel_channel_handlers;
+
+    dest->link = php_parallel_link_copy(channel->link);
+
+    return &dest->std;
+}
+
+static zend_always_inline zend_object* php_parallel_copy_channel_ctor(zend_object *source, zend_bool persistent) {
+    if (persistent) {
+        return php_parallel_copy_channel_persistent(source);
+    }
+    return php_parallel_copy_channel_thread(source);
+}
+
+static zend_always_inline void php_parallel_copy_channel_dtor(zend_object *source, zend_bool persistent) {
+    php_parallel_channel_t *channel = php_parallel_channel_fetch(source);
+
+    if (!persistent) {
+        OBJ_RELEASE(source);
+        return;
+    }
+
+    php_parallel_link_destroy(channel->link);
+
+    pefree(channel, persistent);
+}
+
 static zend_always_inline zend_object* php_parallel_copy_object_persistent(zend_object *source) {
     zend_object *dest;
     zend_class_entry *ce;
@@ -593,6 +639,10 @@ static zend_always_inline zend_object* php_parallel_copy_object_ctor(zend_object
         return php_parallel_copy_closure_ctor(source, persistent);
     }
 
+    if (source->ce == php_parallel_channel_ce) {
+        return php_parallel_copy_channel_ctor(source, persistent);
+    }
+
     if (persistent) {
         return php_parallel_copy_object_persistent(source);
     }
@@ -603,6 +653,11 @@ static zend_always_inline zend_object* php_parallel_copy_object_ctor(zend_object
 static zend_always_inline void php_parallel_copy_object_dtor(zend_object *source, zend_bool persistent) {
     if (source->ce == zend_ce_closure) {
         php_parallel_copy_closure_dtor(source, persistent);
+        return;
+    }
+
+    if (source->ce == php_parallel_channel_ce) {
+        php_parallel_copy_channel_dtor(source, persistent);
         return;
     }
 
