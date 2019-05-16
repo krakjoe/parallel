@@ -488,7 +488,7 @@ zend_reference* php_parallel_copy_reference_persistent(zend_reference *source) {
     GC_SET_REFCOUNT(reference, 1);
     GC_ADD_FLAGS(reference, GC_IMMUTABLE);
 
-    php_parallel_copy_zval_ctor(&reference->val, &source->val, 1);
+    PARALLEL_ZVAL_COPY(&reference->val, &source->val, 1);
 
     return reference;
 } /* }}} */
@@ -499,7 +499,7 @@ zend_reference* php_parallel_copy_reference_thread(zend_reference *source) { /* 
 
     GC_DEL_FLAGS(reference, GC_IMMUTABLE);
 
-    php_parallel_copy_zval_ctor(&reference->val, &source->val, 0);
+    PARALLEL_ZVAL_COPY(&reference->val, &source->val, 0);
 
     return reference;
 } /* }}} */
@@ -511,7 +511,7 @@ zend_reference* php_parallel_copy_reference(zend_reference *source, zend_bool pe
     return php_parallel_copy_reference_thread(source);
 } /* }}} */
 
-
+/* {{{ */
 void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent) {
     switch (Z_TYPE_P(source)) {
         case IS_NULL:
@@ -555,6 +555,45 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
             ZVAL_BOOL(dest, zend_is_true(source));
     }
 }
+
+void php_parallel_copy_zval_dtor(zval *zv) {
+    if (Z_TYPE_P(zv) == IS_ARRAY) {
+#if PHP_VERSION_ID < 70300
+        php_parallel_copy_hash_dtor(Z_ARRVAL_P(zv), Z_ARRVAL_P(zv)->u.flags & HASH_FLAG_PERSISTENT);
+#else
+        php_parallel_copy_hash_dtor(Z_ARRVAL_P(zv), GC_FLAGS(Z_ARRVAL_P(zv)) & IS_ARRAY_PERSISTENT);
+#endif
+    } else if (Z_TYPE_P(zv) == IS_STRING) {
+        zend_string_release(Z_STR_P(zv));
+    } else if (Z_TYPE_P(zv) == IS_REFERENCE) {
+        if (GC_DELREF(Z_REF_P(zv)) == 0) {
+            zend_reference *ref = Z_REF_P(zv);
+
+            PARALLEL_ZVAL_DTOR(&ref->val);
+
+            pefree(ref, GC_FLAGS(ref) & GC_IMMUTABLE);
+        }
+    } else {
+        if (Z_OPT_REFCOUNTED_P(zv)) {
+            if (Z_TYPE_P(zv) == IS_OBJECT && Z_OBJCE_P(zv) == zend_ce_closure) {
+                zend_closure_t *closure =
+                    (zend_closure_t*) Z_OBJ_P(zv);
+
+                if (zv->u2.extra) {
+                    if (closure->func.op_array.static_variables) {
+                        php_parallel_copy_hash_dtor(
+                            closure->func.op_array.static_variables, 1);
+                    }
+                    pefree(closure, 1);
+                } else {
+                    zval_ptr_dtor(zv);
+                }
+            } else {
+                zval_ptr_dtor(zv);
+            }
+        }
+    }
+} /* }}} */
 
 zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent) { /* {{{ */
     if (persistent) {

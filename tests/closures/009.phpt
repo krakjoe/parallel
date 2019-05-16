@@ -28,7 +28,7 @@ $closure = function(bool $three, bool $four, bool $dump = false) {
     ];
 
     if ($three)
-        $vars[3] = sprintf("%s", "three");
+        $vars[3] = "three";
 
     if ($four)
         $vars[4] = "four";
