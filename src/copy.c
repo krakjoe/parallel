@@ -121,25 +121,18 @@ zend_class_entry* php_parallel_copy_scope(zend_class_entry *class) {
     return zend_hash_index_update_ptr(&PCG(scope), (zend_ulong) class, scope);
 }
 
-static zend_always_inline void php_parallel_copy_resource(zval *dest, zval *source) {
-    zend_resource *resource = Z_RES_P(source);
+static zend_always_inline zend_long php_parallel_copy_resource_ctor(zend_resource *source, zend_bool persistent) {
 #ifndef _WIN32
-    if (resource->type == php_file_le_stream() || resource->type == php_file_le_pstream()) {
+    if (source->type == php_file_le_stream() ||
+        source->type == php_file_le_pstream()) {
         int fd;
-        php_stream *stream = zend_fetch_resource2_ex(
-                                source, "stream",
-                                php_file_le_stream(),
-                                php_file_le_pstream());
 
-        if (stream) {
-            if (php_stream_cast(stream, PHP_STREAM_AS_FD, (void*)&fd, 0) == SUCCESS) {
-                ZVAL_LONG(dest, fd);
-                return;
-            }
+        if (php_stream_cast((php_stream*) source->ptr, PHP_STREAM_AS_FD, (void*)&fd, 0) == SUCCESS) {
+            return (zend_long) fd;
         }
     }
 #endif
-    ZVAL_NULL(dest);
+    return -1;
 }
 
 static void php_parallel_copy_zval_persistent(
@@ -629,10 +622,10 @@ static zend_always_inline void php_parallel_copy_object_dtor(zend_object *source
     }
 
     if (source->properties) {
-        php_parallel_copy_hash_dtor(source->properties, persistent);
+        php_parallel_copy_hash_dtor(source->properties, 1);
     }
 
-    pefree(source, persistent);
+    pefree(source, 1);
 }
 
 void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent) {
@@ -670,11 +663,15 @@ void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent)
             ZVAL_REF(dest, php_parallel_copy_reference_ctor(Z_REF_P(source), persistent));
         break;
 
-        case IS_RESOURCE:
-            if (php_parallel_check_resource(source)) {
-                php_parallel_copy_resource(dest, source);
-                break;
+        case IS_RESOURCE: {
+            zend_long fd = php_parallel_copy_resource_ctor(Z_RES_P(source), persistent);
+
+            if (fd == -1) {
+                ZVAL_NULL(dest);
+            } else {
+                ZVAL_LONG(dest, fd);
             }
+        } break;
 
         default:
             ZVAL_BOOL(dest, zend_is_true(source));
