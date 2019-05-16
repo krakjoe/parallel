@@ -26,6 +26,7 @@
 # define GC_ADD_FLAGS(ref, flags) GC_FLAGS(ref) |= flags
 # define GC_DEL_FLAGS(ref, flags) GC_FLAGS(ref) &= ~flags
 # define GC_ARRAY (IS_ARRAY | (GC_COLLECTABLE << GC_FLAGS_SHIFT))
+# define GC_IMMUTABLE (1<<1)
 #else
 # define GC_SET_PERSISTENT_TYPE(ref, type) \
     (GC_TYPE_INFO(ref) = type | (GC_PERSISTENT << GC_FLAGS_SHIFT))
