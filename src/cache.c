@@ -107,28 +107,26 @@ zend_function* php_parallel_cache_closure(const zend_function *source, zend_func
     }
 
     if (closure->op_array.static_variables) {
+#ifdef ZEND_MAP_PTR_INIT
         HashTable *statics =
-#ifdef ZEND_MAP_PTR_GET
-            ZEND_MAP_PTR_GET(source->op_array.static_variables_ptr);
-#else
-            source->op_array.static_variables;
-#endif
+            ZEND_MAP_PTR_GET(
+                source->op_array.static_variables_ptr);
 
         closure->op_array.static_variables =
             php_parallel_copy_hash_ctor(statics, 1);
-    }
 
-#ifdef ZEND_MAP_PTR_INIT
-    ZEND_MAP_PTR_INIT(
-        closure->op_array.static_variables_ptr,
-        &closure->op_array.static_variables);
-#endif
-
-#ifdef ZEND_MAP_PTR_NEW
-    ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
+        ZEND_MAP_PTR_INIT(
+            closure->op_array.static_variables_ptr,
+            &closure->op_array.static_variables);
+        ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
 #else
-    closure->op_array.run_time_cache = NULL;
+        closure->op_array.static_variables =
+            php_parallel_copy_hash_ctor(
+                source->op_array.static_variables, 1);
+
+        closure->op_array.run_time_cache = NULL;
 #endif
+    }
 
     return closure;
 } /* }}} */
@@ -164,22 +162,23 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
     cached->fn_flags |= ZEND_ACC_IMMUTABLE;
 #endif
 
-    if (!cached->refcount) {
-        if ((cached->static_variables != NULL) &&
-           !(GC_FLAGS(cached->static_variables) & IS_ARRAY_IMMUTABLE)) {
-            cached->static_variables =
-                php_parallel_cache_statics(cached->static_variables);
-        }
-
-        goto _php_parallel_cached_function_add;
-    }
-
-    cached->refcount  = NULL;
-
     if (cached->static_variables) {
         cached->static_variables =
             php_parallel_cache_statics(cached->static_variables);
     }
+
+#ifdef ZEND_MAP_PTR_INIT
+    ZEND_MAP_PTR_INIT(cached->static_variables_ptr, &cached->static_variables);
+    ZEND_MAP_PTR_NEW(cached->run_time_cache);
+#else
+    cached->run_time_cache = NULL;
+#endif
+
+    if (!cached->refcount) {
+        goto _php_parallel_cached_function_add;
+    }
+
+    cached->refcount  = NULL;
 
     if (cached->last_literal) {
         zval     *literal = cached->literals,
@@ -356,10 +355,6 @@ _php_parallel_cached_function_add:
 
 _php_parallel_cached_function_return:
     pthread_mutex_unlock(&PCG(mutex));
-
-#ifdef ZEND_MAP_PTR_INIT
-    ZEND_MAP_PTR_INIT(cached->static_variables_ptr, &cached->static_variables);
-#endif
 
     return (zend_function*) cached;
 } /* }}} */

@@ -32,12 +32,6 @@ static struct {
     HashTable       table;
 } php_parallel_copy_strings = {PTHREAD_MUTEX_INITIALIZER};
 
-static zend_object_handlers php_parallel_closure_handlers = {
-    .offset = -1
-};
-
-static zend_object_free_obj_t php_parallel_copy_closure_zend_dtor = NULL;
-
 #define PCG(e) php_parallel_copy_globals.e
 #define PCS(e) php_parallel_copy_strings.e
 
@@ -186,7 +180,7 @@ static zend_always_inline HashTable* php_parallel_copy_hash_thread(HashTable *so
     ht->u.flags &= ~HASH_FLAG_PERSISTENT;
 #endif
 
-    ht->pDestructor = PARALLEL_ZVAL_DTOR;
+    ht->pDestructor = ZVAL_PTR_DTOR;
 
     if (ht->nNumUsed == 0) {
         HT_SET_DATA_ADDR(ht, &php_parallel_copy_uninitialized_bucket);
@@ -339,40 +333,6 @@ static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zen
     memset(rtc, 0, function->cache_size);
 }
 
-static void php_parallel_copy_closure_dtor(zend_object *zo) {
-    zend_closure_t *closure = (zend_closure_t*) zo;
-    zend_op_array  *function = (zend_op_array*) &closure->func;
-
-    if (function->static_variables) {
-        HashTable *statics =
-#ifdef ZEND_MAP_PTR_GET
-            statics = ZEND_MAP_PTR_GET(function->static_variables_ptr);
-#else
-            statics = function->static_variables;
-#endif
-
-        php_parallel_copy_hash_dtor(
-            statics, GC_FLAGS(statics) & IS_ARRAY_IMMUTABLE);
-
-        function->static_variables = NULL;
-    }
-
-    php_parallel_copy_closure_zend_dtor(zo);
-}
-
-static zend_always_inline zend_object_handlers* php_parallel_copy_closure_handlers(const zend_object_handlers *handlers) {
-    if (php_parallel_closure_handlers.offset == -1) {
-        memcpy(
-            &php_parallel_closure_handlers, handlers, sizeof(zend_object_handlers));
-
-        php_parallel_copy_closure_zend_dtor = handlers->free_obj;
-
-        php_parallel_closure_handlers.free_obj = php_parallel_copy_closure_dtor;
-    }
-
-    return &php_parallel_closure_handlers;
-}
-
 static zend_always_inline void php_parallel_copy_closure(zval *destination, zval *source, zend_bool persistent) { /* {{{ */
     zend_closure_t *closure =
         (zend_closure_t*) Z_OBJ_P(source);
@@ -385,6 +345,8 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
         php_parallel_cache_closure(
             &closure->func, &copy->func);
 
+        GC_ADD_FLAGS(&copy->std, GC_IMMUTABLE);
+
         copy->func.common.fn_flags |= ZEND_ACC_CLOSURE;
 
         php_parallel_dependencies_store(&copy->func);
@@ -394,10 +356,9 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
         zend_op_array *function =
             (zend_op_array*) &copy->func;
 
-        zend_object_std_init(&copy->std, zend_ce_closure);
+        GC_DEL_FLAGS(&copy->std, GC_IMMUTABLE);
 
-        copy->std.handlers =
-            php_parallel_copy_closure_handlers(copy->std.handlers);
+        zend_object_std_init(&copy->std, zend_ce_closure);
 
         if (copy->called_scope &&
             copy->called_scope->type == ZEND_USER_CLASS) {
@@ -414,8 +375,7 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
 
         if (function->static_variables) {
             function->static_variables =
-                php_parallel_copy_hash_ctor(
-                    function->static_variables, 0);
+                php_parallel_copy_hash_ctor(function->static_variables, 0);
         }
 
 #ifdef ZEND_MAP_PTR_INIT
@@ -432,8 +392,6 @@ static zend_always_inline void php_parallel_copy_closure(zval *destination, zval
     }
 
     ZVAL_OBJ(destination, &copy->std);
-
-    destination->u2.extra = persistent;
 } /* }}} */
 
 static zend_always_inline zend_string* php_parallel_copy_string_ex(zend_string *source, zend_bool persistent) { /* {{{ */
@@ -577,10 +535,9 @@ void php_parallel_copy_zval_dtor(zval *zv) {
     } else {
         if (Z_OPT_REFCOUNTED_P(zv)) {
             if (Z_TYPE_P(zv) == IS_OBJECT && Z_OBJCE_P(zv) == zend_ce_closure) {
-                zend_closure_t *closure =
-                    (zend_closure_t*) Z_OBJ_P(zv);
+                if (GC_FLAGS(Z_OBJ_P(zv)) & GC_IMMUTABLE) {
+                    zend_closure_t *closure = (zend_closure_t*) Z_OBJ_P(zv);
 
-                if (zv->u2.extra) {
                     if (closure->func.op_array.static_variables) {
                         php_parallel_copy_hash_dtor(
                             closure->func.op_array.static_variables, 1);
@@ -589,8 +546,6 @@ void php_parallel_copy_zval_dtor(zval *zv) {
                 } else {
                     zval_ptr_dtor(zv);
                 }
-            } else {
-                zval_ptr_dtor(zv);
             }
         }
     }
