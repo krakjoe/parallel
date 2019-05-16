@@ -353,6 +353,11 @@ static void php_parallel_copy_closure_dtor(zend_object *zo) {
 
         if ((GC_FLAGS(statics) & IS_ARRAY_IMMUTABLE)) {
             php_parallel_copy_hash_dtor(statics, 1);
+        } else {
+            /*
+            * Not sure about this ...
+            */
+            function->static_variables = NULL;
         }
     }
 
