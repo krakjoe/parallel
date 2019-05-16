@@ -512,9 +512,21 @@ static zend_always_inline void php_parallel_copy_reference_dtor(zend_reference *
     }
 }
 
+static size_t _php_parallel_copy_channel_size = 0;
+
+static zend_always_inline size_t php_parallel_copy_channel_size() {
+    if (_php_parallel_copy_channel_size == 0) {
+        _php_parallel_copy_channel_size = 
+            sizeof(php_parallel_channel_t) + 
+            zend_object_properties_size(php_parallel_channel_ce);
+    }
+
+    return _php_parallel_copy_channel_size;
+}
+
 static zend_always_inline zend_object* php_parallel_copy_channel_persistent(zend_object *source) {
     php_parallel_channel_t *channel = php_parallel_channel_fetch(source),
-                           *dest    = php_parallel_copy_mem(channel, sizeof(php_parallel_channel_t), 1);
+                           *dest    = php_parallel_copy_mem(channel, php_parallel_copy_channel_size(), 1);
 
     GC_ADD_FLAGS(&dest->std, GC_IMMUTABLE);
 
@@ -525,7 +537,7 @@ static zend_always_inline zend_object* php_parallel_copy_channel_persistent(zend
 
 static zend_always_inline zend_object* php_parallel_copy_channel_thread(zend_object *source) {
     php_parallel_channel_t *channel = php_parallel_channel_fetch(source),
-                           *dest    = php_parallel_copy_mem(channel, sizeof(php_parallel_channel_t), 0);
+                           *dest    = php_parallel_copy_mem(channel, php_parallel_copy_channel_size(), 0);
 
     GC_DEL_FLAGS(&dest->std, GC_IMMUTABLE);
 

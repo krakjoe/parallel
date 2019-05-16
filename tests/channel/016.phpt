@@ -12,9 +12,9 @@ use \parallel\{Runtime, Channel};
 
 $runtime = new Runtime;
 
-$future = $runtime->run(function(){
-    return Channel::make("channel");
-});
+$future = $runtime->run(function($channel){
+    return $channel;
+}, [Channel::make("channel")]);
 
 var_dump($future->value());
 ?>
