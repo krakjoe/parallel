@@ -86,11 +86,26 @@ static zend_always_inline void php_parallel_copy_zval_dtor(zval *zv) {
 #endif
     } else if (Z_TYPE_P(zv) == IS_STRING) {
         zend_string_release(Z_STR_P(zv));
+    } else if (Z_TYPE_P(zv) == IS_REFERENCE) {
+        if (GC_DELREF(Z_REF_P(zv)) == 0) {
+            zend_reference *ref = Z_REF_P(zv);
+
+            PARALLEL_ZVAL_DTOR(&ref->val);
+
+            pefree(ref, GC_FLAGS(ref) & GC_IMMUTABLE);
+        }
     } else {
         if (Z_OPT_REFCOUNTED_P(zv)) {
             if (Z_TYPE_P(zv) == IS_OBJECT && Z_OBJCE_P(zv) == zend_ce_closure) {
+                zend_closure_t *closure =
+                    (zend_closure_t*) Z_OBJ_P(zv);
+
                 if (zv->u2.extra) {
-                    pefree(Z_OBJ_P(zv), 1);
+                    if (closure->func.op_array.static_variables) {
+                        php_parallel_copy_hash_dtor(
+                            closure->func.op_array.static_variables, 1);
+                    }
+                    pefree(closure, 1);
                 } else {
                     zval_ptr_dtor(zv);
                 }

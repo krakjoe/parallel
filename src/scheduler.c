@@ -280,6 +280,8 @@ php_parallel_scheduler_cleanup_start(php_parallel_scheduler_run_end, zend_execut
 #endif
         if (!(GC_FLAGS(statics) & IS_ARRAY_IMMUTABLE)) {
             zend_array_destroy(statics);
+        } else {
+            //php_parallel_copy_hash_dtor(statics, 1);
         }
     }
 

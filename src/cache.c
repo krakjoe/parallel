@@ -106,9 +106,17 @@ zend_function* php_parallel_cache_closure(const zend_function *source, zend_func
         memcpy(closure, cache, sizeof(zend_op_array));
     }
 
-    /*
-    * TODO update statics
-    */
+    if (closure->op_array.static_variables) {
+        HashTable *statics =
+#ifdef ZEND_MAP_PTR_GET
+            ZEND_MAP_PTR_GET(source->op_array.static_variables_ptr);
+#else
+            source->op_array.static_variables;
+#endif
+
+        closure->op_array.static_variables =
+            php_parallel_copy_hash_ctor(statics, 1);
+    }
 
 #ifdef ZEND_MAP_PTR_INIT
     ZEND_MAP_PTR_INIT(
@@ -127,7 +135,7 @@ zend_function* php_parallel_cache_closure(const zend_function *source, zend_func
 
 static zend_always_inline HashTable* php_parallel_cache_statics(HashTable *statics) { /* {{{ */
     HashTable *cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) statics);
-    
+
     if (cached) {
         return cached;
     }
