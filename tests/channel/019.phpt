@@ -16,11 +16,10 @@ $runtime = new Runtime(sprintf("%s/019.inc", __DIR__));
 $channel = Channel::make("channel");
 
 $runtime->run(function($channel){
-    $channel = Channel::open($channel);
     $foo = $channel->recv();
 
     $foo->call();
-}, [(string)$channel]);
+}, [$channel]);
 
 $foo = new Foo(function(){
     echo "OK";
