@@ -1,5 +1,5 @@
 --TEST--
-parallel object check finds illegal property in table
+parallel object check finds non-existent class
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -13,17 +13,16 @@ if (ini_get("opcache.enable_cli")) {
 <?php
 $parallel = new \parallel\Runtime;
 
-$std = new stdClass;
-$std->date = new DateTime;
-
 try {
-    $parallel->run(function($std){
-    }, [$std]);
-} catch (parallel\Runtime\Error\IllegalParameter $ex) {
+    $parallel->run(function(DoesNotExist $d){
+
+    });
+} catch (\parallel\Runtime\Error\IllegalParameter $ex) {
     var_dump($ex->getMessage());
 }
 ?>
 --EXPECT--
-string(55) "illegal parameter (object) passed to task at argument 1"
+string(63) "illegal parameter (DoesNotExist) accepted by task at argument 1"
+
 
 

@@ -22,10 +22,7 @@ $parallel->run($closure);
 $future = $parallel->run($closure);
 
 $future->value();
-
-var_dump($future instanceof \parallel\Future);
 ?>
 --EXPECT--
 OK
 OK
-bool(true)

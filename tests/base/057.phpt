@@ -1,5 +1,5 @@
 --TEST--
-parallel object check finds illegal property in table
+parallel object check finds illegal property inline
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -13,12 +13,16 @@ if (ini_get("opcache.enable_cli")) {
 <?php
 $parallel = new \parallel\Runtime;
 
-$std = new stdClass;
-$std->date = new DateTime;
+class Foo {
+    public $property;
+}
+
+$foo = new Foo();
+$foo->property = new DateTime;
 
 try {
-    $parallel->run(function($std){
-    }, [$std]);
+    $parallel->run(function($foo){
+    }, [$foo]);
 } catch (parallel\Runtime\Error\IllegalParameter $ex) {
     var_dump($ex->getMessage());
 }
