@@ -189,17 +189,15 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
                                         sizeof(zval) * cached->last_literal);
 
         while (literal < end) {
-            if (Z_OPT_REFCOUNTED_P(literal)) {
-                if (Z_TYPE_P(literal) == IS_ARRAY) {
-                    ZVAL_ARR(slot,
-                        php_parallel_copy_hash_persistent(
-                            Z_ARRVAL_P(literal),
-                            php_parallel_copy_string_interned,
-                            php_parallel_cache_copy_mem));
-                } else if (Z_TYPE_P(literal) == IS_STRING) {
-                    ZVAL_STR(slot,
-                        php_parallel_copy_string_interned(Z_STR_P(literal)));
-                }
+            if (Z_TYPE_P(literal) == IS_ARRAY) {
+                ZVAL_ARR(slot,
+                    php_parallel_copy_hash_persistent(
+                        Z_ARRVAL_P(literal),
+                        php_parallel_copy_string_interned,
+                        php_parallel_cache_copy_mem));
+            } else if (Z_TYPE_P(literal) == IS_STRING) {
+                ZVAL_STR(slot,
+                    php_parallel_copy_string_interned(Z_STR_P(literal)));
             }
             literal++;
             slot++;
