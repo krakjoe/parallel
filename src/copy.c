@@ -25,6 +25,7 @@
 
 TSRM_TLS struct {
     HashTable scope;
+    zval      unavailable;
 } php_parallel_copy_globals;
 
 static struct {
@@ -32,7 +33,8 @@ static struct {
     HashTable       table;
 } php_parallel_copy_strings = {PTHREAD_MUTEX_INITIALIZER};
 
-zend_class_entry* php_parallel_copy_unavailable_ce;
+zend_class_entry* php_parallel_copy_class_unavailable_ce;
+zend_class_entry* php_parallel_copy_object_unavailable_ce;
 
 #define PCG(e) php_parallel_copy_globals.e
 #define PCS(e) php_parallel_copy_strings.e
@@ -115,7 +117,7 @@ zend_class_entry* php_parallel_copy_scope(zend_class_entry *class) {
     scope = zend_lookup_class(class->name);
 
     if (!scope) {
-        return php_parallel_copy_unavailable_ce;
+        return php_parallel_copy_class_unavailable_ce;
     }
 
     return zend_hash_index_update_ptr(&PCG(scope), (zend_ulong) class, scope);
@@ -575,11 +577,10 @@ static zend_always_inline zend_object* php_parallel_copy_object_persistent(zend_
     zend_class_entry *ce;
 
     if (source->ce->create_object) {
-        /* TODO slow path */
-        return NULL;
+        ce = php_parallel_copy_object_unavailable_ce;
+    } else {
+        ce = source->ce;
     }
-
-    ce = source->ce;
 
     dest = php_parallel_copy_mem(
             source,
@@ -612,11 +613,10 @@ static zend_always_inline zend_object* php_parallel_copy_object_thread(zend_obje
     zend_class_entry *ce;
 
     if (source->ce->create_object) {
-        /* TODO slow path */
-        return NULL;
+        ce = php_parallel_copy_object_unavailable_ce;
+    } else {
+        ce = php_parallel_copy_scope(source->ce);
     }
-
-    ce = php_parallel_copy_scope(source->ce);
 
     dest = php_parallel_copy_mem(
             source,
@@ -788,6 +788,8 @@ PHP_RINIT_FUNCTION(PARALLEL_COPY)
     PHP_RINIT(PARALLEL_CHECK)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_RINIT(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);
 
+    object_init_ex(&PCG(unavailable), php_parallel_copy_object_unavailable_ce);
+
     return SUCCESS;
 }
 
@@ -797,6 +799,8 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_COPY)
 
     PHP_RSHUTDOWN(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_RSHUTDOWN(PARALLEL_CHECK)(INIT_FUNC_ARGS_PASSTHRU);
+
+    zval_ptr_dtor(&PCG(unavailable));
 
     return SUCCESS;
 }
@@ -812,9 +816,13 @@ PHP_MINIT_FUNCTION(PARALLEL_COPY)
 {
     zend_class_entry ce;
 
-    INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime", "Unavailable", NULL);
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime\\Class", "Unavailable", NULL);
 
-    php_parallel_copy_unavailable_ce = zend_register_internal_class(&ce);
+    php_parallel_copy_class_unavailable_ce = zend_register_internal_class(&ce);
+
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime\\Object", "Unavailable", NULL);
+    
+    php_parallel_copy_object_unavailable_ce = zend_register_internal_class(&ce);
 
     PHP_MINIT(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_CACHE)(INIT_FUNC_ARGS_PASSTHRU);

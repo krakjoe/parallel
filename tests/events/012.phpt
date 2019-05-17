@@ -34,7 +34,7 @@ object(parallel\Events\Event)#%d (%d) {
     }
   }
   ["value"]=>
-  object(RuntimeException)#4 (%d) {
+  object(RuntimeException)#%d (%d) {
     ["message":protected]=>
     string(0) ""
     ["string":"Exception":private]=>
