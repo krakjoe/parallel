@@ -186,7 +186,7 @@ PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS)
     */
     INIT_NS_CLASS_ENTRY(ce, "parallel", "Error", NULL);
     php_parallel_error_ce =
-        zend_register_internal_class_ex(&ce, zend_ce_error_exception);
+        zend_register_internal_class_ex(&ce, zend_ce_error);
 
     /*
     * Runtime Exceptions
