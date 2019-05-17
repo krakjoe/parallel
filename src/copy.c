@@ -593,7 +593,7 @@ static zend_always_inline zend_object* php_parallel_copy_object_persistent(zend_
              *slot       = dest->properties_table,
              *end        = property + source->ce->default_properties_count;
 
-        while (slot < end) {
+        while (property < end) {
             PARALLEL_ZVAL_COPY(slot, property, 1);
             property++;
             slot++;
@@ -602,7 +602,7 @@ static zend_always_inline zend_object* php_parallel_copy_object_persistent(zend_
 
     if (dest->properties) {
         dest->properties =
-            php_parallel_copy_hash_ctor(dest->properties, 1);
+            php_parallel_copy_hash_ctor(source->properties, 1);
     }
 
     return dest;
@@ -631,16 +631,16 @@ static zend_always_inline zend_object* php_parallel_copy_object_thread(zend_obje
              *slot       = dest->properties_table,
              *end        = property + source->ce->default_properties_count;
 
-        while (slot < end) {
+        while (property < end) {
             PARALLEL_ZVAL_COPY(slot, property, 0);
             property++;
             slot++;
         }
     }
 
-    if (dest->properties) {
+    if (source->properties) {
         dest->properties =
-            php_parallel_copy_hash_ctor(dest->properties, 0);
+            php_parallel_copy_hash_ctor(source->properties, 0);
     }
 
     return dest;
