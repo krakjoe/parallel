@@ -242,14 +242,6 @@ static int php_parallel_channel_compare(zval *lhs, zval *rhs) {
                 *rho = Z_OBJ_P(rhs);
     php_parallel_channel_t *lhc, *rhc;
 
-    if (lho->ce != rho->ce) {
-        return 1;
-    }
-
-    if (lho == rho) {
-        return 0;
-    }
-
     lhc = php_parallel_channel_fetch(lho),
     rhc = php_parallel_channel_fetch(rho);
 
