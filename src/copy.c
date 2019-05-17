@@ -373,6 +373,10 @@ static zend_always_inline zend_object* php_parallel_copy_closure_persistent(zend
 
     copy->func.common.fn_flags |= ZEND_ACC_CLOSURE;
 
+    if (Z_TYPE(copy->this_ptr) == IS_OBJECT) {
+        PARALLEL_ZVAL_COPY(&copy->this_ptr, &copy->this_ptr, 1);
+    }
+
     php_parallel_dependencies_store(&copy->func);
 
     return &copy->std;
@@ -424,8 +428,6 @@ static zend_always_inline zend_object* php_parallel_copy_closure_thread(zend_obj
             php_parallel_copy_scope(copy->called_scope);
     }
 
-    ZVAL_UNDEF(&copy->this_ptr);
-
     if (scope &&
         scope->type == ZEND_USER_CLASS) {
         function->scope = php_parallel_copy_scope(scope);
@@ -445,6 +447,10 @@ static zend_always_inline zend_object* php_parallel_copy_closure_thread(zend_obj
 #if PHP_VERSION_ID < 70300
     function->prototype = (void*) copy;
 #endif
+
+    if (Z_TYPE(copy->this_ptr) == IS_OBJECT) {
+        PARALLEL_ZVAL_COPY(&copy->this_ptr, &copy->this_ptr, 0);
+    }
 
     php_parallel_dependencies_load((zend_function*) function);
 
@@ -473,6 +479,11 @@ static zend_always_inline void php_parallel_copy_closure_dtor(zend_object *sourc
         php_parallel_copy_hash_dtor(
             closure->func.op_array.static_variables, 1);
     }
+
+    if (Z_TYPE(closure->this_ptr) == IS_OBJECT) {
+        PARALLEL_ZVAL_DTOR(&closure->this_ptr);
+    }
+
     pefree(closure, 1);
 }
 
