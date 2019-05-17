@@ -58,17 +58,9 @@ static zend_always_inline const char* php_parallel_check_opcode_name(zend_uchar 
 } /* }}} */
 
 static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /* {{{ */
-    zend_string      *name;
+    zend_string      *name = ZEND_TYPE_NAME(type);;
     zend_class_entry *class;
     php_parallel_check_type_t check, *checked;
-
-#ifdef ZEND_TYPE_IS_CE
-    if (ZEND_TYPE_IS_CE(type)) {
-        name = ZEND_TYPE_CE(type)->name;
-    } else name = ZEND_TYPE_NAME(type);
-#else
-    name = ZEND_TYPE_NAME(type);
-#endif
 
     if ((checked = zend_hash_find_ptr(&PCG(checked), name))) {
         return checked->valid;
