@@ -43,6 +43,32 @@ static zend_always_inline zend_bool php_parallel_check_zval_closures(zval *zv) {
         } ZEND_HASH_FOREACH_END();
     }
 
+    if (Z_TYPE_P(zv) == IS_OBJECT) {
+        zend_object *object = Z_OBJ_P(zv);
+
+        if (object->ce->default_properties_count) {
+            zval *property = object->properties_table,
+                 *end     = property + object->ce->default_properties_count;
+
+            while (property < end) {
+                if (PARALLEL_ZVAL_CHECK_CLOSURE(property)) {
+                    return 1;
+                }
+                property++;
+            }
+        }
+
+        if (object->properties) {
+            zval *property;
+
+            ZEND_HASH_FOREACH_VAL(object->properties, property) {
+                if (PARALLEL_ZVAL_CHECK_CLOSURE(property)) {
+                    return 1;
+                }
+            } ZEND_HASH_FOREACH_END();
+        }
+    }
+
     return 0;
 } /* }}} */
 

@@ -376,12 +376,38 @@ static zend_always_inline zend_bool php_parallel_check_closure(zend_closure_t *c
     return checked->returns;
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_check_object(zend_object *object) { /* {{{ */
+static zend_always_inline zend_bool php_parallel_check_object(zend_object *object, zval **error) { /* {{{ */
     if (object->ce == php_parallel_channel_ce) {
         return 1;
     }
 
-    return !object->ce->create_object;
+    if (object->ce->create_object) {
+        return 0;
+    }
+
+    if (object->ce->default_properties_count) {
+        zval *property = object->properties_table,
+             *end      = property + object->ce->default_properties_count;
+
+        while (property < end) {
+            if (!php_parallel_check_zval(property, error)) {
+                return 0;
+            }
+            property++;
+        }
+    }
+
+    if (object->properties) {
+        zval *property;
+
+        ZEND_HASH_FOREACH_VAL(object->properties, property) {
+            if (!php_parallel_check_zval(property, error)) {
+                return 0;
+            }
+        } ZEND_HASH_FOREACH_END();
+    }
+
+    return 1;
 } /* }}} */
 
 static zend_always_inline zend_bool php_parallel_check_resource(zval *zv) { /* {{{ */
@@ -406,7 +432,7 @@ zend_bool php_parallel_check_zval(zval *zv, zval **error) { /* {{{ */
                     return 0;
                 }
                 return 1;
-            } else if (php_parallel_check_object(Z_OBJ_P(zv))) {
+            } else if (php_parallel_check_object(Z_OBJ_P(zv), error)) {
                 return 1;
             }
 

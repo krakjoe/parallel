@@ -159,7 +159,8 @@ void php_parallel_link_destroy(php_parallel_link_t *link) {
         if (link->type == PHP_PARALLEL_LINK_BUFFERED) {
             zend_llist_destroy(&link->port.q.l);
         } else {
-            if (PARALLEL_ZVAL_CHECK_CLOSURES(&link->port.z)) {
+            if (Z_OPT_REFCOUNTED(link->port.z) &&
+                (GC_FLAGS(Z_COUNTED(link->port.z)) & GC_COLLECTABLE)) {
                 PARALLEL_ZVAL_DTOR(&link->port.z);
             }
         }
@@ -190,9 +191,15 @@ static zend_always_inline zend_bool php_parallel_link_send_unbuffered(php_parall
     }
 
     if (PARALLEL_ZVAL_CHECK_CLOSURES(value)) {
-        PARALLEL_ZVAL_COPY(&link->port.z, value, 1);
+        PARALLEL_ZVAL_COPY(
+            &link->port.z, value, 1);
+        GC_ADD_FLAGS(Z_COUNTED(link->port.z), GC_COLLECTABLE);
     } else {
-        ZVAL_COPY_VALUE(&link->port.z, value);
+        ZVAL_COPY_VALUE(
+            &link->port.z, value);
+        if (Z_OPT_REFCOUNTED(link->port.z)) {
+            GC_DEL_FLAGS(Z_COUNTED(link->port.z), GC_COLLECTABLE);
+        }
     }
     link->s.w++;
 
@@ -264,7 +271,8 @@ static zend_always_inline zend_bool php_parallel_link_recv_unbuffered(php_parall
 
     PARALLEL_ZVAL_COPY(
         value, &link->port.z, 0);
-    if (PARALLEL_ZVAL_CHECK_CLOSURES(&link->port.z)) {
+    if (Z_OPT_REFCOUNTED(link->port.z) &&
+        (GC_FLAGS(Z_COUNTED(link->port.z)) & GC_COLLECTABLE)) {
         PARALLEL_ZVAL_DTOR(&link->port.z);
     }
     ZVAL_UNDEF(&link->port.z);
