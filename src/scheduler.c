@@ -549,7 +549,7 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill
 
     php_parallel_monitor_unlock(runtime->monitor);
 
-    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED, 0);
+    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED, 1);
 
     pthread_join(runtime->thread, NULL);
 }
