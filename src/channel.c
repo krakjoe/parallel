@@ -28,6 +28,8 @@ typedef struct _php_parallel_channels_t {
 php_parallel_channels_t php_parallel_channels;
 
 zend_class_entry *php_parallel_channel_ce;
+zend_class_entry *php_parallel_channel_read_ce;
+zend_class_entry *php_parallel_channel_write_ce;
 zend_object_handlers php_parallel_channel_handlers;
 
 static zend_always_inline void php_parallel_channels_make(zval *return_value, zend_string *name, zend_bool buffered, zend_long capacity) {
@@ -137,6 +139,14 @@ PHP_METHOD(Channel, send)
         Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END();
 
+    if (channel->role && channel->role != PHP_PARALLEL_CHANNEL_WRITE) {
+        php_parallel_exception_ex(
+            php_parallel_channel_error_role_ce,
+            "the channel (%s) has a reading role in this context",
+            ZSTR_VAL(php_parallel_link_name(channel->link)));
+        return;
+    }
+
     if (!PARALLEL_ZVAL_CHECK(value, &error)) {
         php_parallel_exception_ex(
             php_parallel_channel_error_illegal_value_ce,
@@ -165,6 +175,14 @@ PHP_METHOD(Channel, recv)
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
 
     PARALLEL_PARAMETERS_NONE(return);
+
+    if (channel->role && channel->role != PHP_PARALLEL_CHANNEL_READ) {
+        php_parallel_exception_ex(
+            php_parallel_channel_error_role_ce,
+            "the channel (%s) has a writing role in this context",
+            ZSTR_VAL(php_parallel_link_name(channel->link)));
+        return;
+    }
 
     if (!php_parallel_link_recv(channel->link, return_value)) {
         php_parallel_exception_ex(
@@ -276,6 +294,16 @@ static void php_parallel_channels_link_destroy(zval *zv) {
     php_parallel_link_destroy(link);
 }
 
+zend_function_entry php_parallel_channel_read_methods[] = {
+    PHP_ABSTRACT_ME(Channel, recv, php_parallel_channel_recv_arginfo)
+    PHP_FE_END
+};
+
+zend_function_entry php_parallel_channel_write_methods[] = {
+    PHP_ABSTRACT_ME(Channel, send, php_parallel_channel_send_arginfo)
+    PHP_FE_END
+};
+
 PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
 {
     zend_class_entry ce;
@@ -290,6 +318,16 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
     php_parallel_channel_handlers.compare_objects = php_parallel_channel_compare;
     php_parallel_channel_handlers.get_debug_info  = php_parallel_channel_debug;
 
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel", "Read", php_parallel_channel_read_methods);
+
+    php_parallel_channel_read_ce = zend_register_internal_class(&ce);
+    php_parallel_channel_read_ce->ce_flags |= ZEND_ACC_INTERFACE;
+
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel", "Write", php_parallel_channel_write_methods);
+
+    php_parallel_channel_write_ce = zend_register_internal_class(&ce);
+    php_parallel_channel_write_ce->ce_flags |= ZEND_ACC_INTERFACE;
+
     INIT_NS_CLASS_ENTRY(ce, "parallel", "Channel", php_parallel_channel_methods);
 
     php_parallel_channel_ce = zend_register_internal_class(&ce);
@@ -297,6 +335,8 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
     php_parallel_channel_ce->ce_flags |= ZEND_ACC_FINAL;
 
     zend_declare_class_constant_long(php_parallel_channel_ce, ZEND_STRL("Infinite"), -1);
+
+    zend_class_implements(php_parallel_channel_ce, 2, php_parallel_channel_read_ce, php_parallel_channel_write_ce);
 
     php_parallel_channels.monitor = php_parallel_monitor_create();
 

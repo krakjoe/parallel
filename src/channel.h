@@ -20,12 +20,20 @@
 
 #include "link.h"
 
+typedef enum {
+    PHP_PARALLEL_CHANNEL_READ,
+    PHP_PARALLEL_CHANNEL_WRITE
+} php_parallel_channel_role_t;
+
 typedef struct _php_parallel_channel_t {
     php_parallel_link_t *link;
+    php_parallel_channel_role_t role;
     zend_object std;
 } php_parallel_channel_t;
 
 extern zend_class_entry *php_parallel_channel_ce;
+extern zend_class_entry *php_parallel_channel_read_ce;
+extern zend_class_entry *php_parallel_channel_write_ce;
 extern zend_object_handlers php_parallel_channel_handlers;
 
 static zend_always_inline php_parallel_channel_t* php_parallel_channel_fetch(zend_object *o) {
@@ -34,6 +42,13 @@ static zend_always_inline php_parallel_channel_t* php_parallel_channel_fetch(zen
 
 static zend_always_inline php_parallel_channel_t* php_parallel_channel_from(zval *z) {
     return php_parallel_channel_fetch(Z_OBJ_P(z));
+}
+
+static zend_always_inline void php_parallel_channel_role(zval *zv, php_parallel_channel_role_t role) {
+    php_parallel_channel_t *channel =
+        php_parallel_channel_from(zv);
+
+    channel->role = role;
 }
 
 PHP_MINIT_FUNCTION(PARALLEL_CHANNEL);

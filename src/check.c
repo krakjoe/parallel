@@ -100,6 +100,8 @@ static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /*
 
     if (class == zend_ce_closure ||
         class == php_parallel_channel_ce ||
+        class == php_parallel_channel_read_ce ||
+        class == php_parallel_channel_write_ce ||
         !class->create_object) {
 
         check.valid = 1;

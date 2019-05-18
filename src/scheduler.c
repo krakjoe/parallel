@@ -202,14 +202,35 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
     }
 
     if (ZEND_CALL_NUM_ARGS(head->frame)) {
+        zend_arg_info *info = el->frame->func->common.num_args ?
+                                el->frame->func->common.arg_info : NULL;
         zval *slot = (zval*) ZEND_CALL_ARG(head->frame, 1),
              *end  = slot + ZEND_CALL_NUM_ARGS(head->frame);
         zval *param = ZEND_CALL_ARG(el->frame, 1);
 
         while (slot < end) {
             PARALLEL_ZVAL_COPY(param, slot, 0);
+            if ((info &&
+                    ZEND_TYPE_IS_SET(info->type) &&
+                    ZEND_TYPE_IS_CLASS(info->type) &&
+                    Z_TYPE_P(slot) == IS_OBJECT) &&
+                (Z_OBJCE_P(slot) == php_parallel_channel_ce ||
+                 Z_OBJCE_P(slot) == php_parallel_channel_read_ce ||
+                 Z_OBJCE_P(slot) == php_parallel_channel_write_ce)) {
+                zend_string *name =
+                    ZEND_TYPE_NAME(info->type);
+
+                if (zend_string_equals_literal_ci(name, "parallel\\channel\\read")) {
+                    php_parallel_channel_role(param, PHP_PARALLEL_CHANNEL_READ);
+                } else if (zend_string_equals_literal_ci(name, "parallel\\channel\\write")) {
+                    php_parallel_channel_role(param, PHP_PARALLEL_CHANNEL_WRITE);
+                }
+            }
             slot++;
             param++;
+            if (info) {
+                info++;
+            }
         }
     }
 

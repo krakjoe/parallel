@@ -54,6 +54,7 @@ zend_class_entry* php_parallel_channel_error_ce;
 zend_class_entry* php_parallel_channel_error_existence_ce;
 zend_class_entry* php_parallel_channel_error_illegal_value_ce;
 zend_class_entry* php_parallel_channel_error_closed_ce;
+zend_class_entry* php_parallel_channel_error_role_ce;
 
 zend_class_entry* php_parallel_events_error_ce;
 zend_class_entry* php_parallel_events_error_existence_ce;
@@ -259,6 +260,10 @@ PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS)
 
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel\\Error", "Closed", NULL);
     php_parallel_channel_error_closed_ce =
+        zend_register_internal_class_ex(&ce, php_parallel_channel_error_ce);
+
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel\\Error", "Role", NULL);
+    php_parallel_channel_error_role_ce =
         zend_register_internal_class_ex(&ce, php_parallel_channel_error_ce);
 
     /*
