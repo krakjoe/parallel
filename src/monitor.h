@@ -43,6 +43,6 @@ int32_t php_parallel_monitor_check(php_parallel_monitor_t *m, int32_t state);
 int php_parallel_monitor_unlock(php_parallel_monitor_t *m);
 int32_t php_parallel_monitor_wait(php_parallel_monitor_t *m, int32_t state);
 int32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *m, int32_t state);
-void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state, zend_bool lock);
+void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state);
 void php_parallel_monitor_destroy(php_parallel_monitor_t *);
 #endif

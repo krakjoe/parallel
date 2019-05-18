@@ -237,7 +237,7 @@ static void php_parallel_scheduler_kill_scheduled(void *scheduled) {
 
     if (future) {
         php_parallel_monitor_set(future->monitor,
-            PHP_PARALLEL_READY|PHP_PARALLEL_KILLED, 1);
+            PHP_PARALLEL_READY|PHP_PARALLEL_KILLED);
     }
 }
 
@@ -247,16 +247,20 @@ static zend_always_inline void php_parallel_scheduler_kill(php_parallel_runtime_
 }
 
 php_parallel_scheduler_cleanup_start(php_parallel_scheduler_run_end, zend_execute_data*, frame) {
+    php_parallel_monitor_lock(php_parallel_scheduler_context->monitor);
+
     if (php_parallel_monitor_check(php_parallel_scheduler_context->monitor, PHP_PARALLEL_KILLED)) {
         php_parallel_scheduler_kill(php_parallel_scheduler_context);
         if (php_parallel_scheduler_future) {
             php_parallel_monitor_set(
-                php_parallel_scheduler_future->monitor, PHP_PARALLEL_KILLED, 1);
+                php_parallel_scheduler_future->monitor, PHP_PARALLEL_KILLED);
         }
 
         /* we don't care about leaks, we are shutting down */
         PG(report_memleaks) = 0;
     }
+
+    php_parallel_monitor_unlock(php_parallel_scheduler_context->monitor);
 
     if (frame->return_value  && !Z_ISUNDEF_P(frame->return_value)) {
         zval garbage = *frame->return_value;
@@ -290,7 +294,7 @@ php_parallel_scheduler_cleanup_start(php_parallel_scheduler_run_end, zend_execut
     if (php_parallel_scheduler_future) {
         php_parallel_monitor_set(
             php_parallel_scheduler_future->monitor,
-            PHP_PARALLEL_READY, 1);
+            PHP_PARALLEL_READY);
     }
 
 } php_parallel_scheduler_cleanup_end()
@@ -313,7 +317,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 
                     php_parallel_monitor_set(
                         php_parallel_scheduler_future->monitor,
-                        PHP_PARALLEL_ERROR, 1);
+                        PHP_PARALLEL_ERROR);
                 } else {
                     zend_throw_exception_internal(NULL);
                 }
@@ -325,7 +329,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
                         PHP_PARALLEL_CANCELLED)) {
                     php_parallel_monitor_set(
                         php_parallel_scheduler_future->monitor,
-                        PHP_PARALLEL_KILLED, 1);
+                        PHP_PARALLEL_KILLED);
                 }
             }
         } zend_end_try();
@@ -388,8 +392,7 @@ php_parallel_scheduler_cleanup_start(php_parallel_scheduler_unlock, php_parallel
 
 php_parallel_scheduler_cleanup_start(php_parallel_scheduler_exit, php_parallel_runtime_t*, runtime) {
     php_parallel_monitor_set(
-        runtime->monitor,
-        PHP_PARALLEL_DONE, 1);
+        runtime->monitor, PHP_PARALLEL_DONE);
 
     php_request_shutdown(NULL);
 
@@ -407,12 +410,12 @@ static void* php_parallel_thread(void *arg) {
 
     if (php_parallel_thread_bootstrap(runtime->bootstrap) != SUCCESS) {
         php_parallel_monitor_set(
-            runtime->monitor, PHP_PARALLEL_FAILURE, 1);
+            runtime->monitor, PHP_PARALLEL_FAILURE);
 
         goto _php_parallel_thread_exit;
     }
 
-    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_READY, 1);
+    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_READY);
 
     do {
         php_parallel_schedule_el_t el;
@@ -463,7 +466,7 @@ void php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *
         php_parallel_exception_ex(
             php_parallel_runtime_error_ce,
             "cannot create thread %s", strerror(errno));
-        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE, 0);
+        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE);
         php_parallel_scheduler_stop(runtime);
         return;
     }
@@ -487,8 +490,7 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime) {
 
     if (!php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
         php_parallel_monitor_set(
-            runtime->monitor,
-            PHP_PARALLEL_CLOSE, 0);
+            runtime->monitor, PHP_PARALLEL_CLOSE);
 
         if (!php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_FAILURE)) {
             php_parallel_monitor_wait_locked(
@@ -527,7 +529,7 @@ void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure,
 
     php_parallel_scheduler_add(runtime, function, argv, future);
 
-    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_EXEC, 0);
+    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_EXEC);
     php_parallel_monitor_unlock(runtime->monitor);
 }
 
@@ -535,21 +537,21 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill
     php_parallel_monitor_lock(runtime->monitor);
 
     if (kill){
-        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_KILLED, 0);
+        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_KILLED);
 
         /* we still interrupt the VM, because that is not cancellable */
         *(runtime->child.interrupt) = 1;
 
         pthread_cancel(runtime->thread);
     } else {
-        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSE, 0);
+        php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSE);
     }
 
     php_parallel_monitor_wait_locked(runtime->monitor, PHP_PARALLEL_DONE);
 
     php_parallel_monitor_unlock(runtime->monitor);
 
-    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED, 1);
+    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED);
 
     pthread_join(runtime->thread, NULL);
 }
@@ -568,6 +570,8 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
 
     out = zend_llist_count(&future->runtime->schedule);
 
+    php_parallel_monitor_unlock(future->runtime->monitor);
+
     if (in == out) {
         zend_bool cancelled = 0;
 
@@ -576,26 +580,24 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
         if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY)) {
             *(future->runtime->child.interrupt) = 1;
 
-            php_parallel_monitor_set(future->monitor, PHP_PARALLEL_CANCELLED, 0);
+            php_parallel_monitor_set(future->monitor, PHP_PARALLEL_CANCELLED);
             php_parallel_monitor_wait_locked(future->monitor,
                 PHP_PARALLEL_READY);
             php_parallel_monitor_set(future->monitor,
-                PHP_PARALLEL_READY|PHP_PARALLEL_DONE, 0);
+                PHP_PARALLEL_READY|PHP_PARALLEL_DONE);
 
             cancelled = 1;
         }
 
         php_parallel_monitor_unlock(future->monitor);
 
-        php_parallel_monitor_unlock(future->runtime->monitor);
         return cancelled;
     } else {
         php_parallel_monitor_set(future->monitor,
             PHP_PARALLEL_READY|
             PHP_PARALLEL_DONE|
-            PHP_PARALLEL_CANCELLED, 1);
+            PHP_PARALLEL_CANCELLED);
 
-        php_parallel_monitor_unlock(future->runtime->monitor);
         return 1;
     }
 }

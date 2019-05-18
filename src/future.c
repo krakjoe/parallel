@@ -56,7 +56,7 @@ void php_parallel_future_value(php_parallel_future_t *future, zval *return_value
             PARALLEL_ZVAL_DTOR(&garbage);
         }
 
-        php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+        php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
     }
 
     ZVAL_COPY(return_value, &future->value);
@@ -104,7 +104,7 @@ PHP_METHOD(Future, value)
             php_parallel_future_error_ce,
             "cannot retrieve value");
         php_parallel_monitor_set(future->monitor,
-            PHP_PARALLEL_READY|PHP_PARALLEL_FAILURE, 0);
+            PHP_PARALLEL_READY|PHP_PARALLEL_FAILURE);
         return;
     }
 
@@ -115,13 +115,13 @@ PHP_METHOD(Future, value)
             php_parallel_exceptions_restore(&future->value));
 
         php_parallel_monitor_set(future->monitor,
-            PHP_PARALLEL_READY|PHP_PARALLEL_ERROR, 0);
+            PHP_PARALLEL_READY|PHP_PARALLEL_ERROR);
 
         zend_throw_exception_object(&exception);
         return;
     }
 
-    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY, 0);
+    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY);
 
 _php_parallel_future_value:
     php_parallel_future_value(future, return_value, 1);
@@ -189,7 +189,7 @@ PHP_METHOD(Future, __construct)
         php_parallel_future_error_ce,
         "construction of Future objects is not allowed");
 
-    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
 }
 
 zend_function_entry php_parallel_future_methods[] = {
