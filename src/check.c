@@ -323,13 +323,13 @@ zend_bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_
         it++;
     }
 
+    check.returns = *returns;
+
     if (!*returns) {
         if (EX(opline)->result_type != IS_UNUSED) {
             *returns = 1;
         }
     }
-
-    check.returns = *returns;
 
     zend_hash_index_add_mem(
         &PCG(tasks),
