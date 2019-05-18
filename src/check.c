@@ -227,7 +227,9 @@ zend_bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_
             php_parallel_exception_ex(
                 php_parallel_runtime_error_illegal_parameter_ce,
                 "illegal parameter (%s) passed to task at argument %d",
-                zend_get_type_by_const(Z_TYPE_P(errarg)), errat);
+                Z_TYPE_P(errarg) == IS_OBJECT ?
+                    ZSTR_VAL(Z_OBJCE_P(errarg)->name) :
+                    zend_get_type_by_const(Z_TYPE_P(errarg)), errat);
             return 0;
         }
     }

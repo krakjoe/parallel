@@ -24,6 +24,6 @@ try {
 }
 ?>
 --EXPECT--
-string(55) "illegal parameter (object) passed to task at argument 1"
+string(57) "illegal parameter (stdClass) passed to task at argument 1"
 
 

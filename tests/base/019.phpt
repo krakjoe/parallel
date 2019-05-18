@@ -42,11 +42,10 @@ try {
 	var_dump($ex->getMessage());
 }
 ?>
---EXPECTF--
-string(%d) "illegal parameter (object) passed to task at argument 1"
-string(%d) "illegal parameter (object) passed to task at argument 2"
-string(%d) "illegal parameter (object) passed to task at argument 3"
-string(%d) "illegal parameter (object) passed to task at argument 1"
-
+--EXPECT--
+string(57) "illegal parameter (DateTime) passed to task at argument 1"
+string(57) "illegal parameter (DateTime) passed to task at argument 2"
+string(57) "illegal parameter (DateTime) passed to task at argument 3"
+string(57) "illegal parameter (DateTime) passed to task at argument 1"
 
 
