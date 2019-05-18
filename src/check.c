@@ -42,7 +42,8 @@ typedef struct _php_parallel_check_type_t {
 typedef enum {
     PHP_PARALLEL_CHECK_CLASS_UNKNOWN,
     PHP_PARALLEL_CHECK_CLASS_VALID,
-    PHP_PARALLEL_CHECK_CLASS_INVALID
+    PHP_PARALLEL_CHECK_CLASS_INVALID,
+    PHP_PARALLEL_CHECK_CLASS_INVALID_PROPERTY
 } php_parallel_check_class_result_t;
 
 typedef struct _php_parallel_check_class_t {
@@ -443,8 +444,9 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
 
         switch (php_parallel_check_class(next)) {
             case PHP_PARALLEL_CHECK_CLASS_INVALID:
+            case PHP_PARALLEL_CHECK_CLASS_INVALID_PROPERTY:
                 check.result =
-                    PHP_PARALLEL_CHECK_CLASS_INVALID;
+                    PHP_PARALLEL_CHECK_CLASS_INVALID_PROPERTY;
                 goto _php_parallel_checked_class;
 
             case PHP_PARALLEL_CHECK_CLASS_UNKNOWN:
@@ -486,13 +488,16 @@ static zend_always_inline zend_bool php_parallel_check_object(zend_object *objec
     if ((object->properties == NULL) || (object->properties->nNumUsed == 0)) {
         switch (php_parallel_check_class_inline(object->ce)) {
             case PHP_PARALLEL_CHECK_CLASS_VALID:
+                /* whole graph is typed and allowed */
                 return 1;
 
             case PHP_PARALLEL_CHECK_CLASS_INVALID:
                 return 0;
 
+            case PHP_PARALLEL_CHECK_CLASS_INVALID_PROPERTY:
+                    /* type info for a property in graph is invalid, but may be undef/null */
             case PHP_PARALLEL_CHECK_CLASS_UNKNOWN:
-                /* must check properties */
+                    /* not enough type info */
             break;
         }
     }
