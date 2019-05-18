@@ -82,7 +82,7 @@ static zend_always_inline const char* php_parallel_check_opcode_name(zend_uchar 
 } /* }}} */
 
 static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /* {{{ */
-    zend_string      *name = ZEND_TYPE_NAME(type);;
+    zend_string      *name = ZEND_TYPE_NAME(type);
     zend_class_entry *class;
     php_parallel_check_type_t check, *checked;
 
@@ -364,9 +364,9 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
             case ZEND_DECLARE_INHERITED_CLASS:
             case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
             case ZEND_DECLARE_ANON_CLASS:
-                check.function = (zend_function*) function;
+                check.function =
+                    (zend_function*) function;
                 check.instruction = it->opcode;
-                check.valid = 0;
 
                 goto _php_parallel_checked_function_add;
 
@@ -378,8 +378,6 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
                 PARALLEL_COPY_OPLINE_TO_FUNCTION(function, it, &key, &dependency);
 
                 if (!php_parallel_check_function(dependency, &check.function, &check.instruction)) {
-                    check.valid = 0;
-
                     goto _php_parallel_checked_function_add;
                 }
             } break;
