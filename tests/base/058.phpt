@@ -24,5 +24,3 @@ try {
 --EXPECT--
 string(63) "illegal parameter (DoesNotExist) accepted by task at argument 1"
 
-
-
