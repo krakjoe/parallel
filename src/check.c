@@ -342,19 +342,14 @@ zend_bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_
 } /* }}} */
 
 zend_bool php_parallel_check_function(const zend_function *function, zend_function **errf, zend_uchar *erro) { /* {{{ */
-    php_parallel_check_function_t check, *checked = zend_hash_index_find_ptr(&PCG(functions), (zend_ulong) function->op_array.opcodes);
+    php_parallel_check_function_t check, *checked;
     zend_op *it, *end;
 
-    if (checked) {
-        if (errf) {
-            *errf = checked->function;
-        }
+    if ((checked = zend_hash_index_find_ptr(&PCG(functions), (zend_ulong) function->op_array.opcodes))) {
+        check =
+            *checked;
 
-        if (erro) {
-            *erro = checked->instruction;
-        }
-
-        return checked->valid;
+        goto _php_parallel_checked_function_return;
     }
 
     memset(&check, 0, sizeof(php_parallel_check_function_t));
@@ -373,7 +368,7 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
                 check.instruction = it->opcode;
                 check.valid = 0;
 
-                goto _php_parallel_checked_function;
+                goto _php_parallel_checked_function_add;
 
 
             case ZEND_DECLARE_LAMBDA_FUNCTION: {
@@ -385,7 +380,7 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
                 if (!php_parallel_check_function(dependency, &check.function, &check.instruction)) {
                     check.valid = 0;
 
-                    goto _php_parallel_checked_function;
+                    goto _php_parallel_checked_function_add;
                 }
             } break;
         }
@@ -394,12 +389,13 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
 
     check.valid = 1;
 
-_php_parallel_checked_function:
+_php_parallel_checked_function_add:
     zend_hash_index_add_mem(
         &PCG(functions),
         (zend_ulong) function->op_array.opcodes,
         &check, sizeof(php_parallel_check_function_t));
 
+_php_parallel_checked_function_return:
     if (errf) {
         *errf = check.function;
     }
