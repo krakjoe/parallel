@@ -22,7 +22,7 @@
 
 TSRM_TLS struct {
     HashTable tasks;
-    HashTable closures;    
+    HashTable functions;
     HashTable types;
 #if PHP_VERSION_ID >= 70400
     HashTable classes;
@@ -36,9 +36,11 @@ typedef struct _php_parallel_check_task_t {
     zend_bool      returns;
 } php_parallel_check_task_t;
 
-typedef struct _php_parallel_check_closure_t {
-    zend_bool valid;
-} php_parallel_check_closure_t;
+typedef struct _php_parallel_check_function_t {
+    zend_function *function;
+    zend_uchar     instruction;
+    zend_bool      valid;
+} php_parallel_check_function_t;
 
 typedef struct _php_parallel_check_type_t {
     zend_bool valid;
@@ -340,8 +342,25 @@ zend_bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_
 } /* }}} */
 
 zend_bool php_parallel_check_function(const zend_function *function, zend_function **errf, zend_uchar *erro) { /* {{{ */
-    zend_op *it = function->op_array.opcodes,
-            *end = it + function->op_array.last;
+    php_parallel_check_function_t check, *checked = zend_hash_index_find_ptr(&PCG(functions), (zend_ulong) function->op_array.opcodes);
+    zend_op *it, *end;
+
+    if (checked) {
+        if (errf) {
+            *errf = checked->function;
+        }
+
+        if (erro) {
+            *erro = checked->instruction;
+        }
+
+        return checked->valid;
+    }
+
+    memset(&check, 0, sizeof(php_parallel_check_function_t));
+
+    it  = function->op_array.opcodes;
+    end = it + function->op_array.last;
 
     while (it < end) {
         switch (it->opcode) {
@@ -350,13 +369,12 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
             case ZEND_DECLARE_INHERITED_CLASS:
             case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
             case ZEND_DECLARE_ANON_CLASS:
-                if (errf) {
-                    *errf = (zend_function*) function;
-                }
-                if (erro) {
-                    *erro = it->opcode;
-                }
-                return 0;
+                check.function = (zend_function*) function;
+                check.instruction = it->opcode;
+                check.valid = 0;
+
+                goto _php_parallel_checked_function;
+
 
             case ZEND_DECLARE_LAMBDA_FUNCTION: {
                 zend_string *key;
@@ -364,32 +382,37 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
 
                 PARALLEL_COPY_OPLINE_TO_FUNCTION(function, it, &key, &dependency);
 
-                if (!php_parallel_check_function(dependency, errf, erro)) {
-                    return 0;
+                if (!php_parallel_check_function(dependency, &check.function, &check.instruction)) {
+                    check.valid = 0;
+
+                    goto _php_parallel_checked_function;
                 }
             } break;
         }
         it++;
     }
 
-    return 1;
+    check.valid = 1;
+
+_php_parallel_checked_function:
+    zend_hash_index_add_mem(
+        &PCG(functions),
+        (zend_ulong) function->op_array.opcodes,
+        &check, sizeof(php_parallel_check_function_t));
+
+    if (errf) {
+        *errf = check.function;
+    }
+
+    if (erro) {
+        *erro = check.instruction;
+    }
+
+    return check.valid;
 } /* }}} */
 
 static zend_always_inline zend_bool php_parallel_check_closure(zend_closure_t *closure) { /* {{{ */
-    php_parallel_check_closure_t check, *checked = zend_hash_index_find_ptr(&PCG(closures), (zend_ulong) closure->func.op_array.opcodes);
-
-    if (checked) {
-        return checked->valid;
-    }
-
-    checked = &check;
-
-    check.valid =
-        php_parallel_check_function(&closure->func, NULL, NULL);
-
-    zend_hash_index_add_mem(&PCG(closures), (zend_ulong) closure->func.op_array.opcodes, &check, sizeof(php_parallel_check_closure_t));
-
-    return checked->valid;
+    return php_parallel_check_function(&closure->func, NULL, NULL);
 } /* }}} */
 
 #if PHP_VERSION_ID >= 70400
@@ -599,7 +622,7 @@ static void php_parallel_checked_dtor(zval *zv) {
 PHP_RINIT_FUNCTION(PARALLEL_CHECK)
 {
     zend_hash_init(&PCG(tasks),    32, NULL, php_parallel_checked_dtor, 0);
-    zend_hash_init(&PCG(closures), 32, NULL, php_parallel_checked_dtor, 0);
+    zend_hash_init(&PCG(functions),32, NULL, php_parallel_checked_dtor, 0);
     zend_hash_init(&PCG(types),    32, NULL, php_parallel_checked_dtor, 0);
 #if PHP_VERSION_ID >= 70400
     zend_hash_init(&PCG(classes),  32, NULL, php_parallel_checked_dtor, 0);
@@ -614,7 +637,7 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_CHECK)
     zend_hash_destroy(&PCG(classes));
 #endif
     zend_hash_destroy(&PCG(types));
-    zend_hash_destroy(&PCG(closures));
+    zend_hash_destroy(&PCG(functions));
     zend_hash_destroy(&PCG(tasks));
 
     return SUCCESS;
