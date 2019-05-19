@@ -82,7 +82,7 @@ PHP_MINFO_FUNCTION(parallel)
 zend_module_entry parallel_module_entry = {
 	STANDARD_MODULE_HEADER,
 	"parallel",
-	NULL,
+	php_parallel_functions,
 	PHP_MINIT(parallel),
 	PHP_MSHUTDOWN(parallel),
 	PHP_RINIT(parallel),

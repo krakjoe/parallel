@@ -115,7 +115,7 @@ static zend_always_inline void php_parallel_scheduler_add(
         (zend_execute_data*)
             pecalloc(1, zend_vm_calc_used_stack(argc, (zend_function*) function), 1);
 
-    frame->func = 
+    frame->func =
         php_parallel_cache_closure(function, NULL);
 
     php_parallel_dependencies_store(frame->func);
@@ -159,6 +159,21 @@ static zend_always_inline zend_bool php_parallel_scheduler_empty(php_parallel_ru
     return !zend_llist_count(&runtime->schedule);
 }
 
+zend_bool php_parallel_scheduler_busy(php_parallel_runtime_t *runtime) {
+    zend_bool busy = 1;
+
+    php_parallel_monitor_lock(runtime->monitor);
+    if (php_parallel_scheduler_empty(runtime)) {
+        if (!php_parallel_monitor_check(
+                runtime->monitor, PHP_PARALLEL_RUNNING)) {
+            busy = 0;
+        }
+    }
+    php_parallel_monitor_unlock(runtime->monitor);
+
+    return busy;
+}
+
 static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parallel_schedule_el_t *el) {
     php_parallel_schedule_el_t *head;
     zend_class_entry *scope = NULL;
@@ -169,7 +184,7 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
     }
 
     head = zend_llist_get_first(&runtime->schedule);
-    function = 
+    function =
         head->frame->func;
     head->frame->func = NULL;
 
@@ -260,6 +275,7 @@ php_parallel_scheduler_cleanup_start(php_parallel_scheduler_run_end, zend_execut
         PG(report_memleaks) = 0;
     }
 
+    php_parallel_monitor_remove(php_parallel_scheduler_context->monitor, PHP_PARALLEL_RUNNING);
     php_parallel_monitor_unlock(php_parallel_scheduler_context->monitor);
 
     if (frame->return_value  && !Z_ISUNDEF_P(frame->return_value)) {
@@ -387,6 +403,10 @@ static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
 }
 
 php_parallel_scheduler_cleanup_start(php_parallel_scheduler_unlock, php_parallel_runtime_t*, runtime) {
+    if (!php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_KILLED)) {
+        php_parallel_monitor_add(
+            runtime->monitor, PHP_PARALLEL_RUNNING);
+    }
     php_parallel_monitor_unlock(runtime->monitor);
 } php_parallel_scheduler_cleanup_end()
 

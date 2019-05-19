@@ -83,6 +83,8 @@ static zend_always_inline void php_parallel_cond_destroy(pthread_cond_t *cond) {
     pthread_cond_destroy(cond);
 }
 
+extern zend_function_entry php_parallel_functions[];
+
 PHP_MINIT_FUNCTION(PARALLEL_CORE);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_CORE);
 

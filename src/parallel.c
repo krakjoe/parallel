@@ -20,6 +20,14 @@
 
 #include "parallel.h"
 
+TSRM_TLS struct {
+    zend_string *bootstrap;
+    HashTable    runtimes;
+} php_parallel_globals;
+
+#define PCG(e) php_parallel_globals.e
+
+/* {{{ */
 typedef int (*php_sapi_deactivate_t)(void);
 typedef size_t (*php_sapi_output_t)(const char*, size_t);
 
@@ -37,7 +45,79 @@ static size_t php_parallel_output_function(const char *str, size_t len) {
     pthread_mutex_unlock(&php_parallel_output_mutex);
 
     return result;
+} /* }}} */
+
+/* {{{ */
+ZEND_BEGIN_ARG_INFO_EX(php_parallel_bootstrap_arginfo, 0, 0, 1)
+    ZEND_ARG_TYPE_INFO(0, file, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_NAMED_FUNCTION(php_parallel_bootstrap)
+{
+    zend_string *bootstrap;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_PATH_STR(bootstrap)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (PCG(bootstrap)) {
+        zend_string_release(PCG(bootstrap));
+    }
+
+    PCG(bootstrap) = zend_string_copy(bootstrap);
+} /* }}} */
+
+/* {{{ */
+static zend_always_inline php_parallel_runtime_t* php_parallel_runtimes_fetch() {
+    php_parallel_runtime_t *runtime;
+
+    ZEND_HASH_FOREACH_PTR(&PCG(runtimes), runtime) {
+        if (!php_parallel_scheduler_busy(runtime)) {
+            return runtime;
+        }
+    } ZEND_HASH_FOREACH_END();
+
+    if (!(runtime = php_parallel_runtime_construct(PCG(bootstrap)))) {
+        return NULL;
+    }
+
+    return zend_hash_next_index_insert_ptr(&PCG(runtimes), runtime);
 }
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_run_arginfo, 0, 1, \\parallel\\Future, 1)
+    ZEND_ARG_OBJ_INFO(0, task, Closure, 0)
+    ZEND_ARG_TYPE_INFO(0, argv, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+static PHP_NAMED_FUNCTION(php_parallel_run)
+{
+    php_parallel_runtime_t *runtime;
+    zval *closure = NULL;
+    zval *argv = NULL;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_OBJECT_OF_CLASS(closure, zend_ce_closure)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(argv)
+    ZEND_PARSE_PARAMETERS_END();
+
+    runtime = php_parallel_runtimes_fetch();
+
+    if (!EG(exception)) {
+        php_parallel_scheduler_push(
+            runtime, closure, argv, return_value);
+    }
+} /* }}} */
+
+/* {{{ */
+zend_function_entry php_parallel_functions[] = {
+	ZEND_NS_FENTRY("parallel", bootstrap, php_parallel_bootstrap, php_parallel_bootstrap_arginfo, 0)
+	ZEND_NS_FENTRY("parallel", run,       php_parallel_run,       php_parallel_run_arginfo, 0)
+
+	ZEND_NS_FENTRY("parallel", make, zim_Channel_make, php_parallel_channel_make_arginfo, 0)
+	ZEND_NS_FENTRY("parallel", open, zim_Channel_open, php_parallel_channel_open_arginfo, 0)
+    PHP_FE_END
+}; /* }}} */
 
 PHP_MINIT_FUNCTION(PARALLEL_CORE)
 {
@@ -79,9 +159,20 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CORE)
     return SUCCESS;
 }
 
+static void php_parallel_runtimes_release(zval *zv) {
+    php_parallel_runtime_t *runtime =
+        (php_parallel_runtime_t*) Z_PTR_P(zv);
+
+    OBJ_RELEASE(&runtime->std);
+}
+
 PHP_RINIT_FUNCTION(PARALLEL_CORE)
 {
     PHP_RINIT(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
+
+    zend_hash_init(
+        &PCG(runtimes), 16, NULL, php_parallel_runtimes_release, 0);
+    PCG(bootstrap) = NULL;
 
 	return SUCCESS;
 }
@@ -90,6 +181,12 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE)
 {
     if (!CG(unclean_shutdown)) {
         PHP_RSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
+    }
+
+    zend_hash_destroy(&PCG(runtimes));
+
+    if (PCG(bootstrap)) {
+        zend_string_release(PCG(bootstrap));
     }
 
 	return SUCCESS;

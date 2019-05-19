@@ -97,6 +97,22 @@ void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state) {
     pthread_mutex_unlock(&monitor->mutex);
 }
 
+void php_parallel_monitor_add(php_parallel_monitor_t *monitor, int32_t state) {
+    pthread_mutex_lock(&monitor->mutex);
+
+    monitor->state |= state;
+
+    pthread_mutex_unlock(&monitor->mutex);
+}
+
+void php_parallel_monitor_remove(php_parallel_monitor_t *monitor, int32_t state) {
+    pthread_mutex_lock(&monitor->mutex);
+
+    monitor->state &= ~state;
+
+    pthread_mutex_unlock(&monitor->mutex);
+}
+
 void php_parallel_monitor_destroy(php_parallel_monitor_t *monitor) {
     php_parallel_mutex_destroy(&monitor->mutex);
     php_parallel_cond_destroy(&monitor->condition);

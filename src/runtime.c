@@ -23,6 +23,25 @@
 zend_class_entry *php_parallel_runtime_ce;
 zend_object_handlers php_parallel_runtime_handlers;
 
+php_parallel_runtime_t* php_parallel_runtime_construct(zend_string *bootstrap) {
+    zval rt;
+    php_parallel_runtime_t *runtime;
+
+    object_init_ex(&rt, php_parallel_runtime_ce);
+
+    runtime = 
+        php_parallel_runtime_from(&rt);
+
+    php_parallel_scheduler_start(runtime, bootstrap);
+
+    if (!EG(exception)) {
+        return runtime;
+    }
+
+    zval_ptr_dtor(&rt);
+    return NULL;
+}
+
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_runtime_construct_arginfo, 0, 0, 0)
     ZEND_ARG_TYPE_INFO(0, bootstrap, IS_STRING, 0)
 ZEND_END_ARG_INFO()
