@@ -24,20 +24,13 @@
 TSRM_TLS HashTable php_parallel_runtimes;
 
 static struct {
-    pthread_mutex_t mutex;
-    zend_string     *bootstrap;
-    zend_ulong       running;
+    pthread_mutex_t     mutex;
+    zend_string        *bootstrap;
+    volatile zend_ulong running;
 } php_parallel_globals;
 
 #define PCG(e) php_parallel_globals.e
 /* }}} */
-
-/* {{{ */
-static zend_always_inline void php_parallel_runtimes_adjust(zend_ulong adjustment) {
-    pthread_mutex_lock(&PCG(mutex));
-    PCG(running) += adjustment;
-    pthread_mutex_unlock(&PCG(mutex));
-} /* }}} */
 
 /* {{{ */
 typedef int (*php_sapi_deactivate_t)(void);
@@ -100,6 +93,7 @@ static PHP_NAMED_FUNCTION(php_parallel_bootstrap)
 /* {{{ */
 static zend_always_inline php_parallel_runtime_t* php_parallel_runtimes_fetch() {
     php_parallel_runtime_t *runtime;
+    zend_bool first;
 
     ZEND_HASH_FOREACH_PTR(&php_parallel_runtimes, runtime) {
         if (!php_parallel_scheduler_busy(runtime)) {
@@ -107,22 +101,26 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_runtimes_fetch() 
         }
     } ZEND_HASH_FOREACH_END();
 
-    if (PCG(running) == 0) {
+    if ((first = (PCG(running) == 0))) {
         pthread_mutex_lock(&PCG(mutex));
     }
 
     if (!(runtime = php_parallel_runtime_construct(PCG(bootstrap)))) {
-        if (PCG(running) == 0) {
+        if (first) {
             pthread_mutex_unlock(&PCG(mutex));
         }
         return NULL;
     }
 
-    if (PCG(running) == 0) {
+    if (first) {
         PCG(running)++;
-
+        pthread_mutex_unlock(&PCG(mutex));
+    } else {
+        pthread_mutex_lock(&PCG(mutex));
+        PCG(running)++;
         pthread_mutex_unlock(&PCG(mutex));
     }
+
     return zend_hash_next_index_insert_ptr(&php_parallel_runtimes, runtime);
 }
 
