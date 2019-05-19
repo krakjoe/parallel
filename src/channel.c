@@ -53,6 +53,11 @@ static zend_always_inline void php_parallel_channels_open(zval *return_value, ph
     channel->link = php_parallel_link_copy(link);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_make_arginfo, 0, 1, \\parallel\\Channel, 0)
+    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO(0, capacity, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Channel, make)
 {
     zend_string *name = NULL;
@@ -91,6 +96,10 @@ PHP_METHOD(Channel, make)
 
     php_parallel_monitor_unlock(php_parallel_channels.monitor);
 }
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_open_arginfo, 0, 1, \\parallel\\Channel, 0)
+    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+ZEND_END_ARG_INFO()
 
 PHP_METHOD(Channel, open)
 {

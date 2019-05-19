@@ -113,9 +113,6 @@ static PHP_NAMED_FUNCTION(php_parallel_run)
 zend_function_entry php_parallel_functions[] = {
 	ZEND_NS_FENTRY("parallel", bootstrap, php_parallel_bootstrap, php_parallel_bootstrap_arginfo, 0)
 	ZEND_NS_FENTRY("parallel", run,       php_parallel_run,       php_parallel_run_arginfo, 0)
-
-	ZEND_NS_FENTRY("parallel", make, zim_Channel_make, php_parallel_channel_make_arginfo, 0)
-	ZEND_NS_FENTRY("parallel", open, zim_Channel_open, php_parallel_channel_open_arginfo, 0)
     PHP_FE_END
 }; /* }}} */
 

@@ -36,18 +36,6 @@ static zend_always_inline php_parallel_channel_t* php_parallel_channel_from(zval
     return php_parallel_channel_fetch(Z_OBJ_P(z));
 }
 
-PHP_METHOD(Channel, make);
-PHP_METHOD(Channel, open);
-
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_make_arginfo, 0, 1, \\parallel\\Channel, 0)
-    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
-    ZEND_ARG_TYPE_INFO(0, capacity, IS_LONG, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_open_arginfo, 0, 1, \\parallel\\Channel, 0)
-    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
-ZEND_END_ARG_INFO()
-
 PHP_MINIT_FUNCTION(PARALLEL_CHANNEL);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_CHANNEL);
 #endif
