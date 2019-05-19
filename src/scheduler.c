@@ -58,10 +58,6 @@ void php_parallel_scheduler_init(php_parallel_runtime_t *runtime) {
 
 void php_parallel_scheduler_destroy(php_parallel_runtime_t *runtime) {
     zend_llist_destroy(&runtime->schedule);
-
-    if (runtime->bootstrap) {
-        zend_string_release(runtime->bootstrap);
-    }
 }
 
 zend_bool php_parallel_scheduler_killed() {
@@ -370,14 +366,12 @@ static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
         return FAILURE;
     }
 
-    if (!fh.opened_path) {
-        fh.opened_path = zend_string_dup(file, 0);
-    }
+    zend_hash_add_empty_element(&EG(included_files),
+                                    fh.opened_path ?
+                                        fh.opened_path : file);
 
-    zend_hash_add_empty_element(&EG(included_files), fh.opened_path);
+    ops = zend_compile_file(&fh, ZEND_REQUIRE);
 
-    ops = zend_compile_file(
-        &fh, ZEND_REQUIRE);
     zend_destroy_file_handle(&fh);
 
     if (ops) {
@@ -477,7 +471,7 @@ void php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *
     uint32_t state = SUCCESS;
 
     if (bootstrap) {
-        runtime->bootstrap = zend_string_dup(bootstrap, 1);
+        runtime->bootstrap = php_parallel_copy_string_interned(bootstrap);
     }
 
     runtime->monitor = php_parallel_monitor_create();
