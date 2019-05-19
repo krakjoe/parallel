@@ -27,7 +27,7 @@ static struct {
     pthread_mutex_t mutex;
     zend_string     *bootstrap;
     zend_ulong       running;
-} php_parallel_globals = {PTHREAD_MUTEX_INITIALIZER, NULL, 0};
+} php_parallel_globals;
 
 #define PCG(e) php_parallel_globals.e
 /* }}} */
@@ -107,12 +107,22 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_runtimes_fetch() 
         }
     } ZEND_HASH_FOREACH_END();
 
+    if (PCG(running) == 0) {
+        pthread_mutex_lock(&PCG(mutex));
+    }
+
     if (!(runtime = php_parallel_runtime_construct(PCG(bootstrap)))) {
+        if (PCG(running) == 0) {
+            pthread_mutex_unlock(&PCG(mutex));
+        }
         return NULL;
     }
 
-    php_parallel_runtimes_adjust(1);
+    if (PCG(running) == 0) {
+        PCG(running)++;
 
+        pthread_mutex_unlock(&PCG(mutex));
+    }
     return zend_hash_next_index_insert_ptr(&php_parallel_runtimes, runtime);
 }
 
@@ -156,6 +166,8 @@ PHP_MINIT_FUNCTION(PARALLEL_CORE)
         sapi_module.deactivate = NULL;
     }
 
+    memset(&php_parallel_globals, 0, sizeof(php_parallel_globals));
+
     php_sapi_output_function = sapi_module.ub_write;
 
     sapi_module.ub_write = php_parallel_output_function;
@@ -166,6 +178,10 @@ PHP_MINIT_FUNCTION(PARALLEL_CORE)
     PHP_MINIT(PARALLEL_SCHEDULER)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_CHANNEL)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_EVENTS)(INIT_FUNC_ARGS_PASSTHRU);
+
+    php_parallel_mutex_init(&PCG(mutex), 1);
+    PCG(running) = 0;
+    PCG(bootstrap) = NULL;
 
     return SUCCESS;
 }
@@ -178,6 +194,8 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CORE)
     PHP_MSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MSHUTDOWN(PARALLEL_EXCEPTIONS)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MSHUTDOWN(PARALLEL_HANDLERS)(INIT_FUNC_ARGS_PASSTHRU);
+
+    php_parallel_mutex_destroy(&PCG(mutex));
 
     if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
         sapi_module.deactivate = php_sapi_deactivate_function;
@@ -192,9 +210,10 @@ static void php_parallel_runtimes_release(zval *zv) {
     php_parallel_runtime_t *runtime =
         (php_parallel_runtime_t*) Z_PTR_P(zv);
 
+    pthread_mutex_lock(&PCG(mutex));
     OBJ_RELEASE(&runtime->std);
-
-    php_parallel_runtimes_adjust(-1);
+    PCG(running)--;
+    pthread_mutex_unlock(&PCG(mutex));
 }
 
 PHP_RINIT_FUNCTION(PARALLEL_CORE)
