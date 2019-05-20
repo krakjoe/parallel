@@ -29,7 +29,6 @@ void               php_parallel_scheduler_stop(php_parallel_runtime_t *runtime);
 void               php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill);
 zend_bool          php_parallel_scheduler_busy(php_parallel_runtime_t *runtime);
 void               php_parallel_scheduler_destroy(php_parallel_runtime_t *runtime);
-zend_bool          php_parallel_scheduler_killed();
 
 zend_bool          php_parallel_scheduler_cancel(php_parallel_future_t *future);
 
