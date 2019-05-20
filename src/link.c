@@ -304,11 +304,6 @@ static zend_always_inline zend_bool php_parallel_link_recv_buffered(php_parallel
         link->s.r--;
     }
 
-    if (link->s.c) {
-        pthread_mutex_unlock(&link->m.m);
-        return 0;
-    }
-
     head = zend_llist_get_first(&link->port.q.l);
 
     PARALLEL_ZVAL_COPY(value, head, 0);
