@@ -16,28 +16,24 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-05-08</date>
+ <date>2019-05-20</date>
  <version>
-  <release>0.9.0</release>
-  <api>0.9.0</api>
+  <release>1.0.0</release>
+  <api>1.0.0</api>
  </version>
  <stability>
-  <release>beta</release>
-  <api>beta</api>
+  <release>stable</release>
+  <api>stable</api>
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Channels: bi-directional communication between tasks and runtimes
-- Improvements to copying making it vastly more efficient
-- Improvements to runtime stack, making it more efficient
-- Tasks may use lexical scope
-- Events - an experimental, quite primitive event loop for reading/writing sets of channels and futures
-- Support for rethrowing exceptions uncaught in tasks
-- Simplified Runtime constructor
-- Remove Future::select (in favour of the superior events interface)
-- Task cancellation
-- Closure support
-- Drop support for PHP 7.1
+- Caching improvements
+- Channel comparison (==) fixed
+- Debug handler added for Channel
+- Debug handler for Future (just shows runtime)
+- Fix copying of interned strings
+- Object support
+- Functional API for parallel\Runtime
  </notes>
  <contents>
   <dir name="/">
@@ -84,8 +80,6 @@
     <file name="runtime.h" role="src"/>
     <file name="scheduler.c" role="src"/>
     <file name="scheduler.h" role="src"/>
-    <file name="strings.c" role="src"/>
-    <file name="strings.h" role="src"/>
    </dir> <!-- src -->
    <dir name="tests">
      <dir name="base">
@@ -136,6 +130,19 @@
       <file name="048.phpt" role="test"/>
       <file name="049.phpt" role="test"/>
       <file name="050.phpt" role="test"/>
+      <file name="051.inc" role="test"/>
+      <file name="051.phpt" role="test"/>
+      <file name="052.phpt" role="test"/>
+      <file name="053.inc" role="test"/>
+      <file name="053.phpt" role="test"/>
+      <file name="054.phpt" role="test"/>
+      <file name="055.phpt" role="test"/>
+      <file name="056.phpt" role="test"/>
+      <file name="057.phpt" role="test"/>
+      <file name="058.phpt" role="test"/>
+      <file name="059.inc" role="test"/>
+      <file name="059.phpt" role="test"/>
+      <file name="060.phpt" role="test"/>
       <file name="bootstrapc.inc" role="test"/>
       <file name="bootstrape.inc" role="test"/>
       <file name="bootstrap.inc" role="test"/>
@@ -152,8 +159,14 @@
       <file name="009.phpt" role="test"/>
       <file name="010.phpt" role="test"/>
       <file name="011.phpt" role="test"/>
-      <file name="012.phpt" role="test"/>
       <file name="013.phpt" role="test"/>
+      <file name="014.phpt" role="test"/>
+      <file name="015.phpt" role="test"/>
+      <file name="016.phpt" role="test"/>
+      <file name="017.phpt" role="test"/>
+      <file name="018.phpt" role="test"/>
+      <file name="019.inc" role="test"/>
+      <file name="019.phpt" role="test"/>
      </dir> <!-- channel -->
      <dir name="closures">
       <file name="001.phpt" role="test"/>
@@ -164,8 +177,15 @@
       <file name="006.phpt" role="test"/>
       <file name="007.phpt" role="test"/>
       <file name="008.phpt" role="test"/>
+      <file name="009.phpt" role="test"/>
+      <file name="010.inc" role="test"/>
+      <file name="010.phpt" role="test"/>
+      <file name="011.inc" role="test"/>
+      <file name="011.phpt" role="test"/>
+      <file name="012.phpt" role="test"/>
      </dir> <!-- closures -->
      <dir name="events">
+      <file name="001.phpt" role="test"/>
       <file name="003.phpt" role="test"/>
       <file name="004.phpt" role="test"/>
       <file name="005.phpt" role="test"/>
@@ -187,6 +207,17 @@
         <file name="006.phpt" role="test"/>
        </dir> <!-- wait -->
      </dir> <!-- event -->
+     <dir name="functional">
+      <file name="001.phpt" role="test"/>
+      <file name="002.inc" role="test"/>
+      <file name="002.phpt" role="test"/>
+      <file name="003.inc" role="test"/>
+      <file name="003.phpt" role="test"/>
+      <file name="004.phpt" role="test"/>
+      <file name="005.phpt" role="test"/>
+      <file name="006.phpt" role="test"/>
+      <file name="007.phpt" role="test"/>
+     </dir> <!-- functional -->
      <dir name="handlers">
       <file name="001.phpt" role="test"/>
       <file name="002.phpt" role="test"/>
@@ -210,6 +241,31 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-05-08</date>
+   <version>
+    <release>0.9.0</release>
+    <api>0.9.0</api>
+   </version>
+   <stability>
+    <release>beta</release>
+    <api>beta</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Channels: bi-directional communication between tasks and runtimes
+- Improvements to copying making it vastly more efficient
+- Improvements to runtime stack, making it more efficient
+- Tasks may use lexical scope
+- Events - an experimental, quite primitive event loop for reading/writing sets of channels and futures
+- Support for rethrowing exceptions uncaught in tasks
+- Simplified Runtime constructor
+- Remove Future::select (in favour of the superior events interface)
+- Task cancellation
+- Closure support
+- Drop support for PHP 7.1
+   </notes>
+  </release>
   <release>
    <date>2019-03-25</date>
    <version>
