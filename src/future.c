@@ -23,6 +23,8 @@
 zend_class_entry *php_parallel_future_ce;
 zend_object_handlers php_parallel_future_handlers;
 
+zend_string *php_parallel_future_string_runtime;
+
 zend_bool php_parallel_future_lock(php_parallel_future_t *future) {
     return php_parallel_monitor_lock(future->monitor);
 }
@@ -54,7 +56,7 @@ void php_parallel_future_value(php_parallel_future_t *future, zval *return_value
             PARALLEL_ZVAL_DTOR(&garbage);
         }
 
-        php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+        php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
     }
 
     ZVAL_COPY(return_value, &future->value);
@@ -102,7 +104,7 @@ PHP_METHOD(Future, value)
             php_parallel_future_error_ce,
             "cannot retrieve value");
         php_parallel_monitor_set(future->monitor,
-            PHP_PARALLEL_READY|PHP_PARALLEL_FAILURE, 0);
+            PHP_PARALLEL_READY|PHP_PARALLEL_FAILURE);
         return;
     }
 
@@ -113,13 +115,13 @@ PHP_METHOD(Future, value)
             php_parallel_exceptions_restore(&future->value));
 
         php_parallel_monitor_set(future->monitor,
-            PHP_PARALLEL_READY|PHP_PARALLEL_ERROR, 0);
+            PHP_PARALLEL_READY|PHP_PARALLEL_ERROR);
 
         zend_throw_exception_object(&exception);
         return;
     }
 
-    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY, 0);
+    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY);
 
 _php_parallel_future_value:
     php_parallel_future_value(future, return_value, 1);
@@ -187,7 +189,7 @@ PHP_METHOD(Future, __construct)
         php_parallel_future_error_ce,
         "construction of Future objects is not allowed");
 
-    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE, 0);
+    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
 }
 
 zend_function_entry php_parallel_future_methods[] = {
@@ -240,6 +242,33 @@ void php_parallel_future_destroy(zend_object *o) {
     zend_object_std_dtor(o);
 }
 
+#if PHP_VERSION_ID >= 80000
+static HashTable* php_parallel_future_debug(zend_object *zo, int *temp) {
+    php_parallel_future_t *future = php_parallel_future_fetch(zo);
+#else
+static HashTable* php_parallel_future_debug(zval *zv, int *temp) {
+    php_parallel_future_t *future = php_parallel_future_from(zv);
+#endif
+    HashTable *debug;
+    zval zdbg;
+
+    ALLOC_HASHTABLE(debug);
+    zend_hash_init(debug, 3, NULL, ZVAL_PTR_DTOR, 0);
+
+    *temp = 1;
+
+    GC_ADDREF(&future->runtime->std);
+
+    ZVAL_OBJ(&zdbg, &future->runtime->std);
+
+    zend_hash_add(
+        debug,
+        php_parallel_future_string_runtime,
+        &zdbg);
+
+    return debug;
+}
+
 PHP_MINIT_FUNCTION(PARALLEL_FUTURE)
 {
     zend_class_entry ce;
@@ -248,6 +277,7 @@ PHP_MINIT_FUNCTION(PARALLEL_FUTURE)
 
     php_parallel_future_handlers.offset = XtOffsetOf(php_parallel_future_t, std);
     php_parallel_future_handlers.free_obj = php_parallel_future_destroy;
+    php_parallel_future_handlers.get_debug_info = php_parallel_future_debug;
 
     INIT_NS_CLASS_ENTRY(ce, "parallel", "Future", php_parallel_future_methods);
 
@@ -255,11 +285,15 @@ PHP_MINIT_FUNCTION(PARALLEL_FUTURE)
     php_parallel_future_ce->create_object = php_parallel_future_create;
     php_parallel_future_ce->ce_flags |= ZEND_ACC_FINAL;
 
+    php_parallel_future_string_runtime = zend_string_init_interned(ZEND_STRL("runtime"), 1);
+
     return SUCCESS;
 }
 
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_FUTURE)
 {
+    zend_string_release(php_parallel_future_string_runtime);
+
     return SUCCESS;
 }
 #endif

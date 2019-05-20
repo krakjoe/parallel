@@ -19,6 +19,8 @@ $f1 = $runtime->run(function() {
 	var_dump($closure());
 });
 
+$f1->value();
+
 $f2 = $runtime->run(function() {
 	$closure = function() {
 	    $result = function(){
@@ -29,7 +31,7 @@ $f2 = $runtime->run(function() {
 	var_dump($closure());
 });
 
-$f1->value() && $f2->value();
+$f2->value();
 
 try {
     $runtime->run(function() {

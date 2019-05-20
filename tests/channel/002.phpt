@@ -1,5 +1,5 @@
 --TEST--
-Check basic channel operation (open)
+Check make/open/cast
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -16,11 +16,11 @@ $parallel = new parallel\Runtime();
 $parallel->run(function($channel){
 	$channel = Channel::open($channel);
 	
-	var_dump($channel);
+	var_dump((string)$channel);
+
 }, [(string) $channel]);
 ?>
---EXPECTF--
-object(parallel\Channel)#%d (%d) {
-}
+--EXPECT--
+string(2) "io"
 
 

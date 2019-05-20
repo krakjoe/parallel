@@ -21,7 +21,8 @@ var_dump($future->value());
 --EXPECTF--
 Fatal error: Uncaught RuntimeException: message in %s:12
 Stack trace:
-#0 %sbootstrap.inc(19): Qux->method('array(1)', 'Object(stdClass...')
-#1 %s037.php(7): Foo->bar('array(1)', 'Object(stdClass...')
+#0 %s(19): Qux->method(Array, Object(stdClass))
+#1 %s(7): Foo->bar(Array, Object(stdClass))
 #2 {main}
-  thrown in %sbootstrap.inc on line 12
+  thrown in %s on line 12
+

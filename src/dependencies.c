@@ -94,10 +94,6 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
 
                 PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, &key, &dependency);
 
-                if (dependency->op_array.refcount) {
-                    dependency = php_parallel_cache_function(dependency);
-                }
-
                 dependency = php_parallel_copy_function(dependency, 1);
 
                 if (dependencies.nNumUsed == 0) {
@@ -106,7 +102,7 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
 
                 zend_hash_add_ptr(
                     &dependencies,
-                    php_parallel_string(key),
+                    php_parallel_copy_string_interned(key),
                     dependency);
 
                 php_parallel_dependencies_store(dependency);
@@ -143,7 +139,15 @@ void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
 
     ZEND_HASH_FOREACH_STR_KEY_PTR(dependencies, key, dependency) {
         if (!zend_hash_exists(EG(function_table), key)) {
-            php_parallel_copy_function_use(key, dependency);
+            zend_op_array *used =
+                (zend_op_array*)
+                    php_parallel_copy_function(dependency, 0);
+
+            zend_hash_add_ptr(EG(function_table), key, used);
+
+#ifdef ZEND_MAP_PTR_NEW
+            ZEND_MAP_PTR_NEW(used->run_time_cache);
+#endif
         }
     } ZEND_HASH_FOREACH_END();
 } /* }}} */
@@ -169,19 +173,7 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES)
 
 PHP_MINIT_FUNCTION(PARALLEL_DEPENDENCIES)
 {
-    pthread_mutexattr_t attributes;
-
-    pthread_mutexattr_init(&attributes);
-
-#if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
-     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
-#else
-     pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
-#endif
-
-    pthread_mutex_init(&PDM(mutex), &attributes);
-
-    pthread_mutexattr_destroy(&attributes);
+    php_parallel_mutex_init(&PDM(mutex), 1);
 
     zend_hash_init(&PDM(table), 32, NULL, php_parallel_dependencies_dtor, 1);
 
@@ -191,7 +183,7 @@ PHP_MINIT_FUNCTION(PARALLEL_DEPENDENCIES)
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES)
 {
     zend_hash_destroy(&PDM(table));
-    pthread_mutex_destroy(&PDM(mutex));
+    php_parallel_mutex_destroy(&PDM(mutex));
 
     return SUCCESS;
 }

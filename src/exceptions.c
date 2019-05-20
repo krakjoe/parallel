@@ -20,7 +20,7 @@
 
 #include "parallel.h"
 
-typedef struct _php_parallel_exception_t {
+struct _php_parallel_exception_t {
     zval class;
     zval file;
     zval line;
@@ -110,45 +110,6 @@ void php_parallel_exceptions_destroy(php_parallel_exception_t *ex) {
     pefree(ex, 1);
 }
 
-static zend_always_inline void php_parallel_exceptions_treat_trace(zval *trace) {
-    HashTable *table = zend_array_dup(Z_ARRVAL_P(trace));
-    zval        *el;
-
-    ZEND_HASH_FOREACH_VAL(table, el) {
-        zval *args = zend_hash_find(Z_ARRVAL_P(el), ZSTR_KNOWN(ZEND_STR_ARGS)),
-             *arg;
-
-        if (!args || Z_TYPE_P(args) != IS_ARRAY) {
-            continue;
-        }
-
-        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(args), arg) {
-            if (Z_TYPE_P(arg) == IS_OBJECT) {
-                zend_string *replacement = zend_strpprintf(
-                    0, "Object(%s) #%u",
-                    ZSTR_VAL(Z_OBJCE_P(arg)->name),
-                    Z_OBJ_P(arg)->handle);
-
-                zval_ptr_dtor(arg);
-
-                ZVAL_STR(arg, replacement);
-            } else if (Z_TYPE_P(arg) == IS_ARRAY) {
-                zend_string *replacement = zend_strpprintf(
-                    0, "array(%d)",
-                    zend_hash_num_elements(Z_ARRVAL_P(arg)));
-
-                zval_ptr_dtor(arg);
-
-                ZVAL_STR(arg, replacement);
-            }
-        } ZEND_HASH_FOREACH_END();
-    } ZEND_HASH_FOREACH_END();
-
-    zval_ptr_dtor(trace);
-
-    ZVAL_ARR(trace, table);
-}
-
 void php_parallel_exceptions_save(zval *saved, zend_object *exception) {
     zval class,
          *file     = php_parallel_exceptions_read(exception, ZSTR_KNOWN(ZEND_STR_FILE)),
@@ -166,8 +127,6 @@ void php_parallel_exceptions_save(zval *saved, zend_object *exception) {
     ZVAL_NULL(&previous);
 
     ZVAL_STR(&class, exception->ce->name);
-
-    php_parallel_exceptions_treat_trace(trace);
 
     PARALLEL_ZVAL_COPY(&ex->class,   &class,     1);
     PARALLEL_ZVAL_COPY(&ex->file,    file,       1);
@@ -227,7 +186,7 @@ PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS)
     */
     INIT_NS_CLASS_ENTRY(ce, "parallel", "Error", NULL);
     php_parallel_error_ce =
-        zend_register_internal_class_ex(&ce, zend_ce_error_exception);
+        zend_register_internal_class_ex(&ce, zend_ce_error);
 
     /*
     * Runtime Exceptions

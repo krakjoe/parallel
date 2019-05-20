@@ -28,6 +28,12 @@ object(parallel\Events\Event)#%d (%d) {
   string(3) "one"
   ["object"]=>
   object(parallel\Channel)#%d (%d) {
+    ["name"]=>
+    string(3) "one"
+    ["type"]=>
+    string(8) "buffered"
+    ["capacity"]=>
+    string(8) "infinite"
   }
   ["value"]=>
   array(1) {
@@ -35,6 +41,7 @@ object(parallel\Events\Event)#%d (%d) {
     int(42)
   }
 }
+
 
 
 

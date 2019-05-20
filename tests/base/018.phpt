@@ -11,25 +11,25 @@ if (!extension_loaded('parallel')) {
 $parallel = new parallel\Runtime();
 
 try {
-	$parallel->run(function(stdClass $arg) {});
+	$parallel->run(function(DateTime $arg) {});
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
 }
 
 try {
-	$parallel->run(function($arg, stdClass $arg2) {});
+	$parallel->run(function($arg, DateTime $arg2) {});
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
 }
 
 try {
-	$parallel->run(function($arg, $arg2, stdClass ... $arg3) {});
+	$parallel->run(function($arg, $arg2, DateTime ... $arg3) {});
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
 }
 
 try {
-	$parallel->run(function() : stdClass {});
+	$parallel->run(function() : DateTime {});
 } catch (\parallel\Runtime\Error\IllegalReturn $ex) {
 	var_dump($ex->getMessage());
 }
@@ -58,11 +58,11 @@ try {
 	var_dump($ex->getMessage());
 }
 ?>
---EXPECT--
-string(57) "illegal parameter (object) accepted by task at argument 1"
-string(57) "illegal parameter (object) accepted by task at argument 2"
-string(57) "illegal parameter (object) accepted by task at argument 3"
-string(33) "illegal return (object) from task"
+--EXPECTF--
+string(%d) "illegal parameter (DateTime) accepted by task at argument 1"
+string(%d) "illegal parameter (DateTime) accepted by task at argument 2"
+string(%d) "illegal parameter (DateTime) accepted by task at argument 3"
+string(%d) "illegal return (DateTime) from task"
 string(60) "illegal parameter (reference) accepted by task at argument 1"
 string(60) "illegal parameter (reference) accepted by task at argument 2"
 string(60) "illegal parameter (reference) accepted by task at argument 3"

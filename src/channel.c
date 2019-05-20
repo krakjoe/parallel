@@ -217,7 +217,7 @@ zend_function_entry php_parallel_channel_methods[] = {
     PHP_FE_END
 };
 
-zend_object* php_parallel_channel_create(zend_class_entry *type) {
+static zend_object* php_parallel_channel_create(zend_class_entry *type) {
     php_parallel_channel_t *channel = ecalloc(1,
             sizeof(php_parallel_channel_t) + zend_object_properties_size(type));
 
@@ -228,7 +228,7 @@ zend_object* php_parallel_channel_create(zend_class_entry *type) {
     return &channel->std;
 }
 
-void php_parallel_channel_destroy(zend_object *o) {
+static void php_parallel_channel_destroy(zend_object *o) {
     php_parallel_channel_t *channel =
         php_parallel_channel_fetch(o);
 
@@ -237,7 +237,41 @@ void php_parallel_channel_destroy(zend_object *o) {
     zend_object_std_dtor(o);
 }
 
-void php_parallel_channels_link_destroy(zval *zv) {
+static int php_parallel_channel_compare(zval *lhs, zval *rhs) {
+    zend_object *lho = Z_OBJ_P(lhs),
+                *rho = Z_OBJ_P(rhs);
+    php_parallel_channel_t *lhc, *rhc;
+
+    lhc = php_parallel_channel_fetch(lho),
+    rhc = php_parallel_channel_fetch(rho);
+
+    if (lhc->link == rhc->link) {
+        return 0;
+    }
+
+    return 1;
+}
+
+#if PHP_VERSION_ID >= 80000
+static HashTable* php_parallel_channel_debug(zend_object *zo, int *temp) {
+    php_parallel_channel_t *channel = php_parallel_channel_fetch(zo);
+#else
+static HashTable* php_parallel_channel_debug(zval *zv, int *temp) {
+    php_parallel_channel_t *channel = php_parallel_channel_from(zv);
+#endif
+    HashTable *debug;
+
+    *temp = 1;
+
+    ALLOC_HASHTABLE(debug);
+    zend_hash_init(debug, 3, NULL, ZVAL_PTR_DTOR, 0);
+
+    php_parallel_link_debug(channel->link, debug);
+
+    return debug;
+}
+
+static void php_parallel_channels_link_destroy(zval *zv) {
     php_parallel_link_t *link = Z_PTR_P(zv);
 
     php_parallel_link_destroy(link);
@@ -253,7 +287,9 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
         sizeof(zend_object_handlers));
 
     php_parallel_channel_handlers.offset = XtOffsetOf(php_parallel_channel_t, std);
-    php_parallel_channel_handlers.free_obj = php_parallel_channel_destroy;
+    php_parallel_channel_handlers.free_obj        = php_parallel_channel_destroy;
+    php_parallel_channel_handlers.compare_objects = php_parallel_channel_compare;
+    php_parallel_channel_handlers.get_debug_info  = php_parallel_channel_debug;
 
     INIT_NS_CLASS_ENTRY(ce, "parallel", "Channel", php_parallel_channel_methods);
 
@@ -271,6 +307,8 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
         NULL,
         php_parallel_channels_link_destroy, 1);
 
+    PHP_MINIT(PARALLEL_LINK)(INIT_FUNC_ARGS_PASSTHRU);
+
     return SUCCESS;
 }
 
@@ -279,6 +317,8 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CHANNEL)
     php_parallel_monitor_destroy(
         php_parallel_channels.monitor);
     zend_hash_destroy(&php_parallel_channels.links);
+
+    PHP_MSHUTDOWN(PARALLEL_LINK)(INIT_FUNC_ARGS_PASSTHRU);
 
     return SUCCESS;
 }

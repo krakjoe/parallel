@@ -16,6 +16,7 @@ $future = $parallel->run(function(){
 
 var_dump($future->value());
 ?>
---EXPECT--
-bool(true)
+--EXPECTF--
+object(stdClass)#%d (0) {
+}
 

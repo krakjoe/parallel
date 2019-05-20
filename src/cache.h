@@ -19,13 +19,22 @@
 #define HAVE_PARALLEL_CACHE_H
 
 /*
-* parallel is intended to be used with opcache, this code will only be used
-* where opcache is not available
-*
-* TODO(krakjoe) probably want to copy arginfo
+* parallel is intended to be used with opcache, and whether it is loaded or
+* not, this function shall return a permanently allocated (immutable)
+* copy of the source function, with no reference count and immutable statics.
 */
-
 zend_function* php_parallel_cache_function(const zend_function *source);
+
+/*
+* parallel must be able to buffer closures in persistent (but not permanent)
+* memory for transfer to different contexts.
+*
+* this function shall return an (immutable) copy of the source closure,
+* with no reference count, and immutable statics as they are
+* at the time of the call.
+* If destination is null it will be allocated for return value.
+*/
+zend_function* php_parallel_cache_closure(const zend_function *source, zend_function *destination);
 
 PHP_MINIT_FUNCTION(PARALLEL_CACHE);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_CACHE);

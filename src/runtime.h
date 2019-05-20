@@ -40,9 +40,9 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_from(zval
     return php_parallel_runtime_fetch(Z_OBJ_P(z));
 }
 
-void*        php_parallel_runtime(void *arg);
-
 extern zend_class_entry* php_parallel_runtime_ce;
+
+php_parallel_runtime_t* php_parallel_runtime_construct(zend_string *bootstrap);
 
 PHP_MINIT_FUNCTION(PARALLEL_RUNTIME);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_RUNTIME);
