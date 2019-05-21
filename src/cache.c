@@ -169,7 +169,9 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
 
 #ifdef ZEND_MAP_PTR_INIT
     ZEND_MAP_PTR_INIT(cached->static_variables_ptr, &cached->static_variables);
-    ZEND_MAP_PTR_SET(cached->run_time_cache, NULL);
+    if (ZEND_MAP_PTR_GET(cached->run_time_cache)) {
+        ZEND_MAP_PTR_NEW(cached->run_time_cache);
+    }
 #else
     cached->run_time_cache = NULL;
 #endif
