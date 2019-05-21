@@ -166,8 +166,7 @@ PHP_METHOD(Channel, recv)
 
     PARALLEL_PARAMETERS_NONE(return);
 
-    if (php_parallel_link_closed(channel->link) ||
-        !php_parallel_link_recv(channel->link, return_value)) {
+    if (!php_parallel_link_recv(channel->link, return_value)) {
         php_parallel_exception_ex(
             php_parallel_channel_error_closed_ce,
             "channel(%s) closed",

@@ -33,7 +33,7 @@ static struct {
     HashTable       table;
 } php_parallel_copy_strings = {PTHREAD_MUTEX_INITIALIZER};
 
-zend_class_entry* php_parallel_copy_class_unavailable_ce;
+zend_class_entry* php_parallel_copy_type_unavailable_ce;
 zend_class_entry* php_parallel_copy_object_unavailable_ce;
 
 #define PCG(e) php_parallel_copy_globals.e
@@ -117,7 +117,7 @@ zend_class_entry* php_parallel_copy_scope(zend_class_entry *class) {
     scope = zend_lookup_class(class->name);
 
     if (!scope) {
-        return php_parallel_copy_class_unavailable_ce;
+        return php_parallel_copy_type_unavailable_ce;
     }
 
     return zend_hash_index_update_ptr(&PCG(scope), (zend_ulong) class, scope);
@@ -827,9 +827,9 @@ PHP_MINIT_FUNCTION(PARALLEL_COPY)
 {
     zend_class_entry ce;
 
-    INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime\\Class", "Unavailable", NULL);
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime\\Type", "Unavailable", NULL);
 
-    php_parallel_copy_class_unavailable_ce = zend_register_internal_class(&ce);
+    php_parallel_copy_type_unavailable_ce = zend_register_internal_class(&ce);
 
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime\\Object", "Unavailable", NULL);
     
