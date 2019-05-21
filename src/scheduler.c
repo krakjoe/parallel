@@ -242,6 +242,8 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
     php_parallel_scheduler_future = (php_parallel_future_t*) Z_PTR(frame->This);
 
     zend_first_try {
+        php_parallel_monitor_add(runtime->monitor, PHP_PARALLEL_RUNNING);
+
         zend_try {
             zend_execute_ex(frame);
 
@@ -297,6 +299,8 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
         }
 
         zend_vm_stack_free_call_frame(frame);
+
+        php_parallel_monitor_remove(runtime->monitor, PHP_PARALLEL_RUNNING);
     } zend_end_try ();
 
     if (php_parallel_scheduler_future) {
