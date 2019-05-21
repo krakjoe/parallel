@@ -50,7 +50,7 @@ void         php_parallel_future_destroy(zend_object *);
 
 zend_bool    php_parallel_future_lock(php_parallel_future_t *future);
 zend_bool    php_parallel_future_readable(php_parallel_future_t *future);
-void         php_parallel_future_value(php_parallel_future_t *future, zval *value, zend_bool checked);
+void         php_parallel_future_value(php_parallel_future_t *future, zval *value);
 zend_bool    php_parallel_future_unlock(php_parallel_future_t *future);
 
 PHP_MINIT_FUNCTION(PARALLEL_FUTURE);
