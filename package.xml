@@ -16,9 +16,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-05-20</date>
+ <date>2019-05-21</date>
  <version>
-  <release>1.0.0</release>
+  <release>1.0.1</release>
   <api>1.0.0</api>
  </version>
  <stability>
@@ -27,13 +27,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Caching improvements
-- Channel comparison (==) fixed
-- Debug handler added for Channel
-- Debug handler for Future (just shows runtime)
-- Fix copying of interned strings
-- Object support
-- Functional API for parallel\Runtime
+- Fix #42 \parallel\run will choose wrong thread for scheduling
+- Fix #41 buffered channel could not be drained after close
+- Fix #40 class in FQN stops stubs being generated
  </notes>
  <contents>
   <dir name="/">
@@ -167,6 +163,7 @@
       <file name="018.phpt" role="test"/>
       <file name="019.inc" role="test"/>
       <file name="019.phpt" role="test"/>
+      <file name="020.phpt" role="test"/>
      </dir> <!-- channel -->
      <dir name="closures">
       <file name="001.phpt" role="test"/>
@@ -241,6 +238,27 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-05-20</date>
+   <version>
+    <release>1.0.0</release>
+    <api>1.0.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Caching improvements
+- Channel comparison (==) fixed
+- Debug handler added for Channel
+- Debug handler for Future (just shows runtime)
+- Fix copying of interned strings
+- Object support
+- Functional API for parallel\Runtime
+   </notes>
+  </release>
   <release>
    <date>2019-05-08</date>
    <version>
