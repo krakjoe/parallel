@@ -93,7 +93,6 @@ static PHP_NAMED_FUNCTION(php_parallel_bootstrap)
 /* {{{ */
 static zend_always_inline php_parallel_runtime_t* php_parallel_runtimes_fetch() {
     php_parallel_runtime_t *runtime;
-    zend_bool first;
 
     ZEND_HASH_FOREACH_PTR(&php_parallel_runtimes, runtime) {
         if (!php_parallel_scheduler_busy(runtime)) {
@@ -101,25 +100,13 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_runtimes_fetch() 
         }
     } ZEND_HASH_FOREACH_END();
 
-    if ((first = (PCG(running) == 0))) {
-        pthread_mutex_lock(&PCG(mutex));
-    }
-
     if (!(runtime = php_parallel_runtime_construct(PCG(bootstrap)))) {
-        if (first) {
-            pthread_mutex_unlock(&PCG(mutex));
-        }
         return NULL;
     }
 
-    if (first) {
-        PCG(running)++;
-        pthread_mutex_unlock(&PCG(mutex));
-    } else {
-        pthread_mutex_lock(&PCG(mutex));
-        PCG(running)++;
-        pthread_mutex_unlock(&PCG(mutex));
-    }
+    pthread_mutex_lock(&PCG(mutex));
+    PCG(running)++;
+    pthread_mutex_unlock(&PCG(mutex));
 
     return zend_hash_next_index_insert_ptr(&php_parallel_runtimes, runtime);
 }
@@ -149,10 +136,23 @@ static PHP_NAMED_FUNCTION(php_parallel_run)
     }
 } /* }}} */
 
+#ifdef ZEND_DEBUG
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_count_arginfo, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+PHP_NAMED_FUNCTION(php_parallel_count)
+{
+    RETURN_LONG(zend_hash_num_elements(&php_parallel_runtimes));
+}
+#endif
+
 /* {{{ */
 zend_function_entry php_parallel_functions[] = {
 	ZEND_NS_FENTRY("parallel", bootstrap, php_parallel_bootstrap, php_parallel_bootstrap_arginfo, 0)
 	ZEND_NS_FENTRY("parallel", run,       php_parallel_run,       php_parallel_run_arginfo, 0)
+#ifdef ZEND_DEBUG
+	ZEND_NS_FENTRY("parallel", count,     php_parallel_count,     php_parallel_count_arginfo, 0)
+#endif
     PHP_FE_END
 }; /* }}} */
 
@@ -208,8 +208,8 @@ static void php_parallel_runtimes_release(zval *zv) {
     php_parallel_runtime_t *runtime =
         (php_parallel_runtime_t*) Z_PTR_P(zv);
 
-    pthread_mutex_lock(&PCG(mutex));
     OBJ_RELEASE(&runtime->std);
+    pthread_mutex_lock(&PCG(mutex));
     PCG(running)--;
     pthread_mutex_unlock(&PCG(mutex));
 }
