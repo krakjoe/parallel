@@ -53,6 +53,16 @@ static zend_always_inline void php_parallel_channels_open(zval *return_value, ph
     channel->link = php_parallel_link_copy(link);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(php_parallel_channel_construct_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Channel, __construct)
+{
+    php_parallel_exception_ex(
+        php_parallel_channel_error_ce,
+        "construction of Channel objects is not allowed");
+}
+
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_make_arginfo, 0, 1, \\parallel\\Channel, 0)
     ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
     ZEND_ARG_TYPE_INFO(0, capacity, IS_LONG, 0)
@@ -207,6 +217,7 @@ PHP_METHOD(Channel, __toString)
 }
 
 zend_function_entry php_parallel_channel_methods[] = {
+    PHP_ME(Channel, __construct, php_parallel_channel_construct_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Channel, make, php_parallel_channel_make_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
     PHP_ME(Channel, open, php_parallel_channel_open_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
     PHP_ME(Channel, send, php_parallel_channel_send_arginfo, ZEND_ACC_PUBLIC)
@@ -231,7 +242,9 @@ static void php_parallel_channel_destroy(zend_object *o) {
     php_parallel_channel_t *channel =
         php_parallel_channel_fetch(o);
 
-    php_parallel_link_destroy(channel->link);
+    if (channel->link) {
+        php_parallel_link_destroy(channel->link);
+    }
 
     zend_object_std_dtor(o);
 }
