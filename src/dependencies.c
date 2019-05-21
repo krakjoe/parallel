@@ -144,10 +144,6 @@ void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
                     php_parallel_copy_function(dependency, 0);
 
             zend_hash_add_ptr(EG(function_table), key, used);
-
-#ifdef ZEND_MAP_PTR_NEW
-            ZEND_MAP_PTR_NEW(used->run_time_cache);
-#endif
         }
     } ZEND_HASH_FOREACH_END();
 } /* }}} */
