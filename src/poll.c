@@ -249,7 +249,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_future(
                 type = PHP_PARALLEL_EVENTS_EVENT_ERROR;
             }
 
-            php_parallel_future_value(future, &read, 0);
+            php_parallel_future_value(future, &read);
         }
 
         php_parallel_events_event_construct(
