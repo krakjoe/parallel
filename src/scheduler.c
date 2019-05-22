@@ -298,6 +298,8 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
             }
         }
 
+        pefree(frame->func, 1);
+
         zend_vm_stack_free_call_frame(frame);
 
         php_parallel_monitor_remove(runtime->monitor, PHP_PARALLEL_RUNNING);
