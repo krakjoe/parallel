@@ -233,9 +233,13 @@ void php_parallel_future_destroy(zend_object *o) {
     php_parallel_future_t *future =
         php_parallel_future_fetch(o);
 
+    php_parallel_monitor_lock(future->monitor);
+
     if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
-        php_parallel_monitor_wait(future->monitor, PHP_PARALLEL_READY);
+        php_parallel_monitor_wait_locked(future->monitor, PHP_PARALLEL_READY);
     }
+
+    php_parallel_monitor_unlock(future->monitor);
 
     switch (Z_TYPE(future->value)) {
         case IS_PTR:
