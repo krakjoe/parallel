@@ -312,8 +312,6 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
             php_parallel_scheduler_future->monitor,
             PHP_PARALLEL_READY);
     }
-
-    php_parallel_scheduler_future = NULL;
 }
 
 static void php_parallel_scheduler_killed(void *scheduled) {
