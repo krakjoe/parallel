@@ -19,14 +19,11 @@ env:
     - RULE="all"
     - DEF="-q --show-diff"
     - MEMCHECK="-M memcheck --show-mem"
-    - DRD="-M drd --show-mem"
   matrix:
     - OPCACHE=0 TEST_PHP_ARGS="$DEF" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
     - OPCACHE=1 TEST_PHP_ARGS="$DEF" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
     - OPCACHE=0 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
     - OPCACHE=1 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
-    - OPCACHE=0 TEST_PHP_ARGS="$DEF $DRD" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
-    - OPCACHE=1 TEST_PHP_ARGS="$DEF $DRD" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
 
 matrix:
   allow_failures:
@@ -38,10 +35,6 @@ matrix:
       env: OPCACHE=0 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
     - php: nightly
       env: OPCACHE=1 TEST_PHP_ARGS="$DEF $MEMCHECK" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
-    - php: nightly
-      env: OPCACHE=0 TEST_PHP_ARGS="$DEF $DRD" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
-    - php: nightly
-      env: OPCACHE=1 TEST_PHP_ARGS="$DEF $DRD" CONF="enable-parallel-coverage" RULE="parallel-test-coverage-travis"
 
 before_install:
   - test $CONF != "enable-parallel-coverage" || pip install --user cpp-coveralls
@@ -69,7 +62,7 @@ script:
   - ./configure --$CONF
   - make $RULE
   - make install
-  - php run-tests.php -P
+  - php run-tests.php -j2 -P
 
 after_success:
   - test $CONF != "enable-parallel-coverage" || coveralls -b $TRAVIS_BUILD_DIR -E Zend --gcov-options '\-lp'
