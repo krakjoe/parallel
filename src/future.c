@@ -204,7 +204,7 @@ PHP_METHOD(Future, __construct)
         php_parallel_future_error_ce,
         "construction of Future objects is not allowed");
 
-    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_DONE);
+    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_DONE);
 }
 
 zend_function_entry php_parallel_future_methods[] = {
@@ -235,7 +235,7 @@ void php_parallel_future_destroy(zend_object *o) {
 
     php_parallel_monitor_lock(future->monitor);
 
-    if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
+    if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY)) {
         php_parallel_monitor_wait_locked(future->monitor, PHP_PARALLEL_READY);
     }
 
