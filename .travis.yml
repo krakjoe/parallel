@@ -63,7 +63,7 @@ script:
   - ./configure --$CONF
   - make $RULE
   - make install
-  - php run-tests.php -j2 -P
+  - php run-tests.php -P
 
 after_success:
   - test $CONF != "enable-parallel-coverage" || coveralls -b $TRAVIS_BUILD_DIR -E Zend --gcov-options '\-lp'
