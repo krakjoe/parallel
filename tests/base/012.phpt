@@ -6,6 +6,8 @@ if (!extension_loaded('parallel')) {
 	echo 'skip';
 }
 ?>
+--INI--
+opcache.optimization_level=0
 --FILE--
 <?php
 $parallel = new parallel\Runtime();

@@ -15,6 +15,7 @@ php:
 env:
   global:
     - REPORT_EXIT_STATUS=1
+    - ZEND_DONT_UNLOAD_MODULES=1
     - CONF="disable-parallel-coverage"
     - RULE="all"
     - DEF="-q --show-diff"
