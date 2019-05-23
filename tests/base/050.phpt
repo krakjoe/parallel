@@ -31,5 +31,7 @@ try {
 ?>
 --EXPECT--
 string(21) "cannot retrieve value"
+--XLEAK--
+The interrupt we use for cancellation is not treated in a thread safe way in core
 
 
