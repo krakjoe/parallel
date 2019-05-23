@@ -263,6 +263,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
             }
         } zend_catch {
             if (php_parallel_scheduler_future) {
+                php_parallel_monitor_lock(php_parallel_scheduler_future->monitor);
                 if (!php_parallel_monitor_check(
                         php_parallel_scheduler_future->monitor,
                         PHP_PARALLEL_CANCELLED)) {
@@ -270,6 +271,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
                         php_parallel_scheduler_future->monitor,
                         PHP_PARALLEL_KILLED);
                 }
+                php_parallel_monitor_unlock(php_parallel_scheduler_future->monitor);
             }
         } zend_end_try();
 
@@ -297,6 +299,8 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
                 zend_array_destroy(statics);
             }
         }
+
+        pefree(frame->func, 1);
 
         zend_vm_stack_free_call_frame(frame);
 
@@ -514,6 +518,14 @@ void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure,
 void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill) {
     php_parallel_monitor_lock(runtime->monitor);
 
+    if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
+        php_parallel_exception_ex(
+            php_parallel_runtime_error_closed_ce,
+            "Runtime closed");
+        php_parallel_monitor_unlock(runtime->monitor);
+        return;
+    }
+
     if (kill){
         php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_KILLED);
 
@@ -578,17 +590,24 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
 
 static void php_parallel_scheduler_interrupt(zend_execute_data *execute_data) {
     if (php_parallel_scheduler_context) {
+        php_parallel_monitor_lock(php_parallel_scheduler_context->monitor);
         if (php_parallel_monitor_check(
             php_parallel_scheduler_context->monitor,
             PHP_PARALLEL_KILLED)) {
+            php_parallel_monitor_unlock(php_parallel_scheduler_context->monitor);
             zend_bailout();
         }
+        php_parallel_monitor_unlock(php_parallel_scheduler_context->monitor);
 
+        php_parallel_monitor_lock(php_parallel_scheduler_future->monitor);
         if (php_parallel_monitor_check(
             php_parallel_scheduler_future->monitor,
             PHP_PARALLEL_CANCELLED)) {
+            php_parallel_monitor_unlock(
+                php_parallel_scheduler_future->monitor);
             zend_bailout();
         }
+        php_parallel_monitor_unlock(php_parallel_scheduler_future->monitor);
     }
 
     if (zend_interrupt_handler) {

@@ -96,13 +96,6 @@ PHP_METHOD(Runtime, close)
 
     PARALLEL_PARAMETERS_NONE(return);
 
-    if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
-        php_parallel_exception_ex(
-            php_parallel_runtime_error_closed_ce,
-            "Runtime closed");
-        return;
-    }
-
     php_parallel_scheduler_join(runtime, 0);
 }
 
@@ -112,13 +105,6 @@ PHP_METHOD(Runtime, kill)
         php_parallel_runtime_from(getThis());
 
     PARALLEL_PARAMETERS_NONE(return);
-
-    if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
-        php_parallel_exception_ex(
-            php_parallel_runtime_error_closed_ce,
-            "Runtime closed");
-        return;
-    }
 
     php_parallel_scheduler_join(runtime, 1);
 }
