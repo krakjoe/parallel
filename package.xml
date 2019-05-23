@@ -16,10 +16,10 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-05-21</date>
+ <date>2019-05-23</date>
  <version>
-  <release>1.0.1</release>
-  <api>1.0.0</api>
+  <release>1.0.2</release>
+  <api>1.0.2</api>
  </version>
  <stability>
   <release>stable</release>
@@ -27,9 +27,8 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix #42 \parallel\run will choose wrong thread for scheduling
-- Fix #41 buffered channel could not be drained after close
-- Fix #40 class in FQN stops stubs being generated
+- Fix #45 segfault on new Channel
+- Fix #46 scheduler is leaking function allocated in frame
  </notes>
  <contents>
   <dir name="/">
@@ -164,6 +163,7 @@
       <file name="019.inc" role="test"/>
       <file name="019.phpt" role="test"/>
       <file name="020.phpt" role="test"/>
+      <file name="021.phpt" role="test"/>
      </dir> <!-- channel -->
      <dir name="closures">
       <file name="001.phpt" role="test"/>
@@ -238,6 +238,23 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-05-21</date>
+   <version>
+    <release>1.0.1</release>
+    <api>1.0.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix #42 \parallel\run will choose wrong thread for scheduling
+- Fix #41 buffered channel could not be drained after close
+- Fix #40 class in FQN stops stubs being generated
+   </notes>
+  </release>
   <release>
    <date>2019-05-20</date>
    <version>
