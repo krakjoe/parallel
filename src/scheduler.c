@@ -614,15 +614,17 @@ static void php_parallel_scheduler_interrupt(zend_execute_data *execute_data) {
         }
         php_parallel_monitor_unlock(php_parallel_scheduler_context->monitor);
 
-        php_parallel_monitor_lock(php_parallel_scheduler_future->monitor);
-        if (php_parallel_monitor_check(
-            php_parallel_scheduler_future->monitor,
-            PHP_PARALLEL_CANCELLED)) {
-            php_parallel_monitor_unlock(
-                php_parallel_scheduler_future->monitor);
-            zend_bailout();
+        if (php_parallel_scheduler_future) {
+            php_parallel_monitor_lock(php_parallel_scheduler_future->monitor);
+            if (php_parallel_monitor_check(
+                php_parallel_scheduler_future->monitor,
+                PHP_PARALLEL_CANCELLED)) {
+                php_parallel_monitor_unlock(
+                    php_parallel_scheduler_future->monitor);
+                zend_bailout();
+            }
+            php_parallel_monitor_unlock(php_parallel_scheduler_future->monitor);
         }
-        php_parallel_monitor_unlock(php_parallel_scheduler_future->monitor);
     }
 
     if (zend_interrupt_handler) {
