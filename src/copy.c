@@ -598,6 +598,7 @@ static zend_always_inline zend_object* php_parallel_copy_object_persistent(zend_
             source,
             sizeof(zend_object) + zend_object_properties_size(ce), 1);
 
+    GC_SET_REFCOUNT(dest, 1);
     GC_ADD_FLAGS(dest, GC_IMMUTABLE);
 
     if (ce->default_properties_count) {
