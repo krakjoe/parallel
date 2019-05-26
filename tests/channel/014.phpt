@@ -16,13 +16,12 @@ $ohs = Channel::make("none");
 
 if ($lhs == $ohs) {
     echo "FAIL";
+
+    var_dump($lhs, $rhs, $ohs,
+        ($lhs == $ohs), ($lhs == $rhs));
 } else if ($lhs == $rhs) {
     echo "OK\n";
-    exit;
 }
-
-var_dump($lhs, $rhs, $ohs,
-        ($lhs == $ohs), ($lhs == $rhs));
 ?>
 --EXPECT--
 OK
