@@ -41,6 +41,9 @@ static void php_parallel_schedule_free(void *scheduleed) {
     }
 
     if (el->frame->func) {
+        if (el->frame->func->op_array.static_variables) {
+            php_parallel_copy_hash_dtor(el->frame->func->op_array.static_variables, 1);
+        }
         pefree(el->frame->func, 1);
     }
 
@@ -213,13 +216,23 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
         }
     }
 
-#ifdef ZEND_MAP_PTR_INIT
     if (el->frame->func->op_array.static_variables) {
+        HashTable *statics =
+            el->frame->func->op_array.static_variables;
+
+        el->frame->func->op_array.static_variables =
+            php_parallel_copy_hash_ctor(statics, 0);
+
+#ifdef ZEND_MAP_PTR_INIT
         ZEND_MAP_PTR_INIT(
             el->frame->func->op_array.static_variables_ptr,
             &el->frame->func->op_array.static_variables);
+#endif
+
+        php_parallel_copy_hash_dtor(statics, 1);
     }
 
+#ifdef ZEND_MAP_PTR_NEW
     ZEND_MAP_PTR_NEW(el->frame->func->op_array.run_time_cache);
 #endif
 

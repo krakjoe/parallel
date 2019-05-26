@@ -228,9 +228,7 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE)
 {
     zend_hash_destroy(&php_parallel_runtimes);
 
-    if (!CG(unclean_shutdown)) {
-        PHP_RSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
-    }
+    PHP_RSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 }
