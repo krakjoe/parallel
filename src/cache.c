@@ -344,15 +344,18 @@ zend_function* php_parallel_cache_closure(const zend_function *source, zend_func
         ZEND_MAP_PTR_INIT(
             closure->op_array.static_variables_ptr,
             &closure->op_array.static_variables);
-        ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
 #else
         closure->op_array.static_variables =
             php_parallel_copy_hash_ctor(
                 source->op_array.static_variables, 1);
-
-        closure->op_array.run_time_cache = NULL;
 #endif
     }
+
+#ifdef ZEND_MAP_PTR_INIT
+    ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
+#else
+    closure->op_array.run_time_cache = NULL;
+#endif
 
     return closure;
 } /* }}} */
