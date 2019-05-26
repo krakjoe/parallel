@@ -155,6 +155,7 @@ static void php_parallel_copy_zval_persistent(
             Z_REFVAL_P(dest), Z_REFVAL_P(source),
             php_parallel_copy_string_func,
             php_parallel_copy_memory_func);
+        GC_SET_REFCOUNT(Z_REF_P(dest), 1);
         GC_ADD_FLAGS(Z_REF_P(dest), GC_IMMUTABLE);
     } else if (Z_TYPE_P(source) == IS_STRING) {
         ZVAL_STR(dest, php_parallel_copy_string_func(Z_STR_P(source)));
