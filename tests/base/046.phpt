@@ -35,6 +35,8 @@ $sync->send(true);
 bool(true)
 bool(true)
 OK
+--XLEAK--
+The interrupt we use for cancellation is not treated in a thread safe way in core
 
 
 

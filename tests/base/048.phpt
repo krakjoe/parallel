@@ -33,3 +33,5 @@ try {
 bool(true)
 bool(true)
 string(26) "task was already cancelled"
+--XLEAK--
+The interrupt we use for cancellation is not treated in a thread safe way in core

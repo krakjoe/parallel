@@ -91,46 +91,6 @@ static zend_always_inline void* php_parallel_cache_copy_mem(void *source, zend_l
     return destination;
 } /* }}} */
 
-zend_function* php_parallel_cache_closure(const zend_function *source, zend_function *closure) { /* {{{ */
-    zend_op_array *cache;
-
-    cache =
-        (zend_op_array*)
-            php_parallel_cache_function(
-                (zend_function*) source);
-
-    if (!closure) {
-        closure = php_parallel_copy_mem(
-            cache, sizeof(zend_op_array), 1);
-    } else {
-        memcpy(closure, cache, sizeof(zend_op_array));
-    }
-
-    if (closure->op_array.static_variables) {
-#ifdef ZEND_MAP_PTR_INIT
-        HashTable *statics =
-            ZEND_MAP_PTR_GET(
-                source->op_array.static_variables_ptr);
-
-        closure->op_array.static_variables =
-            php_parallel_copy_hash_ctor(statics, 1);
-
-        ZEND_MAP_PTR_INIT(
-            closure->op_array.static_variables_ptr,
-            &closure->op_array.static_variables);
-        ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
-#else
-        closure->op_array.static_variables =
-            php_parallel_copy_hash_ctor(
-                source->op_array.static_variables, 1);
-
-        closure->op_array.run_time_cache = NULL;
-#endif
-    }
-
-    return closure;
-} /* }}} */
-
 static zend_always_inline HashTable* php_parallel_cache_statics(HashTable *statics) { /* {{{ */
     HashTable *cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) statics);
 
@@ -147,7 +107,7 @@ static zend_always_inline HashTable* php_parallel_cache_statics(HashTable *stati
 } /* }}} */
 
 /* {{{ */
-zend_function* php_parallel_cache_function(const zend_function *source) {
+static zend_always_inline zend_function* php_parallel_cache_function_ex(const zend_function *source, zend_bool statics) {
     zend_op_array *cached;
 
     pthread_mutex_lock(&PCG(mutex));
@@ -162,7 +122,7 @@ zend_function* php_parallel_cache_function(const zend_function *source) {
     cached->fn_flags |= ZEND_ACC_IMMUTABLE;
 #endif
 
-    if (cached->static_variables) {
+    if (statics && cached->static_variables) {
         cached->static_variables =
             php_parallel_cache_statics(cached->static_variables);
     }
@@ -355,6 +315,53 @@ _php_parallel_cached_function_return:
     pthread_mutex_unlock(&PCG(mutex));
 
     return (zend_function*) cached;
+} /* }}} */
+
+zend_function* php_parallel_cache_closure(const zend_function *source, zend_function *closure) { /* {{{ */
+    zend_op_array *cache;
+
+    cache =
+        (zend_op_array*)
+            php_parallel_cache_function_ex(
+                (zend_function*) source, 0);
+
+    if (!closure) {
+        closure = php_parallel_copy_mem(
+            cache, sizeof(zend_op_array), 1);
+    } else {
+        memcpy(closure, cache, sizeof(zend_op_array));
+    }
+
+    if (closure->op_array.static_variables) {
+#ifdef ZEND_MAP_PTR_INIT
+        HashTable *statics =
+            ZEND_MAP_PTR_GET(
+                source->op_array.static_variables_ptr);
+
+        closure->op_array.static_variables =
+            php_parallel_copy_hash_ctor(statics, 1);
+
+        ZEND_MAP_PTR_INIT(
+            closure->op_array.static_variables_ptr,
+            &closure->op_array.static_variables);
+#else
+        closure->op_array.static_variables =
+            php_parallel_copy_hash_ctor(
+                source->op_array.static_variables, 1);
+#endif
+    }
+
+#ifdef ZEND_MAP_PTR_INIT
+    ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
+#else
+    closure->op_array.run_time_cache = NULL;
+#endif
+
+    return closure;
+} /* }}} */
+
+zend_function* php_parallel_cache_function(const zend_function *source) { /* {{{ */
+    return php_parallel_cache_function_ex(source, 1);
 } /* }}} */
 
 /* {{{ */

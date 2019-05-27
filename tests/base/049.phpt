@@ -31,4 +31,6 @@ try {
 ?>
 --EXPECT--
 string(33) "runtime executing task was killed"
+--XLEAK--
+The interrupt we use for cancellation is not treated in a thread safe way in core
 
