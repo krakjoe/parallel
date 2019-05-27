@@ -16,9 +16,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-05-23</date>
+ <date>2019-05-27</date>
  <version>
-  <release>1.0.2</release>
+  <release>1.0.3</release>
   <api>1.0.2</api>
  </version>
  <stability>
@@ -27,8 +27,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix #45 segfault on new Channel
-- Fix #46 scheduler is leaking function allocated in frame
+- Fix #49 closure statics in cache memory
+- Fix #50 persistent reference memory leaks
+- Fix #51 sometimes kill/cancel may crash
+- Fix #52 persistent objects have incorrect refcount
  </notes>
  <contents>
   <dir name="/">
@@ -238,6 +240,22 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-05-23</date>
+   <version>
+    <release>1.0.2</release>
+    <api>1.0.2</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+ <license uri="http://www.php.net/license">PHP License</license>
+ <notes>
+- Fix #45 segfault on new Channel
+- Fix #46 scheduler is leaking function allocated in frame
+ </notes>
+  </release>
   <release>
    <date>2019-05-21</date>
    <version>
