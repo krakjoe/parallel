@@ -70,17 +70,20 @@ PHP_METHOD(Input, add)
         php_parallel_events_input_from(getThis());
     zend_string *target;
     zval        *value;
+    zval        *error;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_STR(target)
         Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (Z_TYPE_P(value) == IS_OBJECT || Z_TYPE_P(value) == IS_NULL) {
+    if (!PARALLEL_ZVAL_CHECK(value, &error)) {
         php_parallel_exception_ex(
             php_parallel_events_input_error_illegal_value_ce,
             "value of type %s is illegal",
-            zend_get_type_by_const(Z_TYPE_P(value)));
+            Z_TYPE_P(error) == IS_OBJECT ?
+                ZSTR_VAL(Z_OBJCE_P(error)->name) :
+                zend_get_type_by_const(Z_TYPE_P(error)));
         return;
     }
 

@@ -13,12 +13,12 @@ use \parallel\Events\Input;
 $input = new Input();
 
 try {
-    $input->add("target", new stdClass);
+    $input->add("target", new DateTime);
 } catch (\parallel\Events\Input\Error\IllegalValue $ex) {
     var_dump($ex->getMessage());
 }
 ?>
 --EXPECT--
-string(31) "value of type object is illegal"
+string(33) "value of type DateTime is illegal"
 
 
