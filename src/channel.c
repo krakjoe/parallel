@@ -30,18 +30,23 @@ php_parallel_channels_t php_parallel_channels;
 zend_class_entry *php_parallel_channel_ce;
 zend_object_handlers php_parallel_channel_handlers;
 
-static zend_always_inline void php_parallel_channels_make(zval *return_value, zend_string *name, zend_bool buffered, zend_long capacity) {
-    php_parallel_channel_t *channel;
-
-    object_init_ex(return_value, php_parallel_channel_ce);
-
-    channel = php_parallel_channel_from(return_value);
+static zend_always_inline void php_parallel_channels_make_ex(php_parallel_channel_t *channel, zend_string *name, zend_bool buffered, zend_long capacity) {
     channel->link = php_parallel_link_init(name, buffered, capacity);
 
     zend_hash_add_ptr(
         &php_parallel_channels.links,
         php_parallel_link_name(channel->link),
         php_parallel_link_copy(channel->link));
+}
+
+static zend_always_inline void php_parallel_channels_make(zval *return_value, zend_string *name, zend_bool buffered, zend_long capacity) {
+    object_init_ex(return_value, php_parallel_channel_ce);
+
+    php_parallel_channels_make_ex(
+        php_parallel_channel_from(return_value),
+        name,
+        buffered,
+        capacity);
 }
 
 static zend_always_inline void php_parallel_channels_open(zval *return_value, php_parallel_link_t *link) {
@@ -53,14 +58,56 @@ static zend_always_inline void php_parallel_channels_open(zval *return_value, ph
     channel->link = php_parallel_link_copy(link);
 }
 
+static zend_always_inline zend_string* php_parallel_channels_name(zend_execute_data *execute_data) {
+    while (EX(func)->type != ZEND_USER_FUNCTION) {
+        execute_data = EX(prev_execute_data);
+    }
+
+    return zend_strpprintf(0, "%s@%p", ZSTR_VAL(EX(func)->op_array.filename), EX(opline));
+}
+
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_channel_construct_arginfo, 0, 0, 0)
+    ZEND_ARG_TYPE_INFO(0, capacity, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 PHP_METHOD(Channel, __construct)
 {
-    php_parallel_exception_ex(
-        php_parallel_channel_error_ce,
-        "construction of Channel objects is not allowed");
+    php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
+    zend_long capacity = -1;
+    zend_bool buffered = 0;
+    zend_string *name = NULL;
+
+    if (ZEND_NUM_ARGS()) {
+        ZEND_PARSE_PARAMETERS_START(0, 1)
+            Z_PARAM_OPTIONAL
+            Z_PARAM_LONG(capacity)
+        ZEND_PARSE_PARAMETERS_END();
+
+        if (capacity < -1 || capacity == 0) {
+            php_parallel_invalid_arguments(
+                "capacity may be -1 for unlimited, or a positive integer");
+            return;
+        }
+
+        buffered = 1;
+    }
+
+    name = php_parallel_channels_name(EX(prev_execute_data));
+
+    php_parallel_monitor_lock(php_parallel_channels.monitor);
+
+    if (zend_hash_exists(&php_parallel_channels.links, name)) {
+        php_parallel_exception_ex(
+            php_parallel_channel_error_existence_ce,
+            "channel named %s already exists",
+            ZSTR_VAL(name));
+    } else {
+        php_parallel_channels_make_ex(channel, name, buffered, capacity);
+    }
+
+    php_parallel_monitor_unlock(php_parallel_channels.monitor);
+
+    zend_string_release(name);
 }
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_make_arginfo, 0, 1, \\parallel\\Channel, 0)

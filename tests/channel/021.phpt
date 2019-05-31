@@ -1,5 +1,5 @@
 --TEST--
-Check Channel constructor
+Check anonymous Channel
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -10,14 +10,30 @@ if (!extension_loaded('parallel')) {
 <?php
 use \parallel\Channel;
 
-try {
-    new Channel;
-} catch (\parallel\Channel\Error $ex) {
-    var_dump($ex->getMessage());
-}
+var_dump(new Channel);
+var_dump(new Channel(Channel::Infinite));
+var_dump(new Channel(1));
 ?>
---EXPECT--
-string(46) "construction of Channel objects is not allowed"
-
-
-
+--EXPECTF--
+object(parallel\Channel)#%d (%d) {
+  ["name"]=>
+  string(%d) "%s021.php@%s"
+  ["type"]=>
+  string(10) "unbuffered"
+}
+object(parallel\Channel)#%d (%d) {
+  ["name"]=>
+  string(%d) "%s021.php@%s"
+  ["type"]=>
+  string(8) "buffered"
+  ["capacity"]=>
+  string(8) "infinite"
+}
+object(parallel\Channel)#%d (%d) {
+  ["name"]=>
+  string(%d) "%s021.php@%s"
+  ["type"]=>
+  string(8) "buffered"
+  ["capacity"]=>
+  int(1)
+}
