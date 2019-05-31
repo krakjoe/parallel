@@ -22,10 +22,11 @@
 
 typedef struct _php_parallel_channels_t {
     php_parallel_monitor_t *monitor;
+    zend_ulong              idc;
     HashTable links;
 } php_parallel_channels_t;
 
-php_parallel_channels_t php_parallel_channels;
+php_parallel_channels_t php_parallel_channels = {NULL, 0};
 
 zend_class_entry *php_parallel_channel_ce;
 zend_object_handlers php_parallel_channel_handlers;
@@ -63,7 +64,28 @@ static zend_always_inline zend_string* php_parallel_channels_name(zend_execute_d
         execute_data = EX(prev_execute_data);
     }
 
-    return zend_strpprintf(0, "%s@%p", ZSTR_VAL(EX(func)->op_array.filename), EX(opline));
+    if ((EX(func)->op_array.function_name == NULL) || (EX(func)->op_array.fn_flags & ZEND_ACC_CLOSURE)) {
+            return zend_strpprintf(0, "%s#%u@%p[" ZEND_ULONG_FMT "]",
+                ZSTR_VAL(EX(func)->op_array.filename),
+                EX(opline)->lineno,
+                EX(opline),
+                ++php_parallel_channels.idc);
+    } else {
+        if (EX(func)->op_array.scope) {
+            return zend_strpprintf(0, "%s::%s#%u@%p[" ZEND_ULONG_FMT "]",
+                ZSTR_VAL(EX(func)->op_array.scope->name),
+                ZSTR_VAL(EX(func)->op_array.function_name),
+                EX(opline)->lineno,
+                EX(opline),
+                ++php_parallel_channels.idc);
+        } else {
+            return zend_strpprintf(0, "%s#%u@%p[" ZEND_ULONG_FMT "]",
+                ZSTR_VAL(EX(func)->op_array.function_name),
+                EX(opline)->lineno,
+                EX(opline),
+                ++php_parallel_channels.idc);
+        }
+    }
 }
 
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_channel_construct_arginfo, 0, 0, 0)
@@ -92,18 +114,12 @@ PHP_METHOD(Channel, __construct)
         buffered = 1;
     }
 
-    name = php_parallel_channels_name(EX(prev_execute_data));
-
     php_parallel_monitor_lock(php_parallel_channels.monitor);
 
-    if (zend_hash_exists(&php_parallel_channels.links, name)) {
-        php_parallel_exception_ex(
-            php_parallel_channel_error_existence_ce,
-            "channel named %s already exists",
-            ZSTR_VAL(name));
-    } else {
-        php_parallel_channels_make_ex(channel, name, buffered, capacity);
-    }
+    name = php_parallel_channels_name(EX(prev_execute_data));
+
+    php_parallel_channels_make_ex(
+        channel, name, buffered, capacity);
 
     php_parallel_monitor_unlock(php_parallel_channels.monitor);
 
