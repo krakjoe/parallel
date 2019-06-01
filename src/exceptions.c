@@ -273,6 +273,7 @@ PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS)
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Sync", "Error", NULL);
     php_parallel_sync_error_ce =
         zend_register_internal_class_ex(&ce, php_parallel_error_ce);
+
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Sync\\Error", "IllegalValue", NULL);
     php_parallel_sync_error_illegal_value_ce =
         zend_register_internal_class_ex(&ce, php_parallel_sync_error_ce);
