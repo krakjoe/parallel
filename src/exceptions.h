@@ -61,9 +61,6 @@ extern zend_class_entry* php_parallel_channel_error_closed_ce;
 */
 extern zend_class_entry* php_parallel_sync_error_ce;
 extern zend_class_entry* php_parallel_sync_error_illegal_value_ce;
-extern zend_class_entry* php_parallel_sync_error_illegal_type_ce;
-extern zend_class_entry* php_parallel_sync_error_illegal_offset_ce;
-extern zend_class_entry* php_parallel_sync_error_illegal_access_ce;
 
 /*
 * Events Exceptions

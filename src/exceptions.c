@@ -276,15 +276,6 @@ PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS)
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Sync\\Error", "IllegalValue", NULL);
     php_parallel_sync_error_illegal_value_ce =
         zend_register_internal_class_ex(&ce, php_parallel_sync_error_ce);
-    INIT_NS_CLASS_ENTRY(ce, "parallel\\Sync\\Error", "IllegalType", NULL);
-    php_parallel_sync_error_illegal_type_ce =
-        zend_register_internal_class_ex(&ce, php_parallel_sync_error_ce);
-    INIT_NS_CLASS_ENTRY(ce, "parallel\\Sync\\Error", "IllegalOffset", NULL);
-    php_parallel_sync_error_illegal_offset_ce =
-        zend_register_internal_class_ex(&ce, php_parallel_sync_error_ce);
-    INIT_NS_CLASS_ENTRY(ce, "parallel\\Sync\\Error", "IllegalAccess", NULL);
-    php_parallel_sync_error_illegal_access_ce =
-        zend_register_internal_class_ex(&ce, php_parallel_sync_error_ce);
 
     /*
     * Events Exceptions
