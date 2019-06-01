@@ -255,8 +255,6 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
     php_parallel_scheduler_future = (php_parallel_future_t*) Z_PTR(frame->This);
 
     zend_first_try {
-        php_parallel_monitor_add(runtime->monitor, PHP_PARALLEL_RUNNING);
-
         zend_try {
             zend_execute_ex(frame);
 
@@ -316,8 +314,6 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
         pefree(frame->func, 1);
 
         zend_vm_stack_free_call_frame(frame);
-
-        php_parallel_monitor_remove(runtime->monitor, PHP_PARALLEL_RUNNING);
     } zend_end_try ();
 
     if (php_parallel_scheduler_future) {
@@ -404,7 +400,7 @@ static void* php_parallel_thread(void *arg) {
         goto _php_parallel_thread_exit;
     }
 
-    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_READY);
+    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_RUNNING);
 
     do {
         php_parallel_schedule_el_t el;
@@ -422,6 +418,8 @@ _php_parallel_thread_killed:
         }
 
         while (!php_parallel_scheduler_pop(runtime, &el)) {
+            php_parallel_monitor_remove(runtime->monitor, PHP_PARALLEL_RUNNING);
+
             if (!(state & PHP_PARALLEL_CLOSE)) {
                 state = php_parallel_monitor_wait_locked(
                         runtime->monitor,
@@ -439,6 +437,8 @@ _php_parallel_thread_killed:
                 }
             }
         }
+
+        php_parallel_monitor_add(runtime->monitor, PHP_PARALLEL_RUNNING);
 
         php_parallel_monitor_unlock(runtime->monitor);
 
