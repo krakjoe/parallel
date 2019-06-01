@@ -70,6 +70,7 @@ static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size,
 zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent);
 
 zend_string*   php_parallel_copy_string_interned(zend_string *source);
+zend_string*   php_parallel_copy_string(zend_string *source, zend_bool persistent);
 
 HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent);
 void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent);

@@ -100,6 +100,7 @@ static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /*
 
     if (class == zend_ce_closure ||
         class == php_parallel_channel_ce ||
+        instanceof_function(class, php_parallel_sync_ce) ||
         !class->create_object) {
 
         check.valid = 1;
@@ -499,7 +500,8 @@ static php_parallel_check_class_result_t php_parallel_check_class(zend_class_ent
 #endif
 
 static zend_always_inline zend_bool php_parallel_check_object(zend_object *object, zval **error) { /* {{{ */
-    if (object->ce == php_parallel_channel_ce) {
+    if (instanceof_function(object->ce, php_parallel_channel_ce) ||
+        instanceof_function(object->ce, php_parallel_sync_ce)) {
         return 1;
     }
 
