@@ -19,6 +19,10 @@ $future->value(); # we know that the
                   # task is free, the next task
                   # must reuse the runtime
 
+usleep(1000000/2); # we can't be sure how fast the runtime will become available
+                   # so we sleep a little here to help the test along
+                   # normal code doesn't need to care
+
 \parallel\run(function(){
     global $var;
 
