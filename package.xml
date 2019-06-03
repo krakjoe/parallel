@@ -16,10 +16,10 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-05-27</date>
+ <date>2019-06-03</date>
  <version>
-  <release>1.0.3</release>
-  <api>1.0.2</api>
+  <release>1.1.0</release>
+  <api>1.1.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -27,10 +27,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix #49 closure statics in cache memory
-- Fix #50 persistent reference memory leaks
-- Fix #51 sometimes kill/cancel may crash
-- Fix #52 persistent objects have incorrect refcount
+- Fix #54 Input::add and Channel::send inconsistency
+- Fix #55 \parallel\run may schedule in wrong thread
+- Anonymous channel support
+- Add \parallel\Sync
  </notes>
  <contents>
   <dir name="/">
@@ -77,6 +77,8 @@
     <file name="runtime.h" role="src"/>
     <file name="scheduler.c" role="src"/>
     <file name="scheduler.h" role="src"/>
+    <file name="sync.c" role="src"/>
+    <file name="sync.h" role="src"/>
    </dir> <!-- src -->
    <dir name="tests">
      <dir name="base">
@@ -139,6 +141,7 @@
       <file name="058.phpt" role="test"/>
       <file name="059.inc" role="test"/>
       <file name="059.phpt" role="test"/>
+      <file name="060.inc" role="test"/>
       <file name="060.phpt" role="test"/>
       <file name="bootstrapc.inc" role="test"/>
       <file name="bootstrape.inc" role="test"/>
@@ -156,7 +159,6 @@
       <file name="009.phpt" role="test"/>
       <file name="010.phpt" role="test"/>
       <file name="011.phpt" role="test"/>
-      <file name="013.phpt" role="test"/>
       <file name="014.phpt" role="test"/>
       <file name="015.phpt" role="test"/>
       <file name="016.phpt" role="test"/>
@@ -224,6 +226,10 @@
       <file name="004.phpt" role="test"/>
       <file name="005.phpt" role="test"/>
      </dir> <!-- handlers -->
+     <dir name="sync">
+      <file name="001.phpt" role="test"/>
+      <file name="002.phpt" role="test"/>
+     </dir> <!-- sync -->
    </dir> <!-- tests -->
   </dir>
  </contents>
@@ -240,6 +246,24 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-05-27</date>
+   <version>
+    <release>1.0.3</release>
+    <api>1.0.2</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix #49 closure statics in cache memory
+- Fix #50 persistent reference memory leaks
+- Fix #51 sometimes kill/cancel may crash
+- Fix #52 persistent objects have incorrect refcount
+   </notes>
+  </release>
   <release>
    <date>2019-05-23</date>
    <version>
