@@ -101,6 +101,10 @@ static zend_always_inline zend_string* php_parallel_copy_string_ctor(zend_string
     return php_parallel_copy_string_ex(source, persistent);
 }
 
+zend_string* php_parallel_copy_string(zend_string *source, zend_bool persistent) {
+    return php_parallel_copy_string_ctor(source, persistent);
+}
+
 zend_class_entry* php_parallel_copy_scope(zend_class_entry *class) {
     zend_class_entry *scope;
 
@@ -196,6 +200,7 @@ static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
 
     ht->nNextFreeElement = 0;
     ht->nInternalPointer = 0;
+
     HT_SET_DATA_ADDR(ht, php_parallel_copy_memory_func(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht)));
     for (idx = 0; idx < ht->nNumUsed; idx++) {
         Bucket *p = ht->arData + idx;
@@ -530,8 +535,8 @@ static size_t _php_parallel_copy_channel_size = 0;
 
 static zend_always_inline size_t php_parallel_copy_channel_size() {
     if (_php_parallel_copy_channel_size == 0) {
-        _php_parallel_copy_channel_size = 
-            sizeof(php_parallel_channel_t) + 
+        _php_parallel_copy_channel_size =
+            sizeof(php_parallel_channel_t) +
             zend_object_properties_size(php_parallel_channel_ce);
     }
 
@@ -582,6 +587,62 @@ static zend_always_inline void php_parallel_copy_channel_dtor(zend_object *sourc
     php_parallel_link_destroy(channel->link);
 
     pefree(channel, persistent);
+}
+
+static size_t _php_parallel_copy_sync_size = 0;
+
+static zend_always_inline size_t php_parallel_copy_sync_size() {
+    if (_php_parallel_copy_sync_size == 0) {
+        _php_parallel_copy_sync_size =
+            sizeof(php_parallel_sync_object_t) +
+            zend_object_properties_size(php_parallel_sync_ce);
+    }
+
+    return _php_parallel_copy_sync_size;
+}
+
+static zend_always_inline zend_object* php_parallel_copy_sync_persistent(zend_object *source) {
+    php_parallel_sync_object_t *object  = php_parallel_sync_object_fetch(source),
+                                 *dest    = php_parallel_copy_mem(object, php_parallel_copy_sync_size(), 1);
+
+    GC_ADD_FLAGS(&dest->std, GC_IMMUTABLE);
+
+    dest->sync = php_parallel_sync_copy(object->sync);
+
+    return &dest->std;
+}
+
+static zend_always_inline zend_object* php_parallel_copy_sync_thread(zend_object *source) {
+    php_parallel_sync_object_t *object = php_parallel_sync_object_fetch(source),
+                                 *dest    = php_parallel_copy_mem(object, php_parallel_copy_sync_size(), 0);
+
+    GC_DEL_FLAGS(&dest->std, GC_IMMUTABLE);
+
+    zend_object_std_init(&dest->std, dest->std.ce);
+
+    dest->sync = php_parallel_sync_copy(object->sync);
+
+    return &dest->std;
+}
+
+static zend_always_inline zend_object* php_parallel_copy_sync_ctor(zend_object *source, zend_bool persistent) {
+    if (persistent) {
+        return php_parallel_copy_sync_persistent(source);
+    }
+    return php_parallel_copy_sync_thread(source);
+}
+
+static zend_always_inline void php_parallel_copy_sync_dtor(zend_object *source, zend_bool persistent) {
+    php_parallel_sync_object_t *object = php_parallel_sync_object_fetch(source);
+
+    if (!persistent) {
+        OBJ_RELEASE(source);
+        return;
+    }
+
+    php_parallel_sync_release(object->sync);
+
+    pefree(object, persistent);
 }
 
 static zend_always_inline zend_object* php_parallel_copy_object_persistent(zend_object *source) {
@@ -668,6 +729,10 @@ static zend_always_inline zend_object* php_parallel_copy_object_ctor(zend_object
         return php_parallel_copy_channel_ctor(source, persistent);
     }
 
+    if (instanceof_function(source->ce, php_parallel_sync_ce)) {
+        return php_parallel_copy_sync_ctor(source, persistent);
+    }
+
     if (persistent) {
         return php_parallel_copy_object_persistent(source);
     }
@@ -683,6 +748,11 @@ static zend_always_inline void php_parallel_copy_object_dtor(zend_object *source
 
     if (source->ce == php_parallel_channel_ce) {
         php_parallel_copy_channel_dtor(source, persistent);
+        return;
+    }
+
+    if (instanceof_function(source->ce, php_parallel_sync_ce)) {
+        php_parallel_copy_sync_dtor(source, persistent);
         return;
     }
 
@@ -834,7 +904,7 @@ PHP_MINIT_FUNCTION(PARALLEL_COPY)
     php_parallel_copy_type_unavailable_ce = zend_register_internal_class(&ce);
 
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime\\Object", "Unavailable", NULL);
-    
+
     php_parallel_copy_object_unavailable_ce = zend_register_internal_class(&ce);
 
     PHP_MINIT(PARALLEL_DEPENDENCIES)(INIT_FUNC_ARGS_PASSTHRU);

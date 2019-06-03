@@ -55,6 +55,12 @@ zend_class_entry* php_parallel_channel_error_existence_ce;
 zend_class_entry* php_parallel_channel_error_illegal_value_ce;
 zend_class_entry* php_parallel_channel_error_closed_ce;
 
+zend_class_entry* php_parallel_sync_error_ce;
+zend_class_entry* php_parallel_sync_error_illegal_value_ce;
+zend_class_entry* php_parallel_sync_error_illegal_type_ce;
+zend_class_entry* php_parallel_sync_error_illegal_offset_ce;
+zend_class_entry* php_parallel_sync_error_illegal_access_ce;
+
 zend_class_entry* php_parallel_events_error_ce;
 zend_class_entry* php_parallel_events_error_existence_ce;
 zend_class_entry* php_parallel_events_error_timeout_ce;
@@ -260,6 +266,17 @@ PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS)
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Channel\\Error", "Closed", NULL);
     php_parallel_channel_error_closed_ce =
         zend_register_internal_class_ex(&ce, php_parallel_channel_error_ce);
+
+    /*
+    * Sync Exceptions
+    */
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Sync", "Error", NULL);
+    php_parallel_sync_error_ce =
+        zend_register_internal_class_ex(&ce, php_parallel_error_ce);
+
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Sync\\Error", "IllegalValue", NULL);
+    php_parallel_sync_error_illegal_value_ce =
+        zend_register_internal_class_ex(&ce, php_parallel_sync_error_ce);
 
     /*
     * Events Exceptions
