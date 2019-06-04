@@ -150,11 +150,7 @@ php_parallel_link_t* php_parallel_link_init(zend_string *name, zend_bool buffere
 }
 
 void php_parallel_link_destroy(php_parallel_link_t *link) {
-    pthread_mutex_lock(&link->m.m);
-
-    if (--link->refcount == 0) {
-        pthread_mutex_unlock(&link->m.m);
-
+    if (php_parallel_atomic_delref(&link->refcount) == 0) {
         php_parallel_link_mutex_destroy(&link->m);
         php_parallel_link_cond_destroy(&link->c);
 
@@ -166,17 +162,11 @@ void php_parallel_link_destroy(php_parallel_link_t *link) {
             }
         }
         pefree(link, 1);
-    } else {
-        pthread_mutex_unlock(&link->m.m);
     }
 }
 
 php_parallel_link_t* php_parallel_link_copy(php_parallel_link_t *link) {
-    pthread_mutex_lock(&link->m.m);
-
-    link->refcount++;
-
-    pthread_mutex_unlock(&link->m.m);
+    php_parallel_atomic_addref(&link->refcount);
 
     return link;
 }

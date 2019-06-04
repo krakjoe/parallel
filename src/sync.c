@@ -62,11 +62,7 @@ static zend_always_inline php_parallel_sync_t* php_parallel_sync_create(zval *zv
 }
 
 php_parallel_sync_t* php_parallel_sync_copy(php_parallel_sync_t *sync) {
-    pthread_mutex_lock(&sync->mutex);
-
-    sync->refcount++;
-
-    pthread_mutex_unlock(&sync->mutex);
+    php_parallel_atomic_addref(&sync->refcount);
 
     return sync;
 }
@@ -76,10 +72,7 @@ void php_parallel_sync_release(php_parallel_sync_t *sync) {
         return;
     }
 
-    pthread_mutex_lock(&sync->mutex);
-    if (--sync->refcount == 0) {
-        pthread_mutex_unlock(&sync->mutex);
-
+    if (php_parallel_atomic_delref(&sync->refcount) == 0) {
         if (Z_TYPE(sync->value) == IS_STRING) {
             PARALLEL_ZVAL_DTOR(&sync->value);
         }
@@ -87,8 +80,6 @@ void php_parallel_sync_release(php_parallel_sync_t *sync) {
         php_parallel_mutex_destroy(&sync->mutex);
         php_parallel_cond_destroy(&sync->condition);
         pefree(sync, 1);
-    } else {
-        pthread_mutex_unlock(&sync->mutex);
     }
 }
 

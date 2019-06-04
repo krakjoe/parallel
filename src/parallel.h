@@ -84,6 +84,22 @@ static zend_always_inline void php_parallel_cond_destroy(pthread_cond_t *cond) {
     pthread_cond_destroy(cond);
 }
 
+static zend_always_inline void php_parallel_atomic_addref(uint32_t *refcount) {
+#ifdef _WIN32
+    InterlockedAdd(refcount, 1);
+#else
+    __atomic_add_fetch(refcount, 1, __ATOMIC_SEQ_CST);
+#endif
+}
+
+static zend_always_inline uint32_t php_parallel_atomic_delref(uint32_t *refcount) {
+#ifdef _WIN32
+    return InterlockedAdd(refcount, -1);
+#else
+    return __atomic_sub_fetch(refcount, 1, __ATOMIC_SEQ_CST);
+#endif
+}
+
 extern zend_function_entry php_parallel_functions[];
 
 PHP_MINIT_FUNCTION(PARALLEL_CORE);
