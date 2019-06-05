@@ -87,16 +87,20 @@ static zend_always_inline void php_parallel_cond_destroy(pthread_cond_t *cond) {
 static zend_always_inline void php_parallel_atomic_addref(uint32_t *refcount) {
 #ifdef _WIN32
     InterlockedAdd(refcount, 1);
-#else
+#elif defined(HAVE_BUILTIN_ATOMIC)
     __atomic_add_fetch(refcount, 1, __ATOMIC_SEQ_CST);
+#else
+    __sync_add_and_fetch(refcount, 1);
 #endif
 }
 
 static zend_always_inline uint32_t php_parallel_atomic_delref(uint32_t *refcount) {
 #ifdef _WIN32
     return InterlockedAdd(refcount, -1);
-#else
+#elif defined(HAVE_BUILTIN_ATOMIC)
     return __atomic_sub_fetch(refcount, 1, __ATOMIC_SEQ_CST);
+#else
+    return __sync_sub_and_fetch(refcount, 1);
 #endif
 }
 
