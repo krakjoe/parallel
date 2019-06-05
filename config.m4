@@ -20,6 +20,17 @@ if test "$PHP_PARALLEL" != "no"; then
 
   AC_DEFINE(HAVE_PARALLEL, 1, [ Have parallel support ])
 
+  AC_MSG_CHECKING([support for __atomic_add_fetch])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([], [[
+    int variable = 1;
+    return (__atomic_add_fetch(&variable, 1, __ATOMIC_SEQ_CST)) ? 1 : 0;
+  ]])], [
+    AC_MSG_RESULT([yes])
+    AC_DEFINE(HAVE_BUILTIN_ATOMIC, 1, [Define to 1 if supports __atomic_add_fetch()])
+  ], [
+    AC_MSG_RESULT([no])
+  ])
+
   if test "$PHP_PARALLEL_DEV" != "no"; then
     AX_CHECK_COMPILE_FLAG(-Werror,                  _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -Werror")
     AX_CHECK_COMPILE_FLAG(-Werror=format-security,  _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -Werror=format-security")
