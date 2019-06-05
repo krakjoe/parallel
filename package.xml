@@ -16,9 +16,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-06-03</date>
+ <date>2019-06-05</date>
  <version>
-  <release>1.1.0</release>
+  <release>1.1.1</release>
   <api>1.1.0</api>
  </version>
  <stability>
@@ -27,10 +27,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix #54 Input::add and Channel::send inconsistency
-- Fix #55 \parallel\run may schedule in wrong thread
-- Anonymous channel support
-- Add \parallel\Sync
+- Fix #60 copying refcounted internals may lead to deadlocks
  </notes>
  <contents>
   <dir name="/">
@@ -246,6 +243,24 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-06-03</date>
+   <version>
+    <release>1.1.0</release>
+    <api>1.1.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix #54 Input::add and Channel::send inconsistency
+- Fix #55 \parallel\run may schedule in wrong thread
+- Anonymous channel support
+- Add \parallel\Sync
+   </notes>
+  </release>
   <release>
    <date>2019-05-27</date>
    <version>
