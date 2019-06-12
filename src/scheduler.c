@@ -252,37 +252,31 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
 }
 
 static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame) {
-    php_parallel_scheduler_future = (php_parallel_future_t*) Z_PTR(frame->This);
+    php_parallel_future_t *future = 
+        php_parallel_scheduler_future = 
+            (php_parallel_future_t*) Z_PTR(frame->This);
 
     zend_first_try {
         zend_try {
             zend_execute_ex(frame);
 
             if (UNEXPECTED(EG(exception))) {
-                if (php_parallel_scheduler_future) {
+                if (future) {
                     php_parallel_exceptions_save(
                         frame->return_value, EG(exception));
 
-                    zend_clear_exception();
-
-                    php_parallel_monitor_set(
-                        php_parallel_scheduler_future->monitor,
-                        PHP_PARALLEL_ERROR);
+                    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_ERROR);
                 } else {
                     zend_throw_exception_internal(NULL);
                 }
             }
         } zend_catch {
-            if (php_parallel_scheduler_future) {
-                php_parallel_monitor_lock(php_parallel_scheduler_future->monitor);
-                if (!php_parallel_monitor_check(
-                        php_parallel_scheduler_future->monitor,
-                        PHP_PARALLEL_CANCELLED)) {
-                    php_parallel_monitor_set(
-                        php_parallel_scheduler_future->monitor,
-                        PHP_PARALLEL_KILLED);
+            if (future) {
+                php_parallel_monitor_lock(future->monitor);
+                if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_CANCELLED)) {
+                    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_KILLED);
                 }
-                php_parallel_monitor_unlock(php_parallel_scheduler_future->monitor);
+                php_parallel_monitor_unlock(future->monitor);
             }
         } zend_end_try();
 
@@ -316,10 +310,8 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
         zend_vm_stack_free_call_frame(frame);
     } zend_end_try ();
 
-    if (php_parallel_scheduler_future) {
-        php_parallel_monitor_set(
-            php_parallel_scheduler_future->monitor,
-            PHP_PARALLEL_READY);
+    if (future) {
+        php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY);
     }
 
     php_parallel_scheduler_future = NULL;

@@ -145,6 +145,8 @@ void php_parallel_exceptions_save(zval *saved, zend_object *exception) {
     ex->handlers = exception->handlers;
 
     ZVAL_PTR(saved, ex);
+
+    zend_clear_exception();
 }
 
 zend_object* php_parallel_exceptions_restore(zval *exception) {

@@ -62,8 +62,12 @@ typedef struct _php_parallel_check_class_t {
 static zend_always_inline const char* php_parallel_check_opcode_name(zend_uchar opcode) { /* {{{ */
     switch (opcode) {
         case ZEND_DECLARE_CLASS:
+#ifdef ZEND_DECLARE_INHERITED_CLASS
         case ZEND_DECLARE_INHERITED_CLASS:
         case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
+#else
+        case ZEND_DECLARE_CLASS_DELAYED:
+#endif
             return "class";
 
         case ZEND_DECLARE_ANON_CLASS:
@@ -288,8 +292,12 @@ zend_bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_
             case ZEND_DECLARE_FUNCTION:
             case ZEND_DECLARE_CLASS:
             case ZEND_DECLARE_ANON_CLASS:
+#ifdef ZEND_DECLARE_INHERITED_CLASS
             case ZEND_DECLARE_INHERITED_CLASS:
             case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
+#else
+            case ZEND_DECLARE_CLASS_DELAYED:
+#endif
             case ZEND_YIELD:
             case ZEND_YIELD_FROM:
                 php_parallel_exception_ex(
@@ -362,8 +370,12 @@ zend_bool php_parallel_check_function(const zend_function *function, zend_functi
         switch (it->opcode) {
             case ZEND_DECLARE_FUNCTION:
             case ZEND_DECLARE_CLASS:
+#ifdef ZEND_DECLARE_INHERITED_CLASS
             case ZEND_DECLARE_INHERITED_CLASS:
             case ZEND_DECLARE_INHERITED_CLASS_DELAYED:
+#else
+            case ZEND_DECLARE_CLASS_DELAYED:
+#endif
             case ZEND_DECLARE_ANON_CLASS:
                 check.function =
                     (zend_function*) function;
