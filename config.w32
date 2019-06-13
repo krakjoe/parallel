@@ -8,8 +8,13 @@ if (PHP_PARALLEL != 'no') {
 		AC_DEFINE('HAVE_PARALLEL', 1, 'parallel support enabled');
 
 		if(CHECK_HEADER_ADD_INCLUDE("pthread.h", "CFLAGS_PARALLEL", PHP_PARALLEL + ";" + configure_module_dirname) &&    
-			CHECK_HEADER_ADD_INCLUDE("sched.h", "CFLAGS_PARALLEL", PHP_PARALLEL + ";" + configure_module_dirname) &&
-			CHECK_LIB("pthreadVC2.lib", "parallel", PHP_PARALLEL)) {
+			CHECK_HEADER_ADD_INCLUDE("sched.h", "CFLAGS_PARALLEL", PHP_PARALLEL + ";" + configure_module_dirname) && (
+				CHECK_LIB("pthreadVC2.lib", "parallel", PHP_PARALLEL) ||
+				(
+					CHECK_LIB("pthreadVC3.lib", "parallel", PHP_PARALLEL) &&
+					CHECK_HEADER_ADD_INCLUDE("_ptw32.h", "CFLAGS_PARALLEL", PHP_PARALLEL + ";" + configure_module_dirname) //extra header needed for v3
+				)
+			)) {
 			EXTENSION("parallel", "php_parallel.c", PHP_PARALLEL_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /I" + configure_module_dirname);
 			ADD_SOURCES(
 				configure_module_dirname + "/src",
