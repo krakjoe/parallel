@@ -24,10 +24,10 @@ extern zend_module_entry parallel_module_entry;
 
 # define PHP_PARALLEL_VERSION "1.1.3-dev"
 
-# if defined(ZTS) && defined(COMPILE_DL_PARALLEL)
-ZEND_TSRMLS_CACHE_EXTERN()
-# else
+# if !defined(ZTS)
 # error Only ZTS build are supported
+# elif defined(COMPILE_DL_PARALLEL)
+ZEND_TSRMLS_CACHE_EXTERN()
 # endif
 
 #endif	/* PHP_PARALLEL_H */
