@@ -352,6 +352,26 @@ static void php_parallel_channels_link_destroy(zval *zv) {
     php_parallel_link_destroy(link);
 }
 
+#if PHP_VERSION_ID >= 80000
+static zend_object* php_parallel_channel_clone(zend_object *src) {
+#else
+static zend_object* php_parallel_channel_clone(zval *zv) {
+    zend_object *src = Z_OBJ_P(zv);
+#endif
+    php_parallel_channel_t *channel = php_parallel_channel_fetch(src);
+    php_parallel_channel_t *clone = ecalloc(1,
+            sizeof(php_parallel_channel_t) + 
+            zend_object_properties_size(channel->std.ce));
+
+    zend_object_std_init(&clone->std, channel->std.ce);
+
+    clone->std.handlers = 
+        &php_parallel_channel_handlers;
+    clone->link = php_parallel_link_copy(channel->link);
+
+    return &clone->std;
+}
+
 PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
 {
     zend_class_entry ce;
@@ -365,6 +385,7 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
     php_parallel_channel_handlers.free_obj        = php_parallel_channel_destroy;
     php_parallel_channel_handlers.compare_objects = php_parallel_channel_compare;
     php_parallel_channel_handlers.get_debug_info  = php_parallel_channel_debug;
+    php_parallel_channel_handlers.clone_obj       = php_parallel_channel_clone;
 
     INIT_NS_CLASS_ENTRY(ce, "parallel", "Channel", php_parallel_channel_methods);
 

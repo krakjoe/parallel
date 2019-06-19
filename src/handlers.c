@@ -108,6 +108,8 @@ PHP_MINIT_FUNCTION(PARALLEL_HANDLERS)
     _php_parallel_standard_handlers.write_dimension = php_parallel_handlers_write_dimension;
     _php_parallel_standard_handlers.get_property_ptr_ptr = php_parallel_handlers_get_property_ptr_ptr;
 
+    _php_parallel_standard_handlers.clone_obj = NULL;
+
     return SUCCESS;
 }
 
