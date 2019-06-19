@@ -317,6 +317,9 @@ PHP_MINIT_FUNCTION(PARALLEL_SYNC)
     php_parallel_sync_ce->create_object = php_parallel_sync_object_create;
     php_parallel_sync_ce->ce_flags |= ZEND_ACC_FINAL;
 
+    php_parallel_sync_ce->serialize = zend_class_serialize_deny;
+    php_parallel_sync_ce->unserialize = zend_class_unserialize_deny;
+
     php_parallel_sync_string_value = zend_string_init_interned(ZEND_STRL("value"), 1);
 
     return SUCCESS;

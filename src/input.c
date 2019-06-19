@@ -195,6 +195,9 @@ PHP_MINIT_FUNCTION(PARALLEL_EVENTS_INPUT)
     php_parallel_events_input_ce->create_object = php_parallel_events_input_create;
     php_parallel_events_input_ce->ce_flags |= ZEND_ACC_FINAL;
 
+    php_parallel_events_input_ce->serialize = zend_class_serialize_deny;
+    php_parallel_events_input_ce->unserialize = zend_class_unserialize_deny;
+
     return SUCCESS;
 }
 
