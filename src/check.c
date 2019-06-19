@@ -175,6 +175,39 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     return 1;
 } /* }}} */
 
+static zend_always_inline zend_bool php_parallel_check_statics(const zend_function *function, zend_string **errn, zval **errz) { /* {{{ */
+    HashTable *statics;
+    zval *value, *error;
+    zend_string *name;
+
+    if (!function->op_array.static_variables) {
+        return 1;
+    }
+
+#if PHP_VERSION_ID >= 70400
+    statics = ZEND_MAP_PTR_GET(function->op_array.static_variables_ptr);
+    if (!statics) {
+        statics = function->op_array.static_variables;
+    }
+#else
+    statics = function->op_array.static_variables;
+#endif
+
+    ZEND_HASH_FOREACH_STR_KEY_VAL(statics, name, value) {
+        if (!PARALLEL_ZVAL_CHECK(value, &error)) {
+            if (errn) {
+                *errn = name;
+            }
+            if (errz) {
+                *errz = error;
+            }
+            return 0;
+        }
+    } ZEND_HASH_FOREACH_END();
+
+    return 1;
+} /* }}} */
+
 static zend_always_inline zend_bool php_parallel_check_argv(zval *args, uint32_t *argc, zval **error) { /* {{{ */
     zval *arg;
 
@@ -265,6 +298,21 @@ zend_bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_
         return 0;
     }
 
+    {
+        zend_string *errn;
+        zval        *errv;
+        if (!php_parallel_check_statics(function, &errn, &errv)) {
+            php_parallel_exception_ex(
+                php_parallel_runtime_error_illegal_variable_ce,
+                "illegal variable (%s) named %s in static scope of function",
+                Z_TYPE_P(errv) == IS_OBJECT ?
+                    ZSTR_VAL(Z_OBJCE_P(errv)->name) :
+                    zend_get_type_by_const(Z_TYPE_P(errv)),
+                ZSTR_VAL(errn));
+            return 0;
+        }
+    }
+
     memset(&check, 0, sizeof(php_parallel_check_task_t));
 
     it  = function->op_array.opcodes;
@@ -286,6 +334,21 @@ zend_bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_
                         php_parallel_check_opcode_name(erro),
                         errf->op_array.line_start - function->op_array.line_start);
                     return 0;
+                }
+
+                {
+                    zend_string *errn;
+                    zval        *errv;
+                    if (!php_parallel_check_statics(dependency, &errn, &errv)) {
+                        php_parallel_exception_ex(
+                            php_parallel_runtime_error_illegal_variable_ce,
+                            "illegal variable (%s) named %s in static scope of dependency",
+                            Z_TYPE_P(errv) == IS_OBJECT ?
+                                ZSTR_VAL(Z_OBJCE_P(errv)->name) :
+                                zend_get_type_by_const(Z_TYPE_P(errv)),
+                            ZSTR_VAL(errn));
+                        return 0;
+                    }
                 }
             } break;
 
@@ -419,7 +482,8 @@ _php_parallel_checked_function_return:
 } /* }}} */
 
 static zend_always_inline zend_bool php_parallel_check_closure(zend_closure_t *closure) { /* {{{ */
-    return php_parallel_check_function(&closure->func, NULL, NULL);
+    return php_parallel_check_statics(&closure->func, NULL, NULL) &&
+           php_parallel_check_function(&closure->func, NULL, NULL);
 } /* }}} */
 
 #if PHP_VERSION_ID >= 70400

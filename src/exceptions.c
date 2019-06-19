@@ -219,6 +219,10 @@ PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS)
     php_parallel_runtime_error_illegal_function_ce =
         zend_register_internal_class_ex(&ce, php_parallel_runtime_error_ce);
 
+    INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime\\Error", "IllegalVariable", NULL);
+    php_parallel_runtime_error_illegal_variable_ce =
+        zend_register_internal_class_ex(&ce, php_parallel_runtime_error_ce);
+
     INIT_NS_CLASS_ENTRY(ce, "parallel\\Runtime\\Error", "IllegalParameter", NULL);
     php_parallel_runtime_error_illegal_parameter_ce =
         zend_register_internal_class_ex(&ce, php_parallel_runtime_error_ce);
