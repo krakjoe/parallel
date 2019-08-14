@@ -16,9 +16,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-06-13</date>
+ <date>2019-08-14</date>
  <version>
-  <release>1.1.2</release>
+  <release>1.1.3</release>
   <api>1.1.0</api>
  </version>
  <stability>
@@ -27,7 +27,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix for 7.4.0alpha1
+- Fix #79 segfault on copy closure in 7.2
+- Fix #69 segfault on deep runtime copy
+- Fix #70 segfault caused by incorrect Channel serialize/unserialize
+- Fix #71 segfault caused by cloned Channel access
  </notes>
  <contents>
   <dir name="/">
@@ -140,6 +143,7 @@
       <file name="059.phpt" role="test"/>
       <file name="060.inc" role="test"/>
       <file name="060.phpt" role="test"/>
+      <file name="061.phpt" role="test"/>
       <file name="bootstrapc.inc" role="test"/>
       <file name="bootstrape.inc" role="test"/>
       <file name="bootstrap.inc" role="test"/>
@@ -165,6 +169,8 @@
       <file name="019.phpt" role="test"/>
       <file name="020.phpt" role="test"/>
       <file name="021.phpt" role="test"/>
+      <file name="022.phpt" role="test"/>
+      <file name="023.phpt" role="test"/>
      </dir> <!-- channel -->
      <dir name="closures">
       <file name="001.phpt" role="test"/>
@@ -243,6 +249,21 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-06-13</date>
+   <version>
+    <release>1.1.2</release>
+    <api>1.1.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix for 7.4.0alpha1
+   </notes>
+  </release>
   <release>
    <date>2019-06-05</date>
    <version>
