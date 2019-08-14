@@ -120,6 +120,8 @@ static zend_always_inline zend_function* php_parallel_cache_function_ex(const ze
 
 #ifdef ZEND_ACC_IMMUTABLE
     cached->fn_flags |= ZEND_ACC_IMMUTABLE;
+#else
+    cached->fn_flags &= ~ZEND_ACC_CLOSURE;
 #endif
 
     if (statics && cached->static_variables) {

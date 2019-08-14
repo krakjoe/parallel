@@ -662,6 +662,11 @@ static zend_always_inline zend_object* php_parallel_copy_object_persistent(zend_
     GC_SET_REFCOUNT(dest, 1);
     GC_ADD_FLAGS(dest, GC_IMMUTABLE);
 
+    if (ce == php_parallel_copy_object_unavailable_ce) {
+        dest->ce = ce;
+        dest->handlers = zend_get_std_object_handlers();
+    }
+
     if (ce->default_properties_count) {
         zval *property   = source->properties_table,
              *slot       = dest->properties_table,
@@ -695,6 +700,11 @@ static zend_always_inline zend_object* php_parallel_copy_object_thread(zend_obje
     dest = php_parallel_copy_mem(
             source,
             sizeof(zend_object) + zend_object_properties_size(ce), 0);
+
+    if (ce == php_parallel_copy_object_unavailable_ce) {
+        dest->ce = ce;
+        dest->handlers = zend_get_std_object_handlers();
+    }
 
     zend_object_std_init(dest, ce);
 

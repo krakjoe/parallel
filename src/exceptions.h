@@ -37,6 +37,7 @@ extern zend_class_entry* php_parallel_runtime_error_closed_ce;
 extern zend_class_entry* php_parallel_runtime_error_killed_ce;
 extern zend_class_entry* php_parallel_runtime_error_illegal_function_ce;
 extern zend_class_entry* php_parallel_runtime_error_illegal_instruction_ce;
+extern zend_class_entry* php_parallel_runtime_error_illegal_variable_ce;
 extern zend_class_entry* php_parallel_runtime_error_illegal_parameter_ce;
 extern zend_class_entry* php_parallel_runtime_error_illegal_return_ce;
 
