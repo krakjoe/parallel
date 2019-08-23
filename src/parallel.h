@@ -23,6 +23,7 @@
 #include "pthread.h"
 
 #include "arena.h"
+#include "list.h"
 #include "exceptions.h"
 #include "handlers.h"
 #include "runtime.h"

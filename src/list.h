@@ -15,35 +15,18 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_RUNTIME_H
-#define HAVE_PARALLEL_RUNTIME_H
+#ifndef HAVE_PARALLEL_LIST_H
+#define HAVE_PARALLEL_LIST_H
 
-typedef struct _php_parallel_runtime_t {
-    pthread_t                        thread;
-    php_parallel_monitor_t          *monitor;
-    zend_string                     *bootstrap;
-    struct {
-        zend_bool                   *interrupt;
-    } child;
-    struct {
-        void                        *server;
-    } parent;
-    php_parallel_list_t             *schedule;
-    zend_object                      std;
-} php_parallel_runtime_t;
+typedef struct _php_parallel_list_t php_parallel_list_t;
 
-static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_fetch(zend_object *o) {
-    return (php_parallel_runtime_t*) (((char*) o) - XtOffsetOf(php_parallel_runtime_t, std));
-}
-
-static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_from(zval *z) {
-    return php_parallel_runtime_fetch(Z_OBJ_P(z));
-}
-
-extern zend_class_entry* php_parallel_runtime_ce;
-
-php_parallel_runtime_t* php_parallel_runtime_construct(zend_string *bootstrap);
-
-PHP_MINIT_FUNCTION(PARALLEL_RUNTIME);
-PHP_MSHUTDOWN_FUNCTION(PARALLEL_RUNTIME);
+php_parallel_list_t* php_parallel_list_create(zend_ulong size, llist_dtor_func_t dtor);
+void                 php_parallel_list_apply(php_parallel_list_t *list, llist_apply_func_t func);
+void*                php_parallel_list_append(php_parallel_list_t *list, void *mem);
+void                 php_parallel_list_delete(php_parallel_list_t *list, void *mem);
+zend_ulong           php_parallel_list_count(php_parallel_list_t *list);
+void*                php_parallel_list_head(php_parallel_list_t *list);
+void*                php_parallel_list_tail(php_parallel_list_t *list);
+void                 php_parallel_list_destroy(php_parallel_list_t *list);
+void                 php_parallel_list_free(php_parallel_list_t *list);
 #endif

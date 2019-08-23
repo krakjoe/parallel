@@ -25,10 +25,6 @@ TSRM_TLS php_parallel_future_t* php_parallel_scheduler_future = NULL;
 
 void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
 
-static zend_always_inline int php_parallel_scheduler_list_delete(void *lhs, void *rhs) {
-    return lhs == rhs;
-}
-
 static void php_parallel_schedule_free(void *scheduleed) {
     php_parallel_schedule_el_t *el =
         (php_parallel_schedule_el_t*) scheduleed;
@@ -51,11 +47,14 @@ static void php_parallel_schedule_free(void *scheduleed) {
 }
 
 void php_parallel_scheduler_init(php_parallel_runtime_t *runtime) {
-    zend_llist_init(&runtime->schedule, sizeof(php_parallel_schedule_el_t), php_parallel_schedule_free, 1);
+    runtime->schedule =
+        php_parallel_list_create(
+            sizeof(php_parallel_schedule_el_t), php_parallel_schedule_free);
 }
 
 void php_parallel_scheduler_destroy(php_parallel_runtime_t *runtime) {
-    zend_llist_destroy(&runtime->schedule);
+    php_parallel_list_destroy(runtime->schedule);
+    php_parallel_list_free(runtime->schedule);
 }
 
 static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(php_parallel_runtime_t *runtime) {
@@ -141,18 +140,17 @@ static zend_always_inline void php_parallel_scheduler_add(
 
     el.frame   = frame;
 
-    zend_llist_add_element(&runtime->schedule, &el);
+    php_parallel_list_append(runtime->schedule, &el);
 
     if (future) {
         future->runtime = runtime;
-        future->handle =
-            runtime->schedule.tail->data;
+        future->handle = php_parallel_list_tail(runtime->schedule);
         GC_ADDREF(&runtime->std);
     }
 }
 
 static zend_always_inline zend_bool php_parallel_scheduler_empty(php_parallel_runtime_t *runtime) {
-    return !zend_llist_count(&runtime->schedule);
+    return !php_parallel_list_count(runtime->schedule);
 }
 
 zend_bool php_parallel_scheduler_busy(php_parallel_runtime_t *runtime) {
@@ -175,11 +173,11 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
     zend_class_entry *scope = NULL;
     zend_function    *function = NULL;
 
-    if (zend_llist_count(&runtime->schedule) == 0) {
+    if (php_parallel_list_count(runtime->schedule) == 0) {
         return 0;
     }
 
-    head = zend_llist_get_first(&runtime->schedule);
+    head = php_parallel_list_head(runtime->schedule);
     function =
         head->frame->func;
     head->frame->func = NULL;
@@ -243,17 +241,16 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
 
     Z_PTR(el->frame->This) = Z_PTR(head->frame->This);
 
-    zend_llist_del_element(
-        &runtime->schedule,
-        head,
-        php_parallel_scheduler_list_delete);
+    php_parallel_list_delete(
+        runtime->schedule,
+        head);
 
     return 1;
 }
 
 static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame) {
-    php_parallel_future_t *future = 
-        php_parallel_scheduler_future = 
+    php_parallel_future_t *future =
+        php_parallel_scheduler_future =
             (php_parallel_future_t*) Z_PTR(frame->This);
 
     zend_first_try {
@@ -329,8 +326,8 @@ static void php_parallel_scheduler_killed(void *scheduled) {
 }
 
 static zend_always_inline void php_parallel_scheduler_kill(php_parallel_runtime_t *runtime) {
-    zend_llist_apply(&runtime->schedule, php_parallel_scheduler_killed);
-    zend_llist_clean(&runtime->schedule);
+    php_parallel_list_apply(runtime->schedule, php_parallel_scheduler_killed);
+    php_parallel_list_destroy(runtime->schedule);
 }
 
 static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
@@ -555,14 +552,13 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
 
     php_parallel_monitor_lock(future->runtime->monitor);
 
-    in = zend_llist_count(&future->runtime->schedule);
+    in = php_parallel_list_count(future->runtime->schedule);
 
-    zend_llist_del_element(
-        &future->runtime->schedule,
-        future->handle,
-        php_parallel_scheduler_list_delete);
+    php_parallel_list_delete(
+        future->runtime->schedule,
+        future->handle);
 
-    out = zend_llist_count(&future->runtime->schedule);
+    out = php_parallel_list_count(future->runtime->schedule);
 
     php_parallel_monitor_unlock(future->runtime->monitor);
 
