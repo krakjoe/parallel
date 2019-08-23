@@ -22,6 +22,7 @@
 #include "monitor.h"
 #include "pthread.h"
 
+#include "arena.h"
 #include "exceptions.h"
 #include "handlers.h"
 #include "runtime.h"
@@ -41,14 +42,11 @@
 #include "zend_exceptions.h"
 #include "zend_vm.h"
 
-#include "dependencies.h"
-#include "cache.h"
-#include "copy.h"
-#include "check.h"
-
 #define PARALLEL_PARAMETERS_NONE(r) \
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, 0, 0) \
     ZEND_PARSE_PARAMETERS_END()
+
+pid_t php_parallel_tid(void);
 
 static zend_always_inline zend_bool php_parallel_mutex_init(pthread_mutex_t *mutex, zend_bool recursive) {
     if (recursive) {
@@ -103,6 +101,14 @@ static zend_always_inline uint32_t php_parallel_atomic_delref(uint32_t *refcount
     return __sync_sub_and_fetch(refcount, 1);
 #endif
 }
+
+extern void* php_parallel_heap_alloc(size_t size);
+extern void  php_parallel_heap_free(void *mem);
+
+#include "dependencies.h"
+#include "cache.h"
+#include "copy.h"
+#include "check.h"
 
 extern zend_function_entry php_parallel_functions[];
 

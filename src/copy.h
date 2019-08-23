@@ -60,7 +60,7 @@ typedef struct _zend_closure_t {
 } zend_closure_t;
 
 static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) {
-    void *destination = (void*) pemalloc(size, persistent);
+    void *destination = (void*) ((persistent) ? php_parallel_heap_alloc(size) : emalloc(size));
 
     memcpy(destination, source, size);
 

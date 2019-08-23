@@ -23,68 +23,13 @@
 static struct {
     pthread_mutex_t mutex;
     HashTable       table;
-    struct {
-        size_t      size;
-        size_t      used;
-        void       *mem;
-        void       *block;
-    } memory;
 } php_parallel_cache_globals = {PTHREAD_MUTEX_INITIALIZER};
 
 #define PCG(e) php_parallel_cache_globals.e
-#define PCM(e) PCG(memory).e
-
-typedef union _php_parallel_cache_align_test {
-    void *v;
-    double d;
-    zend_long l;
-} php_parallel_cache_align_test;
-
-#if ZEND_GCC_VERSION >= 2000
-# define PARALLEL_PLATFORM_ALIGNMENT \
-    (__alignof__(php_parallel_cache_align_test) < 8 ? \
-        8 : __alignof__(php_parallel_cache_align_test))
-#else
-# define PARALLEL_PLATFORM_ALIGNMENT \
-    (sizeof(php_parallel_cache_align_test))
-#endif
-#define PARALLEL_CACHE_ALIGNED(size) \
-    ZEND_MM_ALIGNED_SIZE_EX(size, PARALLEL_PLATFORM_ALIGNMENT)
-#define PARALLEL_CACHE_CHUNK \
-    PARALLEL_CACHE_ALIGNED((1024 * 1024) * 8)
-
-/* {{{ */
-static zend_always_inline void* php_parallel_cache_alloc(size_t size) {
-    void *mem;
-    size_t aligned =
-        PARALLEL_CACHE_ALIGNED(size);
-
-    ZEND_ASSERT(size < PARALLEL_CACHE_CHUNK);
-
-    if ((PCM(used) + aligned) >= PCM(size)) {
-        PCM(size) = PARALLEL_CACHE_ALIGNED(
-            PCM(size) + PARALLEL_CACHE_CHUNK);
-        PCM(mem) = (void*) realloc(PCM(mem), PCM(size));
-
-        if (!PCM(mem)) {
-            /* out of memory */
-            return NULL;
-        }
-
-        PCM(block) = (void*)(((char*)PCM(mem)) + PCM(used));
-    }
-
-    mem = PCM(block);
-    PCM(block) =
-        (void*)(((char*)PCM(block)) + aligned);
-    PCM(used) += aligned;
-
-    return mem;
-}
 
 static zend_always_inline void* php_parallel_cache_copy_mem(void *source, zend_long size) {
     void *destination =
-        php_parallel_cache_alloc(size);
+        php_parallel_heap_alloc(size);
 
     memcpy(destination, source, size);
 
@@ -170,7 +115,7 @@ static zend_always_inline zend_function* php_parallel_cache_function_ex(const ze
         zend_string **vars = cached->vars;
         uint32_t      it = 0,
                       end = cached->last_var;
-        zend_string **heap = php_parallel_cache_alloc(cached->last_var * sizeof(zend_string*));
+        zend_string **heap = php_parallel_heap_alloc(cached->last_var * sizeof(zend_string*));
 
         while (it < end) {
             heap[it] =
@@ -371,24 +316,12 @@ PHP_MINIT_FUNCTION(PARALLEL_CACHE)
 {
     zend_hash_init(&PCG(table), 32, NULL, NULL, 1);
 
-    PCM(size) = PARALLEL_CACHE_CHUNK;
-    PCM(mem) =
-        PCM(block) =
-            malloc(PCM(size));
-
-    if (!PCM(mem)) {
-        /* out of memory */
-    }
-
     return SUCCESS;
 }
 
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_CACHE)
 {
     zend_hash_destroy(&PCG(table));
-
-    if (PCM(mem))
-        free(PCM(mem));
 
     return SUCCESS;
 } /* }}} */

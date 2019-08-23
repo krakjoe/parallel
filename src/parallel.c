@@ -20,13 +20,20 @@
 
 #include "parallel.h"
 
+#if !defined(_WIN32)
+# include <sys/syscall.h>
+#endif
+
 /* {{{ */
 TSRM_TLS HashTable php_parallel_runtimes;
 
 static struct {
-    pthread_mutex_t     mutex;
-    zend_string        *bootstrap;
-    volatile zend_ulong running;
+    pthread_mutex_t        mutex;
+    pid_t                  main;
+    zend_string           *bootstrap;
+    zend_long              limit;
+    php_parallel_arena_t  *arena;
+    volatile zend_ulong    running;
 } php_parallel_globals;
 
 #define PCG(e) php_parallel_globals.e
@@ -51,6 +58,14 @@ static size_t php_parallel_output_function(const char *str, size_t len) {
 
     return result;
 } /* }}} */
+
+pid_t php_parallel_tid(void) {
+# if defined(_WIN32)
+    return GetCurrentThreadId();
+# else
+    return syscall(SYS_gettid);
+# endif
+}
 
 /* {{{ */
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_bootstrap_arginfo, 0, 0, 1)
@@ -156,19 +171,41 @@ zend_function_entry php_parallel_functions[] = {
     PHP_FE_END
 }; /* }}} */
 
+PHP_INI_MH(OnUpdateParallelMemory)
+{
+    PCG(limit) =
+        zend_atol(
+            ZSTR_VAL(new_value),
+            ZSTR_LEN(new_value));
+
+    return SUCCESS;
+}
+
+ZEND_INI_BEGIN()
+    ZEND_INI_ENTRY("parallel.memory", "128M", ZEND_INI_SYSTEM, OnUpdateParallelMemory)
+ZEND_INI_END()
+
 PHP_MINIT_FUNCTION(PARALLEL_CORE)
 {
+    memset(&php_parallel_globals, 0, sizeof(php_parallel_globals));
+
+    REGISTER_INI_ENTRIES();
+
     if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
         php_sapi_deactivate_function = sapi_module.deactivate;
 
         sapi_module.deactivate = NULL;
     }
 
-    memset(&php_parallel_globals, 0, sizeof(php_parallel_globals));
-
     php_sapi_output_function = sapi_module.ub_write;
 
     sapi_module.ub_write = php_parallel_output_function;
+
+    php_parallel_mutex_init(&PCG(mutex), 1);
+    PCG(main) =
+        php_parallel_tid();
+    PCG(arena) =
+        php_parallel_arena_create(PCG(limit));
 
     PHP_MINIT(PARALLEL_HANDLERS)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_EXCEPTIONS)(INIT_FUNC_ARGS_PASSTHRU);
@@ -177,10 +214,6 @@ PHP_MINIT_FUNCTION(PARALLEL_CORE)
     PHP_MINIT(PARALLEL_CHANNEL)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_EVENTS)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_SYNC)(INIT_FUNC_ARGS_PASSTHRU);
-
-    php_parallel_mutex_init(&PCG(mutex), 1);
-    PCG(running) = 0;
-    PCG(bootstrap) = NULL;
 
     return SUCCESS;
 }
@@ -195,6 +228,10 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CORE)
     PHP_MSHUTDOWN(PARALLEL_EXCEPTIONS)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MSHUTDOWN(PARALLEL_HANDLERS)(INIT_FUNC_ARGS_PASSTHRU);
 
+    if (php_parallel_tid() != PCG(main)) {
+        return SUCCESS;
+    }
+
     php_parallel_mutex_destroy(&PCG(mutex));
 
     if (strncmp(sapi_module.name, "cli", sizeof("cli")-1) == SUCCESS) {
@@ -202,6 +239,10 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CORE)
     }
 
     sapi_module.ub_write = php_sapi_output_function;
+
+    php_parallel_arena_destroy(PCG(arena));
+
+    UNREGISTER_INI_ENTRIES();
 
     return SUCCESS;
 }
@@ -233,5 +274,13 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE)
     PHP_RSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
+}
+
+void* php_parallel_heap_alloc(size_t size) {
+    return php_parallel_arena_alloc(PCG(arena), size);
+}
+
+void php_parallel_heap_free(void *mem) {
+    php_parallel_arena_free(PCG(arena), mem);
 }
 #endif

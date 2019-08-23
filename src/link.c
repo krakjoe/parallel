@@ -121,16 +121,16 @@ static zend_always_inline void php_parallel_link_cond_destroy(php_parallel_link_
 }
 
 php_parallel_link_t* php_parallel_link_init(zend_string *name, zend_bool buffered, zend_long capacity) {
-    php_parallel_link_t *link = pecalloc(1, sizeof(php_parallel_link_t), 1);
+    php_parallel_link_t *link = php_parallel_heap_alloc(sizeof(php_parallel_link_t));
 
     if (php_parallel_link_mutex_init(&link->m) != SUCCESS) {
-        pefree(link, 1);
+        php_parallel_heap_free(link);
         return NULL;
     }
 
     if (php_parallel_link_cond_init(&link->c) != SUCCESS) {
         php_parallel_link_mutex_destroy(&link->m);
-        pefree(link, 1);
+        php_parallel_heap_free(link);
         return NULL;
     }
 
@@ -161,7 +161,7 @@ void php_parallel_link_destroy(php_parallel_link_t *link) {
                 PARALLEL_ZVAL_DTOR(&link->port.z);
             }
         }
-        pefree(link, 1);
+        php_parallel_heap_free(link);
     }
 }
 

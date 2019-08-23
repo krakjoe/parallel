@@ -44,10 +44,10 @@ static void php_parallel_schedule_free(void *scheduleed) {
         if (el->frame->func->op_array.static_variables) {
             php_parallel_copy_hash_dtor(el->frame->func->op_array.static_variables, 1);
         }
-        pefree(el->frame->func, 1);
+        php_parallel_heap_free(el->frame->func);
     }
 
-    pefree(el->frame, 1);
+    php_parallel_heap_free(el->frame);
 }
 
 void php_parallel_scheduler_init(php_parallel_runtime_t *runtime) {
@@ -109,7 +109,7 @@ static zend_always_inline void php_parallel_scheduler_add(
 
     zend_execute_data *frame =
         (zend_execute_data*)
-            pecalloc(1, zend_vm_calc_used_stack(argc, (zend_function*) function), 1);
+            php_parallel_heap_alloc(zend_vm_calc_used_stack(argc, (zend_function*) function));
 
     frame->func =
         php_parallel_cache_closure(function, NULL);
@@ -305,7 +305,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
             }
         }
 
-        pefree(frame->func, 1);
+        php_parallel_heap_free(frame->func);
 
         zend_vm_stack_free_call_frame(frame);
     } zend_end_try ();
