@@ -23,7 +23,7 @@
 php_parallel_monitor_t* php_parallel_monitor_create(void) {
     php_parallel_monitor_t *monitor =
         (php_parallel_monitor_t*)
-            calloc(1, sizeof(php_parallel_monitor_t));
+            php_parallel_heap_alloc(sizeof(php_parallel_monitor_t));
 
     php_parallel_mutex_init(&monitor->mutex, 1);
     php_parallel_cond_init(&monitor->condition);
@@ -116,7 +116,6 @@ void php_parallel_monitor_remove(php_parallel_monitor_t *monitor, int32_t state)
 void php_parallel_monitor_destroy(php_parallel_monitor_t *monitor) {
     php_parallel_mutex_destroy(&monitor->mutex);
     php_parallel_cond_destroy(&monitor->condition);
-
-    free(monitor);
+    php_parallel_heap_free(monitor);
 }
 #endif

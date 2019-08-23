@@ -50,25 +50,27 @@
 pid_t php_parallel_tid(void);
 
 static zend_always_inline zend_bool php_parallel_mutex_init(pthread_mutex_t *mutex, zend_bool recursive) {
-    if (recursive) {
-        zend_bool result = 0;
-        pthread_mutexattr_t attributes;
+    zend_bool result = 0;
+    pthread_mutexattr_t attributes;
 
-        pthread_mutexattr_init(&attributes);
+    pthread_mutexattr_init(&attributes);
+
+    if (recursive) {
 #if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
         pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE);
 #else
         pthread_mutexattr_settype(&attributes, PTHREAD_MUTEX_RECURSIVE_NP);
 #endif
-        if (pthread_mutex_init(mutex, &attributes) == SUCCESS) {
-            result = 1;
-        }
-
-        pthread_mutexattr_destroy(&attributes);
-        return result;
     }
 
-    return (pthread_mutex_init(mutex, NULL) == SUCCESS);
+    pthread_mutexattr_setpshared(&attributes, PTHREAD_PROCESS_SHARED);
+
+    if (pthread_mutex_init(mutex, &attributes) == SUCCESS) {
+        result = 1;
+    }
+
+    pthread_mutexattr_destroy(&attributes);
+    return result;
 }
 
 static zend_always_inline void php_parallel_mutex_destroy(pthread_mutex_t *mutex) {
@@ -76,7 +78,19 @@ static zend_always_inline void php_parallel_mutex_destroy(pthread_mutex_t *mutex
 }
 
 static zend_always_inline zend_bool php_parallel_cond_init(pthread_cond_t *cond) {
-    return (pthread_cond_init(cond, NULL) == SUCCESS);
+    zend_bool result = 0;
+    pthread_condattr_t attributes;
+
+    pthread_condattr_init(&attributes);
+
+    pthread_condattr_setpshared(&attributes, PTHREAD_PROCESS_SHARED);
+
+    if (pthread_cond_init(cond, &attributes) == SUCCESS) {
+        result = 1;
+    }
+
+    pthread_condattr_destroy(&attributes);
+    return result;
 }
 
 static zend_always_inline void php_parallel_cond_destroy(pthread_cond_t *cond) {
