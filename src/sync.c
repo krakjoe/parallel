@@ -46,7 +46,9 @@ static zend_always_inline php_parallel_sync_t* php_parallel_sync_from(zval *z) {
 
 static zend_always_inline php_parallel_sync_t* php_parallel_sync_create(zval *zv) {
     php_parallel_sync_t *sync =
-        (php_parallel_sync_t*) pecalloc(1, sizeof(php_parallel_sync_t), 1);
+        (php_parallel_sync_t*) 
+            php_parallel_heap_alloc(
+                sizeof(php_parallel_sync_t));
 
     php_parallel_mutex_init(&sync->mutex, 1);
     php_parallel_cond_init(&sync->condition);
@@ -79,7 +81,7 @@ void php_parallel_sync_release(php_parallel_sync_t *sync) {
 
         php_parallel_mutex_destroy(&sync->mutex);
         php_parallel_cond_destroy(&sync->condition);
-        pefree(sync, 1);
+        php_parallel_heap_free(sync);
     }
 }
 
