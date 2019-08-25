@@ -27,7 +27,7 @@ typedef struct _php_parallel_future_t {
     php_parallel_monitor_t *monitor;
     php_parallel_runtime_t *runtime;
     void *handle;
-    zval value;
+    zval *value;
     zend_object std;
 } php_parallel_future_t;
 
