@@ -47,13 +47,17 @@ static void php_parallel_copy_string_free(zval *zv) {
 
 static zend_always_inline zend_string* php_parallel_copy_string_alloc(size_t length, zend_bool persistent) {
     zend_string *result = (zend_string*)
-       ((persistent) ? 
-            php_parallel_heap_alloc(ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(length))) : 
+       ((persistent) ?
+            php_parallel_heap_alloc(ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(length))) :
             emalloc(ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(length))));
 
     GC_SET_REFCOUNT(result, 1);
-    GC_TYPE_INFO(result) = 
-        IS_STRING | ((persistent ? IS_STR_PERSISTENT : 0) << GC_FLAGS_SHIFT);
+    if (persistent) {
+        GC_TYPE_INFO(result) =
+            (IS_STRING | IS_STR_INTERNED | IS_STR_PERMANENT) << GC_FLAGS_SHIFT;
+    } else {
+        GC_TYPE_INFO(result) = (IS_STRING) << GC_FLAGS_SHIFT;
+    }
     zend_string_forget_hash_val(result);
     ZSTR_LEN(result) = length;
 
