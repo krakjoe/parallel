@@ -113,7 +113,7 @@ void php_parallel_exceptions_destroy(php_parallel_exception_t *ex) {
     PARALLEL_ZVAL_DTOR(&ex->trace);
     PARALLEL_ZVAL_DTOR(&ex->previous);
 
-    pefree(ex, 1);
+    php_parallel_heap_free(ex);
 }
 
 void php_parallel_exceptions_save(zval *saved, zend_object *exception) {
@@ -127,7 +127,7 @@ void php_parallel_exceptions_save(zval *saved, zend_object *exception) {
 
     php_parallel_exception_t *ex =
         (php_parallel_exception_t*)
-            pecalloc(1, sizeof(php_parallel_exception_t), 1);
+            php_parallel_heap_alloc(sizeof(php_parallel_exception_t));
 
     /* todo */
     ZVAL_NULL(&previous);
