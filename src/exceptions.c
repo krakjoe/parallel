@@ -127,7 +127,8 @@ void php_parallel_exceptions_save(zval *saved, zend_object *exception) {
 
     php_parallel_exception_t *ex =
         (php_parallel_exception_t*)
-            php_parallel_heap_alloc(sizeof(php_parallel_exception_t));
+            php_parallel_heap_alloc(
+                sizeof(php_parallel_exception_t));
 
     /* todo */
     ZVAL_NULL(&previous);
