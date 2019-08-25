@@ -21,7 +21,7 @@
 #include "parallel.h"
 
 TSRM_TLS php_parallel_runtime_t* php_parallel_scheduler_context = NULL;
-TSRM_TLS php_parallel_future_t* php_parallel_scheduler_monitor = NULL;
+TSRM_TLS php_parallel_monitor_t* php_parallel_scheduler_monitor = NULL;
 
 void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
 
