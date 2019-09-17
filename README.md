@@ -25,14 +25,16 @@ Hello World
 $runtime = new \parallel\Runtime();
 
 $future = $runtime->run(function(){
-    for ($i = 0; $i < 500; $i++)
-        echo "*";
-
+	for ($i = 0; $i < 500; $i++) {
+		usleep(rand(1, 1000));
+		echo "*";
+	}
     return "easy";
 });
 
 for ($i = 0; $i < 500; $i++) {
-    echo ".";
+	usleep(rand(1, 1000));
+	echo ".";
 }
 
 printf("\nUsing \\parallel\\Runtime is %s\n", $future->value());
