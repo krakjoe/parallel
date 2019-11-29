@@ -29,6 +29,7 @@ static struct {
 
 TSRM_TLS struct {
     HashTable activated;
+    HashTable used;
 } php_parallel_dependencies_globals;
 
 #define PDG(e) php_parallel_dependencies_globals.e
@@ -146,8 +147,10 @@ void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
             zend_hash_add_ptr(EG(function_table), key, used);
 
 #ifdef ZEND_MAP_PTR_NEW
-            ZEND_MAP_PTR_NEW(dependency->op_array.run_time_cache);
+            ZEND_MAP_PTR_NEW(used->run_time_cache);
 #endif
+
+            zend_hash_add_empty_element(&PDG(used), key);
         }
     } ZEND_HASH_FOREACH_END();
 } /* }}} */
@@ -160,13 +163,20 @@ static void php_parallel_dependencies_dtor(zval *zv) { /* {{{ */
 PHP_RINIT_FUNCTION(PARALLEL_DEPENDENCIES)
 {
     zend_hash_init(&PDG(activated), 32, NULL, NULL, 0);
+    zend_hash_init(&PDG(used), 32, NULL, NULL, 0);
 
     return SUCCESS;
 }
 
 PHP_RSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES)
 {
+    zend_string *key;
+
     zend_hash_destroy(&PDG(activated));
+    ZEND_HASH_FOREACH_STR_KEY(&PDG(used), key) {
+        zend_hash_del(EG(function_table), key);
+    } ZEND_HASH_FOREACH_END();
+    zend_hash_destroy(&PDG(used));
 
     return SUCCESS;
 }
