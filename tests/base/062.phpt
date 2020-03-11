@@ -5,6 +5,9 @@ parallel immutable class load
 if (!extension_loaded('parallel')) {
 	die("skip parallel not loaded");
 }
+if (!version_compare(PHP_VERSION, "7.4", ">=")) {
+    die("skip php 7.4 required");
+}
 ?>
 --FILE--
 <?php
