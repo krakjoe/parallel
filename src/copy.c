@@ -106,11 +106,14 @@ zend_string* php_parallel_copy_string(zend_string *source, zend_bool persistent)
 }
 
 zend_class_entry* php_parallel_copy_scope(zend_class_entry *class) {
-    zend_class_entry *scope;
+    zend_class_entry *scope, *exists_ce;
 
 #ifdef ZEND_ACC_IMMUTABLE
     if (class->ce_flags & ZEND_ACC_IMMUTABLE) {
-        return class;
+        exists_ce = zend_lookup_class_ex(class->name, NULL, ZEND_FETCH_CLASS_NO_AUTOLOAD);
+        if (exists_ce) {
+            return class;
+        }
     }
 #endif
 
