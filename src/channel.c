@@ -278,6 +278,8 @@ PHP_METHOD(Channel, closed)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
 
+    PARALLEL_PARAMETERS_NONE(return);
+
     RETURN_BOOL(php_parallel_link_closed(channel->link));
 }
 
