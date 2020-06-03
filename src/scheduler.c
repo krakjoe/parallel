@@ -241,7 +241,7 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
         &el->frame->func->op_array,
         head->frame->return_value);
 
-    Z_PTR(el->frame->This) = Z_PTR(head->frame->This);
+    php_parallel_scheduler_future = Z_PTR(head->frame->This);
 
     zend_llist_del_element(
         &runtime->schedule,
@@ -252,9 +252,7 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
 }
 
 static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame) {
-    php_parallel_future_t *future = 
-        php_parallel_scheduler_future = 
-            (php_parallel_future_t*) Z_PTR(frame->This);
+    php_parallel_future_t *future = php_parallel_scheduler_future;
 
     zend_first_try {
         zend_try {
