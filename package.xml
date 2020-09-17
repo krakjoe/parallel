@@ -16,9 +16,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2019-08-14</date>
+ <date>2020-09-17</date>
  <version>
-  <release>1.1.3</release>
+  <release>1.1.4</release>
   <api>1.1.0</api>
  </version>
  <stability>
@@ -27,10 +27,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix #79 segfault on copy closure in 7.2
-- Fix #69 segfault on deep runtime copy
-- Fix #70 segfault caused by incorrect Channel serialize/unserialize
-- Fix #71 segfault caused by cloned Channel access
+- Fix #103: memory leaks in Sync
+- Fix #112: broken type hinting and instanceof operator
+- Fix #139: crash with opcache enabled
  </notes>
  <contents>
   <dir name="/">
@@ -144,6 +143,9 @@
       <file name="060.inc" role="test"/>
       <file name="060.phpt" role="test"/>
       <file name="061.phpt" role="test"/>
+      <file name="062.bootstrap.inc" role="test"/>
+      <file name="062.immutable.inc" role="test"/>
+      <file name="062.phpt" role="test"/>
       <file name="bootstrapc.inc" role="test"/>
       <file name="bootstrape.inc" role="test"/>
       <file name="bootstrap.inc" role="test"/>
@@ -249,6 +251,24 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2019-08-14</date>
+   <version>
+    <release>1.1.3</release>
+    <api>1.1.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix #79 segfault on copy closure in 7.2
+- Fix #69 segfault on deep runtime copy
+- Fix #70 segfault caused by incorrect Channel serialize/unserialize
+- Fix #71 segfault caused by cloned Channel access
+   </notes>
+  </release>
   <release>
    <date>2019-06-13</date>
    <version>
