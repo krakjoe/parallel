@@ -20,7 +20,7 @@ Installation
 
 **From PECL**
 
-    pecl install parallel-beta
+    pecl install parallel
 
 **Binary distributions**
 

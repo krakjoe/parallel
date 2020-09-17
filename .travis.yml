@@ -9,7 +9,7 @@ addons:
 php:
   - 7.2
   - 7.3
-  - 7.4snapshot
+  - 7.4
   - nightly
 
 env:
