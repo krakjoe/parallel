@@ -286,7 +286,7 @@ zend_function_entry php_parallel_channel_methods[] = {
     PHP_ME(Channel, send, php_parallel_channel_send_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Channel, recv, php_parallel_channel_recv_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Channel, close, php_parallel_channel_close_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Channel, __toString, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Channel, __toString, php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -383,7 +383,11 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
 
     php_parallel_channel_handlers.offset = XtOffsetOf(php_parallel_channel_t, std);
     php_parallel_channel_handlers.free_obj        = php_parallel_channel_destroy;
+#if PHP_VERSION_ID >= 80000
+    php_parallel_channel_handlers.compare = php_parallel_channel_compare;
+#else
     php_parallel_channel_handlers.compare_objects = php_parallel_channel_compare;
+#endif
     php_parallel_channel_handlers.get_debug_info  = php_parallel_channel_debug;
     php_parallel_channel_handlers.clone_obj       = php_parallel_channel_clone;
 

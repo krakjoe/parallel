@@ -247,7 +247,7 @@ zend_function_entry php_parallel_events_methods[] = {
     PHP_ME(Events, setBlocking, php_parallel_events_set_blocking_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, setTimeout,  php_parallel_events_set_timeout_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, poll,        php_parallel_events_poll_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, count,       NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, count,       php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -273,7 +273,7 @@ PHP_MINIT_FUNCTION(PARALLEL_EVENTS)
     php_parallel_events_ce->serialize = zend_class_serialize_deny;
     php_parallel_events_ce->unserialize = zend_class_unserialize_deny;
 
-    zend_class_implements(php_parallel_events_ce, 2, zend_ce_countable, zend_ce_traversable);
+    zend_class_implements(php_parallel_events_ce, 1, zend_ce_countable);
 
     PHP_MINIT(PARALLEL_EVENTS_EVENT)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_EVENTS_INPUT)(INIT_FUNC_ARGS_PASSTHRU);

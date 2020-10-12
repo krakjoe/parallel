@@ -126,7 +126,11 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     if (function->common.fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
         it = function->op_array.arg_info - 1;
 
+#if PHP_VERSION_ID >= 80000
+        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+#else
         if (ZEND_TYPE_IS_SET(it->type) && (ZEND_TYPE_CODE(it->type) == IS_OBJECT || ZEND_TYPE_IS_CLASS(it->type))) {
+#endif
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_return_ce,
@@ -136,7 +140,11 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
             }
         }
 
+#if PHP_VERSION_ID >= 80000
+	if (function->common.fn_flags & ZEND_ACC_RETURN_REFERENCE) {
+#else
         if (it->pass_by_reference) {
+#endif
             php_parallel_exception_ex(
                 php_parallel_runtime_error_illegal_return_ce,
                 "illegal return (reference) from task");
@@ -152,7 +160,11 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     }
 
     while (it < end) {
+#if PHP_VERSION_ID >= 80000
+        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+#else
         if (ZEND_TYPE_IS_SET(it->type) && (ZEND_TYPE_CODE(it->type) == IS_OBJECT || ZEND_TYPE_IS_CLASS(it->type))) {
+#endif
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_parameter_ce,
@@ -162,7 +174,11 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
             }
         }
 
+#if PHP_VERSION_ID >= 80000
+	if (ZEND_ARG_SEND_MODE(it)) {
+#else
         if (it->pass_by_reference) {
+#endif
             php_parallel_exception_ex(
                 php_parallel_runtime_error_illegal_parameter_ce,
                 "illegal parameter (reference) accepted by task at argument %d", argc);
@@ -531,11 +547,19 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             goto _php_parallel_checked_class;
         }
 
+#if PHP_VERSION_ID >= 80000
+        if (!ZEND_TYPE_HAS_CLASS(info->type)) {
+#else
         if (!ZEND_TYPE_IS_CLASS(info->type)) {
+#endif
             continue;
         }
 
+#if PHP_VERSION_ID >= 80000
+        if (ZEND_TYPE_HAS_CE(info->type)) {
+#else
         if (ZEND_TYPE_IS_CE(info->type)) {
+#endif
             next = ZEND_TYPE_CE(info->type);
         } else {
             next = zend_lookup_class(

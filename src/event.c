@@ -71,7 +71,7 @@ PHP_METHOD(Event, __construct)
 }
 
 zend_function_entry php_parallel_events_event_methods[] = {
-    PHP_ME(Event, __construct, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Event, __construct, php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

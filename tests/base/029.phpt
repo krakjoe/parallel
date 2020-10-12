@@ -15,7 +15,7 @@ try {
 }
 ?>
 --EXPECTF--
-Warning: Unknown: failed to open stream: No such file or directory in Unknown on line 0
+Warning: Unknown: %cailed to open stream: No such file or directory in Unknown on line 0
 string(%d) "bootstrapping failed with %snope.php"
 
 

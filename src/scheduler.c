@@ -23,6 +23,12 @@
 TSRM_TLS php_parallel_runtime_t* php_parallel_scheduler_context = NULL;
 TSRM_TLS php_parallel_future_t* php_parallel_scheduler_future = NULL;
 
+#if PHP_VERSION_ID >= 80000
+static void zend_disable_function(const char *name, size_t length) {
+	zend_hash_str_del(CG(function_table), name, length);
+}
+#endif
+
 void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
 
 static zend_always_inline int php_parallel_scheduler_list_delete(void *lhs, void *rhs) {
@@ -499,7 +505,11 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime) {
 
 void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure, zval *argv, zval *return_value) {
     zend_execute_data      *caller = EG(current_execute_data)->prev_execute_data;
+#if PHP_VERSION_ID >= 80000
+    const zend_function    *function = zend_get_closure_method_def(Z_OBJ_P(closure));
+#else
     const zend_function    *function = zend_get_closure_method_def(closure);
+#endif
     zend_bool               returns = 0;
     php_parallel_future_t  *future = NULL;
 

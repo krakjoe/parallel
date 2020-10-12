@@ -266,7 +266,18 @@ static zend_always_inline zend_function* php_parallel_cache_function_ex(const ze
                     php_parallel_copy_string_interned(it->name);
             }
 
+#if PHP_VERSION_ID >= 80000
+            if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+#else
             if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_CLASS(it->type)) {
+#endif
+
+#if PHP_VERSION_ID >= 80000
+		zend_string *type = 
+			php_parallel_copy_string_interned(ZEND_TYPE_NAME(it->type));
+
+		ZEND_TYPE_SET_PTR(info->type, type);
+#else
                 zend_bool nulls =
                     ZEND_TYPE_ALLOW_NULL(it->type);
 
@@ -274,6 +285,7 @@ static zend_always_inline zend_function* php_parallel_cache_function_ex(const ze
                         php_parallel_copy_string_interned(ZEND_TYPE_NAME(it->type));
 
                 info->type = ZEND_TYPE_ENCODE_CLASS(name, nulls);
+#endif
             }
 
             info++;
