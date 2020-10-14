@@ -161,6 +161,11 @@ static zend_always_inline zend_function* php_parallel_cache_function_ex(const ze
                 ZVAL_STR(slot,
                     php_parallel_copy_string_interned(Z_STR_P(literal)));
             }
+
+#if PHP_VERSION_ID >= 70300
+	    Z_TYPE_FLAGS_P(slot) = 0;
+#endif
+
             literal++;
             slot++;
         }
