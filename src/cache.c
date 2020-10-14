@@ -163,9 +163,10 @@ static zend_always_inline zend_function* php_parallel_cache_function_ex(const ze
             }
 
 #if PHP_VERSION_ID >= 70300
-	    Z_TYPE_FLAGS_P(slot) = 0;
+            Z_TYPE_FLAGS_P(slot) = 0;
+#else
+            Z_TYPE_FLAGS_P(slot) &= ~IS_TYPE_REFCOUNTED;
 #endif
-
             literal++;
             slot++;
         }
