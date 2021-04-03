@@ -39,7 +39,7 @@ cache:
         c:\build-cache -> .appveyor.yml
 
 environment:
-        BIN_SDK_VER: 2.1.9
+        BIN_SDK_VER: 2.2.0
         PTHREADS_VER: 2.9.1
         matrix:
                 - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
@@ -52,12 +52,12 @@ environment:
                   VC: vc15
                   PHP_VER: 7.4.16
                   TS: 1
-                - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+                - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
                   ARCH: x64
                   VC: vs16
                   PHP_VER: 8.0.3
                   TS: 1
-                - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+                - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
                   ARCH: x86
                   VC: vs16
                   PHP_VER: 8.0.3
