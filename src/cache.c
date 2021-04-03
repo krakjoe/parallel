@@ -468,7 +468,7 @@ static zend_function* php_parallel_cache_function_ex(const zend_function *source
                             (char*)opline;
 #endif
             }
-#if ZEND_USE_ABS_JMP_ADD
+#if ZEND_USE_ABS_JMP_ADDR
             switch (opline->opcode) {
                 case ZEND_JMP:
                 case ZEND_FAST_CALL:
