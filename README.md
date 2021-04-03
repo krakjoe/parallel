@@ -1,7 +1,7 @@
 parallel
 ========
 
-[![Build Status](https://travis-ci.org/krakjoe/parallel.svg?branch=develop)](https://travis-ci.org/krakjoe/parallel)
+[![Build Status](https://travis-ci.com/krakjoe/parallel.svg?branch=develop)](https://travis-ci.com/krakjoe/parallel)
 [![Build status](https://ci.appveyor.com/api/projects/status/cppfcu6unc0r0h0b?svg=true)](https://ci.appveyor.com/project/krakjoe/parallel)
 [![Coverage Status](https://coveralls.io/repos/github/krakjoe/parallel/badge.svg?branch=develop)](https://coveralls.io/github/krakjoe/parallel)
 
