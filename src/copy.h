@@ -35,7 +35,12 @@
 #define PARALLEL_ZVAL_COPY php_parallel_copy_zval_ctor
 #define PARALLEL_ZVAL_DTOR php_parallel_copy_zval_dtor
 
-#if PHP_VERSION_ID >= 70300
+#if PHP_VERSION_ID >= 80100
+# define PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, key, destination) do { \
+	*key = NULL; \
+	*destination = (zend_function*) function->op_array.dynamic_func_defs[opline->op2.num]; \
+} while(0)
+#elif PHP_VERSION_ID >= 70300
 # define PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, key, destination) do { \
      zval *_tmp; \
      *key = Z_STR_P(RT_CONSTANT(opline, opline->op1)); \

@@ -61,7 +61,7 @@ static PHP_NAMED_FUNCTION(php_parallel_bootstrap)
 {
     zend_string *bootstrap;
 
-    ZEND_PARSE_PARAMETERS_START(1, 2)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_PATH_STR(bootstrap)
     ZEND_PARSE_PARAMETERS_END();
 

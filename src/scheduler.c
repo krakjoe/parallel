@@ -347,7 +347,13 @@ static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
         return SUCCESS;
     }
 
+#if PHP_VERSION_ID >= 80100
+    zend_stream_init_filename_ex(&fh, file);
+    
+    result = php_stream_open_for_zend_ex(&fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
+#else
     result = php_stream_open_for_zend_ex(ZSTR_VAL(file), &fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
+#endif
 
     if (result != SUCCESS) {
         return FAILURE;
