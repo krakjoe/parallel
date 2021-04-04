@@ -104,12 +104,7 @@ static void php_parallel_sync_object_destroy(zend_object *o) {
     zend_object_std_dtor(o);
 }
 
-#if PHP_VERSION_ID < 80000
-static HashTable* php_parallel_sync_object_debug(zval *zo, int *temp) {
-    zend_object *o = Z_OBJ_P(zo);
-#else
 static HashTable* php_parallel_sync_object_debug(zend_object *o, int *temp) {
-#endif
     php_parallel_sync_object_t *object =
         php_parallel_sync_object_fetch(o);
     HashTable *debug;

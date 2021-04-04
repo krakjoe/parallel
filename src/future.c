@@ -261,13 +261,8 @@ void php_parallel_future_destroy(zend_object *o) {
     zend_object_std_dtor(o);
 }
 
-#if PHP_VERSION_ID >= 80000
 static HashTable* php_parallel_future_debug(zend_object *zo, int *temp) {
     php_parallel_future_t *future = php_parallel_future_fetch(zo);
-#else
-static HashTable* php_parallel_future_debug(zval *zv, int *temp) {
-    php_parallel_future_t *future = php_parallel_future_from(zv);
-#endif
     HashTable *debug;
     zval zdbg;
 

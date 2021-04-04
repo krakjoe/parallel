@@ -106,27 +106,51 @@ static zend_always_inline HashTable* php_parallel_cache_statics(HashTable *stati
     return zend_hash_index_update_ptr(&PCG(table), (zend_ulong) statics, cached);
 } /* }}} */
 
+static zend_always_inline void php_parallel_cache_type(zend_type *type) { /* {{{ */
+    zend_type *single;
+
+    if (!ZEND_TYPE_IS_SET(*type)) {
+        return;
+    }
+
+    if (ZEND_TYPE_HAS_LIST(*type)) {
+        zend_type_list *list = ZEND_TYPE_LIST(*type);
+
+        list = php_parallel_cache_copy_mem(
+            	list, ZEND_TYPE_LIST_SIZE(list->num_types));
+
+        if (ZEND_TYPE_USES_ARENA(*type)) {
+            ZEND_TYPE_FULL_MASK(*type) &= ~_ZEND_TYPE_ARENA_BIT;
+        }
+ 
+        ZEND_TYPE_SET_PTR(*type, list);
+    }
+
+    ZEND_TYPE_FOREACH(*type, single) {
+        if (ZEND_TYPE_HAS_NAME(*single)) {
+            zend_string *name = ZEND_TYPE_NAME(*single);
+
+            ZEND_TYPE_SET_PTR(
+                *single,
+                php_parallel_copy_string_interned(name));
+        }
+    } ZEND_TYPE_FOREACH_END();
+} /* }}} */
+
+
 /* {{{ */
 static zend_op_array* php_parallel_cache_create(const zend_function *source, zend_bool statics) {
     zend_op_array *cached = php_parallel_cache_copy_mem((void*) source, sizeof(zend_op_array));
 
-#ifdef ZEND_ACC_IMMUTABLE
     cached->fn_flags |= ZEND_ACC_IMMUTABLE;
-#else
-    cached->fn_flags &= ~ZEND_ACC_CLOSURE;
-#endif
 
     if (statics && cached->static_variables) {
         cached->static_variables =
             php_parallel_cache_statics(cached->static_variables);
     }
 
-#ifdef ZEND_MAP_PTR_INIT
     ZEND_MAP_PTR_INIT(cached->static_variables_ptr, &cached->static_variables);
     ZEND_MAP_PTR_SET(cached->run_time_cache, NULL);
-#else
-    cached->run_time_cache = NULL;
-#endif
 
 #if PHP_VERSION_ID >= 80100
     if (cached->num_dynamic_func_defs) {
@@ -200,7 +224,7 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, zen
             if (opline->op1_type == IS_CONST) {
 #if ZEND_USE_ABS_CONST_ADDR
                 opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)cached->literals - (char*)source->op_array.literals));
-#elif PHP_VERSION_ID >= 70300
+#else
                 opline->op1.constant =
                     (char*)(cached->literals +
                             ((zval*)((char*)(source->op_array.opcodes + (opline - opcodes)) +
@@ -216,7 +240,7 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, zen
             if (opline->op2_type == IS_CONST) {
 #if ZEND_USE_ABS_CONST_ADDR
                 opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)cached->literals - (char*)source->op_array.literals));
-#elif PHP_VERSION_ID >= 70300
+#else
                 opline->op2.constant =
                     (char*)(cached->literals +
                             ((zval*)((char*)(source->op_array.opcodes + (opline - opcodes)) +
@@ -243,13 +267,11 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, zen
                     opline->op2.jmp_addr = &opcodes[opline->op2.jmp_addr - source->op_array.opcodes];
                     break;
 
-#ifdef ZEND_LAST_CATCH
                 case ZEND_CATCH:
                     if (!(opline->extended_value & ZEND_LAST_CATCH)) {
                         opline->op2.jmp_addr = &opcodes[opline->op2.jmp_addr - source->op_array.opcodes];
                     }
                     break;
-#endif
             }
 #endif
 
@@ -272,33 +294,13 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, zen
 
         cached->arg_info = info = php_parallel_cache_copy_mem(it, (end - it) * sizeof(zend_arg_info));
 
-        while (it < end) {
+         while (it < end) {
             if (info->name) {
                 info->name =
                     php_parallel_copy_string_interned(it->name);
             }
-
-#if PHP_VERSION_ID >= 80000
-            if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
-#else
-            if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_CLASS(it->type)) {
-#endif
-
-#if PHP_VERSION_ID >= 80000
-		zend_string *type = 
-			php_parallel_copy_string_interned(ZEND_TYPE_NAME(it->type));
-
-		ZEND_TYPE_SET_PTR(info->type, type);
-#else
-                zend_bool nulls =
-                    ZEND_TYPE_ALLOW_NULL(it->type);
-
-                zend_string *name =
-                        php_parallel_copy_string_interned(ZEND_TYPE_NAME(it->type));
-
-                info->type = ZEND_TYPE_ENCODE_CLASS(name, nulls);
-#endif
-            }
+            
+            php_parallel_cache_type(&info->type);
 
             info++;
             it++;
@@ -339,7 +341,7 @@ _php_parallel_cached_function_return:
 } /* }}} */
 
 /* {{{ */
-static zend_function* php_parallel_cache_function_ex(const zend_function *source, zend_bool statics) {
+static zend_always_inline zend_function* php_parallel_cache_function_ex(const zend_function *source, zend_bool statics) {
     zend_op_array *cached;
     
     pthread_mutex_lock(&PCG(mutex));
@@ -351,7 +353,7 @@ static zend_function* php_parallel_cache_function_ex(const zend_function *source
     cached = php_parallel_cache_create(source, statics);
 
     zend_hash_index_add_ptr(
-        &PCG(table), 
+        &PCG(table),
         (zend_ulong) source->op_array.opcodes, 
         cached);
 
@@ -377,7 +379,6 @@ zend_function* php_parallel_cache_closure(const zend_function *source, zend_func
     }
 
     if (closure->op_array.static_variables) {
-#ifdef ZEND_MAP_PTR_INIT
         HashTable *statics =
             ZEND_MAP_PTR_GET(
                 source->op_array.static_variables_ptr);
@@ -388,18 +389,9 @@ zend_function* php_parallel_cache_closure(const zend_function *source, zend_func
         ZEND_MAP_PTR_INIT(
             closure->op_array.static_variables_ptr,
             &closure->op_array.static_variables);
-#else
-        closure->op_array.static_variables =
-            php_parallel_copy_hash_ctor(
-                source->op_array.static_variables, 1);
-#endif
     }
 
-#ifdef ZEND_MAP_PTR_INIT
     ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
-#else
-    closure->op_array.run_time_cache = NULL;
-#endif
 
     return closure;
 } /* }}} */

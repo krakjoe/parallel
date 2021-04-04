@@ -163,9 +163,7 @@ void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
 
             zend_hash_add_ptr(EG(function_table), key, used);
 
-#ifdef ZEND_MAP_PTR_NEW
             ZEND_MAP_PTR_NEW(used->run_time_cache);
-#endif
 
             zend_hash_add_empty_element(&PDG(used), key);
         }

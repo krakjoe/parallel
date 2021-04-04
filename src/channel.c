@@ -327,13 +327,8 @@ static int php_parallel_channel_compare(zval *lhs, zval *rhs) {
     return 1;
 }
 
-#if PHP_VERSION_ID >= 80000
 static HashTable* php_parallel_channel_debug(zend_object *zo, int *temp) {
     php_parallel_channel_t *channel = php_parallel_channel_fetch(zo);
-#else
-static HashTable* php_parallel_channel_debug(zval *zv, int *temp) {
-    php_parallel_channel_t *channel = php_parallel_channel_from(zv);
-#endif
     HashTable *debug;
 
     *temp = 1;
@@ -352,12 +347,7 @@ static void php_parallel_channels_link_destroy(zval *zv) {
     php_parallel_link_destroy(link);
 }
 
-#if PHP_VERSION_ID >= 80000
 static zend_object* php_parallel_channel_clone(zend_object *src) {
-#else
-static zend_object* php_parallel_channel_clone(zval *zv) {
-    zend_object *src = Z_OBJ_P(zv);
-#endif
     php_parallel_channel_t *channel = php_parallel_channel_fetch(src);
     php_parallel_channel_t *clone = ecalloc(1,
             sizeof(php_parallel_channel_t) + 
@@ -383,11 +373,7 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
 
     php_parallel_channel_handlers.offset = XtOffsetOf(php_parallel_channel_t, std);
     php_parallel_channel_handlers.free_obj        = php_parallel_channel_destroy;
-#if PHP_VERSION_ID >= 80000
     php_parallel_channel_handlers.compare = php_parallel_channel_compare;
-#else
-    php_parallel_channel_handlers.compare_objects = php_parallel_channel_compare;
-#endif
     php_parallel_channel_handlers.get_debug_info  = php_parallel_channel_debug;
     php_parallel_channel_handlers.clone_obj       = php_parallel_channel_clone;
 

@@ -11,6 +11,13 @@ PHP_ARG_ENABLE(parallel-dev, whether to enable parallel developer build flags,
 
 if test "$PHP_PARALLEL" != "no"; then
 
+  PHP_VERSION=$($PHP_CONFIG --vernum)
+  AC_MSG_CHECKING([PHP version]);
+  if test $PHP_VERSION -lt 80000; then
+    AC_MSG_ERROR([parallel requires PHP 8.0+]);
+  fi
+  AC_MSG_RESULT([$PHP_VERSION])
+
   AC_MSG_CHECKING([for ZTS])
   if test "$PHP_THREAD_SAFETY" != "no"; then
     AC_MSG_RESULT([ok])

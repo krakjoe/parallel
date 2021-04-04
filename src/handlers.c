@@ -22,12 +22,7 @@
 
 zend_object_handlers _php_parallel_standard_handlers;
 
-#if PHP_VERSION_ID >= 80000
 zval* php_parallel_handlers_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv) {
-#else
-zval* php_parallel_handlers_read_property(zval *zv, zval *member, int type, void **cache_slot, zval *rv) {
-    zend_object *object = Z_OBJ_P(zv);
-#endif
     php_parallel_exception(
         "%s objects do not support properties",
         ZSTR_VAL(object->ce->name));
@@ -35,31 +30,15 @@ zval* php_parallel_handlers_read_property(zval *zv, zval *member, int type, void
     return &EG(uninitialized_zval);
 }
 
-#if PHP_VERSION_ID >= 80000
 zval* php_parallel_handlers_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot) {
-#else
-#if PHP_VERSION_ID >= 70400
-zval* php_parallel_handlers_write_property(zval *zv, zval *member, zval *value, void **cache_slot) {
-#else
-void php_parallel_handlers_write_property(zval *zv, zval *member, zval *value, void **cache_slot) {
-#endif
-    zend_object *object = Z_OBJ_P(zv);
-#endif
     php_parallel_exception(
         "%s objects do not support properties",
         ZSTR_VAL(object->ce->name));
 
-#if PHP_VERSION_ID >= 70400
     return &EG(uninitialized_zval);
-#endif
 }
 
-#if PHP_VERSION_ID >= 80000
 zval* php_parallel_handlers_read_dimension(zend_object *object, zval *offset, int type, zval *rv) {
-#else
-zval* php_parallel_handlers_read_dimension(zval *zv, zval *offset, int type, zval *rv) {
-    zend_object *object = Z_OBJ_P(zv);
-#endif
     php_parallel_exception(
         "%s objects do not support dimensions",
         ZSTR_VAL(object->ce->name));
@@ -67,23 +46,13 @@ zval* php_parallel_handlers_read_dimension(zval *zv, zval *offset, int type, zva
     return &EG(uninitialized_zval);
 }
 
-#if PHP_VERSION_ID >= 80000
 void php_parallel_handlers_write_dimension(zend_object *object, zval *offset, zval *value) {
-#else
-void php_parallel_handlers_write_dimension(zval *zv, zval *offset, zval *value) {
-    zend_object *object = Z_OBJ_P(zv);
-#endif
     php_parallel_exception(
         "%s objects do not support dimensions",
         ZSTR_VAL(object->ce->name));
 }
 
-#if PHP_VERSION_ID >= 80000
 zval* php_parallel_handlers_get_property_ptr_ptr(zend_object *object, zend_string *member, int type, void **cache_slot) {
-#else
-zval* php_parallel_handlers_get_property_ptr_ptr(zval *zv, zval *member, int type, void **cache_slot) {
-    zend_object *object = Z_OBJ_P(zv);
-#endif
     php_parallel_exception(
         "%s objects do not support properties",
         ZSTR_VAL(object->ce->name));

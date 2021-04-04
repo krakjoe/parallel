@@ -23,11 +23,9 @@
 TSRM_TLS php_parallel_runtime_t* php_parallel_scheduler_context = NULL;
 TSRM_TLS php_parallel_future_t* php_parallel_scheduler_future = NULL;
 
-#if PHP_VERSION_ID >= 80000
 static void zend_disable_function(const char *name, size_t length) {
 	zend_hash_str_del(CG(function_table), name, length);
 }
-#endif
 
 void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
 
@@ -81,9 +79,6 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(p
     php_request_startup();
 
     zend_disable_function(ZEND_STRL("setlocale"));
-#if PHP_VERSION_ID < 70400
-    zend_disable_function(ZEND_STRL("putenv"));
-#endif
     zend_disable_function(ZEND_STRL("dl"));
 
     PG(during_request_startup)  = 0;
@@ -201,9 +196,6 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
         ZEND_CALL_TOP_FUNCTION,
         php_parallel_copy_function(function, 0),
         ZEND_CALL_NUM_ARGS(head->frame),
-#if PHP_VERSION_ID < 70400
-        NULL,
-#endif
         NULL);
 
     if (scope != function->op_array.scope) {
@@ -229,18 +221,14 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
         el->frame->func->op_array.static_variables =
             php_parallel_copy_hash_ctor(statics, 0);
 
-#ifdef ZEND_MAP_PTR_INIT
         ZEND_MAP_PTR_INIT(
             el->frame->func->op_array.static_variables_ptr,
             &el->frame->func->op_array.static_variables);
-#endif
 
         php_parallel_copy_hash_dtor(statics, 1);
     }
 
-#ifdef ZEND_MAP_PTR_NEW
     ZEND_MAP_PTR_NEW(el->frame->func->op_array.run_time_cache);
-#endif
 
     zend_init_func_execute_data(
         el->frame,
@@ -296,14 +284,10 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
         }
 
         if (frame->func->op_array.static_variables) {
-#ifdef ZEND_MAP_PTR_GET
             HashTable *statics =
                 ZEND_MAP_PTR_GET(
                     frame->func->op_array.static_variables_ptr);
-#else
-            HashTable *statics =
-                frame->func->op_array.static_variables;
-#endif
+
             if (!(GC_FLAGS(statics) & IS_ARRAY_IMMUTABLE)) {
                 zend_array_destroy(statics);
             }
@@ -511,11 +495,7 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime) {
 
 void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure, zval *argv, zval *return_value) {
     zend_execute_data      *caller = EG(current_execute_data)->prev_execute_data;
-#if PHP_VERSION_ID >= 80000
     const zend_function    *function = zend_get_closure_method_def(Z_OBJ_P(closure));
-#else
-    const zend_function    *function = zend_get_closure_method_def(closure);
-#endif
     zend_bool               returns = 0;
     php_parallel_future_t  *future = NULL;
 

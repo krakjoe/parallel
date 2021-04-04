@@ -4,6 +4,8 @@ ARG_WITH('parallel', 'parallel support', 'no');
 if (PHP_PARALLEL != 'no') {
 	if (PHP_ZTS == "no") {
 		WARNING("Parallel extension requires ZTS build of PHP on windows");
+	} else if (PHP_VERSION < 8) {
+		WARNING("Parallel requires PHP8.0+");
 	} else {
 		AC_DEFINE('HAVE_PARALLEL', 1, 'parallel support enabled');
 

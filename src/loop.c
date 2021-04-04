@@ -65,10 +65,7 @@ static zval* php_parallel_events_loop_current(zend_object_iterator *zo) {
     return &loop->event;
 }
 
-#if PHP_VERSION_ID >= 70300
-const
-#endif
-zend_object_iterator_funcs php_parallel_events_loop_functions = {
+const zend_object_iterator_funcs php_parallel_events_loop_functions = {
     .dtor               = php_parallel_events_loop_destroy,
     .valid              = php_parallel_events_loop_valid,
     .move_forward       = php_parallel_events_loop_poll,
