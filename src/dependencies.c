@@ -61,7 +61,7 @@ static zend_always_inline void php_parallel_dependencies_load_globals_literals(c
 } /* }}} */
 
 /* {{{ */
-static zend_always_inline void php_parallel_dependencies_load_globals(const zend_function *function) {
+static void php_parallel_dependencies_load_globals(const zend_function *function) {
     if (zend_hash_index_exists(&PDG(activated), (zend_ulong) function->op_array.opcodes)) {
         return;
     }
