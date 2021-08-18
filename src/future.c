@@ -298,9 +298,14 @@ PHP_MINIT_FUNCTION(PARALLEL_FUTURE)
     php_parallel_future_ce = zend_register_internal_class(&ce);
     php_parallel_future_ce->create_object = php_parallel_future_create;
     php_parallel_future_ce->ce_flags |= ZEND_ACC_FINAL;
+#if PHP_VERSION_ID >= 80100
+    php_parallel_future_ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE ;
+#endif
 
+#if PHP_VERSION_ID < 80100
     php_parallel_future_ce->serialize = zend_class_serialize_deny;
     php_parallel_future_ce->unserialize = zend_class_unserialize_deny;
+#endif
 
     php_parallel_future_string_runtime = zend_string_init_interned(ZEND_STRL("runtime"), 1);
 

@@ -382,9 +382,12 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
     php_parallel_channel_ce = zend_register_internal_class(&ce);
     php_parallel_channel_ce->create_object = php_parallel_channel_create;
     php_parallel_channel_ce->ce_flags |= ZEND_ACC_FINAL;
-
+#if PHP_VERSION_ID >= 80100
+    php_parallel_channel_ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE;
+#else
     php_parallel_channel_ce->serialize = zend_class_serialize_deny;
     php_parallel_channel_ce->unserialize = zend_class_unserialize_deny;
+#endif
 
     zend_declare_class_constant_long(php_parallel_channel_ce, ZEND_STRL("Infinite"), -1);
 
