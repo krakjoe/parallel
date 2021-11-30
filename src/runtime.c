@@ -29,7 +29,7 @@ php_parallel_runtime_t* php_parallel_runtime_construct(zend_string *bootstrap) {
 
     object_init_ex(&rt, php_parallel_runtime_ce);
 
-    runtime = 
+    runtime =
         php_parallel_runtime_from(&rt);
 
     php_parallel_scheduler_start(runtime, bootstrap);
@@ -156,10 +156,14 @@ PHP_MINIT_FUNCTION(PARALLEL_RUNTIME)
 
     php_parallel_runtime_ce = zend_register_internal_class(&ce);
     php_parallel_runtime_ce->create_object = php_parallel_runtime_create;
-    php_parallel_runtime_ce->ce_flags |= ZEND_ACC_FINAL;
 
+#if PHP_VERSION_ID >= 80100
+    php_parallel_runtime_ce->ce_flags |= ZEND_ACC_FINAL|ZEND_ACC_NOT_SERIALIZABLE;
+#else
+    php_parallel_runtime_ce->ce_flags |= ZEND_ACC_FINAL;
     php_parallel_runtime_ce->serialize = zend_class_serialize_deny;
     php_parallel_runtime_ce->unserialize = zend_class_unserialize_deny;
+#endif
 
     PHP_MINIT(PARALLEL_FUTURE)(INIT_FUNC_ARGS_PASSTHRU);
 

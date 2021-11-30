@@ -86,22 +86,22 @@ static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /*
         ZEND_TYPE_FOREACH(type, single) {
             if (ZEND_TYPE_HAS_NAME(*single)) {
                 name = ZEND_TYPE_NAME(*single);
-                
+
                 if ((checked = zend_hash_find_ptr(&PCG(types), name))) {
                     if (!checked->valid) {
                         return 0;
                     }
                     continue;
                 }
-                
+
                 class = zend_lookup_class(ZEND_TYPE_NAME(*single));
 
                 if (!class) {
                     return 0;
                 }
-                
+
                 memset(&check, 0, sizeof(php_parallel_check_type_t));
-                
+
                 if (class == zend_ce_closure ||
                     class == php_parallel_channel_ce ||
                     instanceof_function(class, php_parallel_sync_ce) ||
@@ -109,10 +109,10 @@ static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /*
 
                     check.valid = 1;
                 }
-                
+
                 zend_hash_add_mem(
                     &PCG(types), name, &check, sizeof(php_parallel_check_type_t));
-                    
+
                 if (!check.valid) {
                     return 0;
                 }
@@ -121,7 +121,7 @@ static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /*
 
         return 1;
     }
-    
+
     name = ZEND_TYPE_NAME(type);
 
     if ((checked = zend_hash_find_ptr(&PCG(types), name))) {
@@ -160,7 +160,11 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     if (function->common.fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
         it = function->op_array.arg_info - 1;
 
+#if PHP_VERSION_ID >= 80100
+		if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_COMPLEX(it->type)) {
+#else
         if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+#endif
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_return_ce,
@@ -186,7 +190,12 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     }
 
     while (it < end) {
+
+#if PHP_VERSION_ID >= 80100
+		if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_COMPLEX(it->type)) {
+#else
         if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+#endif
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_parameter_ce,
@@ -510,7 +519,7 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
     if (checked) {
         return checked->result;
     }
-    
+
     if (!ce) {
         return PHP_PARALLEL_CHECK_CLASS_INVALID;
     }
@@ -549,29 +558,31 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             goto _php_parallel_checked_class;
         }
 
+#if PHP_VERSION_ID >= 80100
+		if (!ZEND_TYPE_IS_SET(info->type) || !ZEND_TYPE_IS_COMPLEX(info->type)) {
+#else
         if (!ZEND_TYPE_IS_SET(info->type) || !ZEND_TYPE_HAS_CLASS(info->type)) {
+#endif
             continue;
         }
-        
+
         if (ZEND_TYPE_HAS_LIST(info->type)) {
             zend_type *single;
-            
+
             ZEND_TYPE_FOREACH(info->type, single) {
-                
-            	if (ZEND_TYPE_HAS_CE(*single)) {
-            		next = ZEND_TYPE_CE(*single);
-            	} else if (ZEND_TYPE_HAS_NAME(*single)) {
+
+            	if (ZEND_TYPE_HAS_NAME(*single)) {
             		next = zend_lookup_class(ZEND_TYPE_NAME(*single));
             	} else {
             		continue;
             	}
-            	
+
             	if (next == ce) {
             		continue;
             	}
 
             	memset(&check, 0, sizeof(php_parallel_check_class_t));
-            	
+
             	switch (php_parallel_check_class(next)) {
                     case PHP_PARALLEL_CHECK_CLASS_INVALID:
                     case PHP_PARALLEL_CHECK_CLASS_INVALID_PROPERTY:
@@ -585,36 +596,34 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
                     break;
 
                     case PHP_PARALLEL_CHECK_CLASS_VALID:
-                        check.result = 
+                        check.result =
                             PHP_PARALLEL_CHECK_CLASS_VALID;
                     break;
                 }
-                
+
                 if (check.result != PHP_PARALLEL_CHECK_CLASS_VALID) {
                     zend_hash_index_add_mem(
-                        &PCG(classes), 
-                        (zend_ulong) next, &check, 
+                        &PCG(classes),
+                        (zend_ulong) next, &check,
                         sizeof(php_parallel_check_class_t));
-                                  
+
                     check.result = PHP_PARALLEL_CHECK_CLASS_INVALID_PROPERTY;
-                    
+
                     zend_hash_index_add_mem(
-                        &PCG(classes), 
-                        (zend_ulong) ce, &check, 
+                        &PCG(classes),
+                        (zend_ulong) ce, &check,
                         sizeof(php_parallel_check_class_t));
-                    
+
                     return check.result;
                 }
             } ZEND_TYPE_FOREACH_END();
-            
+
         } else {
-            if (ZEND_TYPE_HAS_CE(info->type)) {
-                next = ZEND_TYPE_CE(info->type);
-            } else {
+            if (ZEND_TYPE_HAS_NAME(info->type)) {
                 next = zend_lookup_class(
                         ZEND_TYPE_NAME(info->type));
             }
-            
+
             if (next == ce) {
             	continue;
             }

@@ -350,12 +350,12 @@ static void php_parallel_channels_link_destroy(zval *zv) {
 static zend_object* php_parallel_channel_clone(zend_object *src) {
     php_parallel_channel_t *channel = php_parallel_channel_fetch(src);
     php_parallel_channel_t *clone = ecalloc(1,
-            sizeof(php_parallel_channel_t) + 
+            sizeof(php_parallel_channel_t) +
             zend_object_properties_size(channel->std.ce));
 
     zend_object_std_init(&clone->std, channel->std.ce);
 
-    clone->std.handlers = 
+    clone->std.handlers =
         &php_parallel_channel_handlers;
     clone->link = php_parallel_link_copy(channel->link);
 
@@ -381,10 +381,14 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
 
     php_parallel_channel_ce = zend_register_internal_class(&ce);
     php_parallel_channel_ce->create_object = php_parallel_channel_create;
-    php_parallel_channel_ce->ce_flags |= ZEND_ACC_FINAL;
 
+#if PHP_VERSION_ID >= 80100
+    php_parallel_channel_ce->ce_flags |= ZEND_ACC_FINAL|ZEND_ACC_NOT_SERIALIZABLE;
+#else
+    php_parallel_channel_ce->ce_flags |= ZEND_ACC_FINAL;
     php_parallel_channel_ce->serialize = zend_class_serialize_deny;
     php_parallel_channel_ce->unserialize = zend_class_unserialize_deny;
+#endif
 
     zend_declare_class_constant_long(php_parallel_channel_ce, ZEND_STRL("Infinite"), -1);
 
