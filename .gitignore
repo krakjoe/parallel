@@ -54,3 +54,20 @@ modules
 run-tests.php
 run-tests.log
 tmp-php.ini
+
+# Windows build files
+x64
+x86
+arm64
+
+# test files
+tests/**/*.diff
+tests/**/*.exp
+tests/**/*.log
+tests/**/*.out
+tests/**/*.php
+tests/**/*.sh
+
+#ides
+.vscode
+.vs
