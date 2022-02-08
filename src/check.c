@@ -560,10 +560,12 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             zend_type *single;
             
             ZEND_TYPE_FOREACH(info->type, single) {
-                
+#ifdef ZEND_TYPE_HAS_CE
             	if (ZEND_TYPE_HAS_CE(*single)) {
             		next = ZEND_TYPE_CE(*single);
-            	} else if (ZEND_TYPE_HAS_NAME(*single)) {
+            	} else
+#endif
+                if (ZEND_TYPE_HAS_NAME(*single)) {
             		next = zend_lookup_class(ZEND_TYPE_NAME(*single));
             	} else {
             		continue;
@@ -611,9 +613,12 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             } ZEND_TYPE_FOREACH_END();
             
         } else {
+#ifdef ZEND_TYPE_HAS_CE
             if (ZEND_TYPE_HAS_CE(info->type)) {
                 next = ZEND_TYPE_CE(info->type);
-            } else {
+            } else
+#endif
+            {
                 next = zend_lookup_class(
                         ZEND_TYPE_NAME(info->type));
             }
