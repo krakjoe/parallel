@@ -27,6 +27,10 @@ TSRM_TLS struct {
     HashTable classes;
 } php_parallel_check_globals;
 
+#ifdef ZEND_TYPE_IS_COMPLEX
+#define ZEND_TYPE_HAS_CLASS ZEND_TYPE_IS_COMPLEX
+#endif
+
 #define PCG(e) php_parallel_check_globals.e
 
 typedef struct _php_parallel_check_task_t {
@@ -159,7 +163,6 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
 
     if (function->common.fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
         it = function->op_array.arg_info - 1;
-
         if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
