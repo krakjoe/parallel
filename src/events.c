@@ -230,6 +230,8 @@ PHP_METHOD(Events, poll)
     php_parallel_events_poll(events, return_value);
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO(php_parallel_events_count_arginfo, IS_LONG, 0)
+ZEND_END_ARG_INFO()
 PHP_METHOD(Events, count)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
@@ -247,7 +249,7 @@ zend_function_entry php_parallel_events_methods[] = {
     PHP_ME(Events, setBlocking, php_parallel_events_set_blocking_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, setTimeout,  php_parallel_events_set_timeout_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, poll,        php_parallel_events_poll_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, count,       php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, count,       php_parallel_events_count_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
