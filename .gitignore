@@ -31,6 +31,9 @@ config.sub
 configure
 configure.ac
 configure.in
+config.nice.bat
+configure.bat
+configure.js
 conftest
 conftest.c
 Makefile
