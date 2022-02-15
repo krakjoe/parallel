@@ -57,8 +57,11 @@ tmp-php.ini
 
 # Windows build files
 x64
-x86
 arm64
+Debug
+Debug_TS
+Release
+Release_TS
 
 # test files
 tests/**/*.diff
@@ -67,7 +70,3 @@ tests/**/*.log
 tests/**/*.out
 tests/**/*.php
 tests/**/*.sh
-
-#ides
-.vscode
-.vs
