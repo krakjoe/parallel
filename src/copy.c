@@ -423,7 +423,11 @@ static zend_always_inline zend_object* php_parallel_copy_closure_thread(zend_obj
             php_parallel_copy_hash_ctor(function->static_variables, 0);
     }
 
+#if PHP_VERSION_ID >= 80200
+    ZEND_MAP_PTR_INIT(function->static_variables_ptr, function->static_variables);
+#else
     ZEND_MAP_PTR_INIT(function->static_variables_ptr, &function->static_variables);
+#endif
 
     php_parallel_copy_closure_init_run_time_cache(function);
 
