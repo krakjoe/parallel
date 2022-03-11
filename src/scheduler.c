@@ -220,10 +220,15 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
 
         el->frame->func->op_array.static_variables =
             php_parallel_copy_hash_ctor(statics, 0);
-
+#if PHP_VERSION_ID >= 80200
+        ZEND_MAP_PTR_INIT(
+            el->frame->func->op_array.static_variables_ptr,
+            el->frame->func->op_array.static_variables);
+#else
         ZEND_MAP_PTR_INIT(
             el->frame->func->op_array.static_variables_ptr,
             &el->frame->func->op_array.static_variables);
+#endif
 
         php_parallel_copy_hash_dtor(statics, 1);
     }
