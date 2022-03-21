@@ -27,8 +27,8 @@ TSRM_TLS struct {
     HashTable classes;
 } php_parallel_check_globals;
 
-#ifdef ZEND_TYPE_IS_COMPLEX
-#define ZEND_TYPE_HAS_CLASS ZEND_TYPE_IS_COMPLEX
+#ifndef ZEND_TYPE_IS_COMPLEX
+#define ZEND_TYPE_IS_COMPLEX ZEND_TYPE_HAS_CLASS
 #endif
 
 #define PCG(e) php_parallel_check_globals.e
@@ -163,7 +163,7 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
 
     if (function->common.fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
         it = function->op_array.arg_info - 1;
-        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_COMPLEX(it->type)) {
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_return_ce,
@@ -189,7 +189,7 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     }
 
     while (it < end) {
-        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_COMPLEX(it->type)) {
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_parameter_ce,
@@ -552,7 +552,7 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             goto _php_parallel_checked_class;
         }
 
-        if (!ZEND_TYPE_IS_SET(info->type) || !ZEND_TYPE_HAS_CLASS(info->type)) {
+        if (!ZEND_TYPE_IS_SET(info->type) || !ZEND_TYPE_IS_COMPLEX(info->type)) {
             continue;
         }
         
