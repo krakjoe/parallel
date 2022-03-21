@@ -230,8 +230,13 @@ PHP_METHOD(Events, poll)
     php_parallel_events_poll(events, return_value);
 }
 
+#ifdef ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX
+ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(php_parallel_events_count_arginfo, 0, 0, IS_LONG, 0)
+#else
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO(php_parallel_events_count_arginfo, IS_LONG, 0)
+#endif
 ZEND_END_ARG_INFO()
+
 PHP_METHOD(Events, count)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
