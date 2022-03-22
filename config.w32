@@ -2,24 +2,59 @@
 ARG_WITH('parallel', 'parallel support', 'no');
 
 if (PHP_PARALLEL != 'no') {
-	if (PHP_ZTS == "no") {
-		WARNING("Parallel extension requires ZTS build of PHP on windows");
-	} else if (PHP_VERSION < 8) {
-		WARNING("Parallel requires PHP8.0+");
-	} else {
-		AC_DEFINE('HAVE_PARALLEL', 1, 'parallel support enabled');
-
-		if(CHECK_HEADER_ADD_INCLUDE("pthread.h", "CFLAGS_PARALLEL", PHP_PARALLEL + ";" + configure_module_dirname) &&    
-			CHECK_HEADER_ADD_INCLUDE("sched.h", "CFLAGS_PARALLEL", PHP_PARALLEL + ";" + configure_module_dirname) &&
-			CHECK_LIB("pthreadVC2.lib", "parallel", PHP_PARALLEL)) {
-			EXTENSION("parallel", "php_parallel.c", PHP_PARALLEL_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /I" + configure_module_dirname);
-			ADD_SOURCES(
-				configure_module_dirname + "/src",
-				"exceptions.c copy.c check.c dependencies.c cache.c monitor.c parallel.c runtime.c scheduler.c future.c channel.c link.c handlers.c events.c poll.c loop.c event.c input.c sync.c",
-				"parallel"
-			);
-		} else {
-			WARNING("parallel not enabled; pthread libraries and headers not found");
+	(function () {
+		// check if zts enabled
+		if (PHP_ZTS == "no") {
+			WARNING("Parallel extension requires ZTS build of PHP on windows");
+			return;
 		}
-	}
+
+		// check if PHP 8+
+		if (PHP_VERSION < 8) {
+			WARNING("Parallel requires PHP8.0+");
+			return;
+		}
+
+		// check headers
+		if (
+			!CHECK_HEADER_ADD_INCLUDE("pthread.h", "CFLAGS_PARALLEL", PHP_PARALLEL + ";" + configure_module_dirname) ||
+			!CHECK_HEADER_ADD_INCLUDE("sched.h", "CFLAGS_PARALLEL", PHP_PARALLEL + ";" + configure_module_dirname)
+		) {
+			WARNING("parallel not enabled; pthread headers not found");
+			return;
+		}
+
+		// check libraries
+		var libNames = [
+			'libpthreadVC',
+			'libpthreadGC',
+			'pthreadVC'
+		];
+		var libName = null;
+		for (var i in libNames) {
+			var l = libNames[i] + '3.lib';
+			if (CHECK_LIB(l)) {
+				libName = l;
+				break;
+			}
+			l = libNames[i] + '2.lib';
+			if (CHECK_LIB(l)) {
+				libName = l;
+				break;
+			}
+		}
+		if (libName == null) {
+			WARNING("parallel not enabled; pthread libraries not found");
+			return;
+		}
+
+		// register extension
+		AC_DEFINE('HAVE_PARALLEL', 1, 'parallel support enabled');
+		EXTENSION("parallel", "php_parallel.c", PHP_PARALLEL_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /I" + configure_module_dirname);
+		ADD_SOURCES(
+			configure_module_dirname + "/src",
+			"exceptions.c copy.c check.c dependencies.c cache.c monitor.c parallel.c runtime.c scheduler.c future.c channel.c link.c handlers.c events.c poll.c loop.c event.c input.c sync.c",
+			"parallel"
+		);
+	})();
 }
