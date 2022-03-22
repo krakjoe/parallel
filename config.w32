@@ -2,17 +2,17 @@
 ARG_WITH('parallel', 'parallel support', 'no');
 
 if (PHP_PARALLEL != 'no') {
-	do {
+	(function () {
 		// check if zts enabled
 		if (PHP_ZTS == "no") {
 			WARNING("Parallel extension requires ZTS build of PHP on windows");
-			break;
+			return;
 		}
 
 		// check if PHP 8+
 		if (PHP_VERSION < 8) {
 			WARNING("Parallel requires PHP8.0+");
-			break;
+			return;
 		}
 
 		// check headers
@@ -21,7 +21,7 @@ if (PHP_PARALLEL != 'no') {
 			!CHECK_HEADER_ADD_INCLUDE("sched.h", "CFLAGS_PARALLEL", PHP_PARALLEL + ";" + configure_module_dirname)
 		) {
 			WARNING("parallel not enabled; pthread headers not found");
-			break;
+			return;
 		}
 
 		// check libraries
@@ -45,7 +45,7 @@ if (PHP_PARALLEL != 'no') {
 		}
 		if (libName == null) {
 			WARNING("parallel not enabled; pthread libraries not found");
-			break;
+			return;
 		}
 
 		// register extension
@@ -56,5 +56,5 @@ if (PHP_PARALLEL != 'no') {
 			"exceptions.c copy.c check.c dependencies.c cache.c monitor.c parallel.c runtime.c scheduler.c future.c channel.c link.c handlers.c events.c poll.c loop.c event.c input.c sync.c",
 			"parallel"
 		);
-	} while (false);
+	})();
 }
