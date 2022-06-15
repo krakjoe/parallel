@@ -23,10 +23,6 @@
 TSRM_TLS php_parallel_runtime_t* php_parallel_scheduler_context = NULL;
 TSRM_TLS php_parallel_future_t* php_parallel_scheduler_future = NULL;
 
-static void zend_disable_function(const char *name, size_t length) {
-	zend_hash_str_del(CG(function_table), name, length);
-}
-
 void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
 
 static zend_always_inline int php_parallel_scheduler_list_delete(void *lhs, void *rhs) {
@@ -76,10 +72,9 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(p
     PG(expose_php)       = 0;
     PG(auto_globals_jit) = 1;
 
-    php_request_startup();
+    zend_disable_functions("setlocale,dl");
 
-    zend_disable_function(ZEND_STRL("setlocale"));
-    zend_disable_function(ZEND_STRL("dl"));
+    php_request_startup();
 
     PG(during_request_startup)  = 0;
     SG(sapi_started)            = 0;
