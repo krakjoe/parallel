@@ -191,7 +191,7 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
         ZEND_CALL_TOP_FUNCTION,
         php_parallel_copy_function(function, 0),
         ZEND_CALL_NUM_ARGS(head->frame),
-        NULL);
+        scope);
 
     if (scope != function->op_array.scope) {
         el->frame->func->op_array.scope = scope;
