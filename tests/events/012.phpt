@@ -46,7 +46,15 @@ object(parallel\Events\Event)#%d (%d) {
     ["line":protected]=>
     int(7)
     ["trace":"Exception":private]=>
-    array(0) {
+    array(1) {
+      [0]=>
+      array(2) {
+        ["function"]=>
+        string(9) "{closure}"
+        ["args"]=>
+        array(0) {
+        }
+      }
     }
     ["previous":"Exception":private]=>
     NULL
