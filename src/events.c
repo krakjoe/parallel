@@ -239,6 +239,9 @@ PHP_METHOD(Events, count)
     RETURN_LONG(zend_hash_num_elements(&events->targets));
 }
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_count_arginfo, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
 zend_function_entry php_parallel_events_methods[] = {
     PHP_ME(Events, setInput,    php_parallel_events_set_input_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, addChannel,  php_parallel_events_add_channel_arginfo, ZEND_ACC_PUBLIC)
@@ -247,7 +250,7 @@ zend_function_entry php_parallel_events_methods[] = {
     PHP_ME(Events, setBlocking, php_parallel_events_set_blocking_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, setTimeout,  php_parallel_events_set_timeout_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, poll,        php_parallel_events_poll_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, count,       php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, count,       php_parallel_events_count_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

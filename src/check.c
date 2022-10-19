@@ -160,7 +160,7 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     if (function->common.fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
         it = function->op_array.arg_info - 1;
 
-        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_COMPLEX(it->type)) {
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_return_ce,
@@ -186,7 +186,7 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     }
 
     while (it < end) {
-        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_COMPLEX(it->type)) {
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_parameter_ce,
@@ -549,7 +549,7 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             goto _php_parallel_checked_class;
         }
 
-        if (!ZEND_TYPE_IS_SET(info->type) || !ZEND_TYPE_HAS_CLASS(info->type)) {
+        if (!ZEND_TYPE_IS_SET(info->type) || !ZEND_TYPE_IS_COMPLEX(info->type)) {
             continue;
         }
         
@@ -558,8 +558,8 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             
             ZEND_TYPE_FOREACH(info->type, single) {
                 
-            	if (ZEND_TYPE_HAS_CE(*single)) {
-            		next = ZEND_TYPE_CE(*single);
+            	if (ZEND_TYPE_HAS_NAME(*single)) {
+            		next = zend_lookup_class(ZEND_TYPE_NAME(*single));
             	} else if (ZEND_TYPE_HAS_NAME(*single)) {
             		next = zend_lookup_class(ZEND_TYPE_NAME(*single));
             	} else {
@@ -608,8 +608,8 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             } ZEND_TYPE_FOREACH_END();
             
         } else {
-            if (ZEND_TYPE_HAS_CE(info->type)) {
-                next = ZEND_TYPE_CE(info->type);
+            if (ZEND_TYPE_HAS_NAME(info->type)) {
+                next = zend_lookup_class(ZEND_TYPE_NAME(info->type));
             } else {
                 next = zend_lookup_class(
                         ZEND_TYPE_NAME(info->type));
