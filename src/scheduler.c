@@ -310,8 +310,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
                     frame->func->op_array.static_variables_ptr);
 
             if (!(GC_FLAGS(statics) & IS_ARRAY_IMMUTABLE)) {
-                //zend_array_destroy(statics);
-                php_parallel_copy_hash_dtor(statics, 1);
+                zend_array_destroy(statics);
             }
         }
 
