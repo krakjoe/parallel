@@ -27,7 +27,7 @@ jobs:
       - name: phpize
         run: phpize
       - name: configure
-        run: configure --enable-parallel --enable-debug-pack --with-prefix=${{steps.setup-php.outputs.prefix}}
+        run: configure --with-parallel --enable-debug-pack --with-prefix=${{steps.setup-php.outputs.prefix}}
       - name: make
         run: nmake
       - name: test
