@@ -1,5 +1,7 @@
 #!/bin/bash
 
+declare
+
 export NO_INTERACTION=1
 export REPORT_EXIT_STATUS=1
 
