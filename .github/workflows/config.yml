@@ -6,6 +6,8 @@ jobs:
       matrix:
           version: ["8.0"]
     runs-on: ubuntu-latest
+    container:
+      options: -v .:/opt/parallel:rw
     steps:
       - name: Checkout
         uses: actions/checkout@v3
