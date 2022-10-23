@@ -22,6 +22,4 @@ try {
 Fatal error: Uncaught %s in %s:7
 Stack trace:
 #0 %s(6): thrower()
-#1 {main}
-  thrown in %s on line 7
-
+%A

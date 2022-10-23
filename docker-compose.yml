@@ -92,6 +92,7 @@ services:
     working_dir:     /opt/parallel,
     container_name:  parallel-dist-8.1.11,
     image:           parallel-dist-8.1.11:latest,
+    depends_on:      [php-8.1],
     <<: *dev
   }
   "php-8.2": {      <<: *parallel,
@@ -127,6 +128,6 @@ services:
     working_dir:     /opt/parallel,
     container_name:  parallel-git-8.2.0,
     image:           parallel-git-8.2.0:latest,
-    depends_on:      ["php-8.2"],
+    depends_on:      [php-8.2],
     <<: *dev
   }

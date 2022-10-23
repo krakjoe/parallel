@@ -46,7 +46,8 @@ object(parallel\Events\Event)#%d (%d) {
     ["line":protected]=>
     int(7)
     ["trace":"Exception":private]=>
-    array(0) {
+    array(%d) {
+      %A
     }
     ["previous":"Exception":private]=>
     NULL
