@@ -57,6 +57,7 @@ services:
     working_dir:     /opt/parallel,
     container_name:  parallel-dist-8.0.23,
     image:           parallel-dist-8.0.23:latest,
+    depends_on:      [php-8.0],
     <<: *dev
   }
   "php-8.1": {      <<: *parallel,
