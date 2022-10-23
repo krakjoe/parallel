@@ -1,0 +1,10 @@
+#!/bin/bash
+
+export NO_INTERACTION=1
+export REPORT_EXIT_STATUS=1
+
+php run-tests.php                           \
+    -P                                      \
+    -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK      \
+    --show-diff                             \
+    -j$(nproc)
