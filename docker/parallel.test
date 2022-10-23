@@ -1,8 +1,6 @@
 #!/bin/bash
 
-find ./ -name run-tests.php
-
-if [ $? -ne 0 ]; then
+if [ ! -f run-tests.php ]; then
   PHP_RUN_TESTS=/opt/lib/php/build/run-tests.php
 else
   PHP_RUN_TESTS=run-tests.php
