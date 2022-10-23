@@ -1,0 +1,59 @@
+name: Build and Test
+on: [push, pull_request]
+jobs:
+  windows:
+    defaults:
+      run:
+        shell: cmd
+    strategy:
+      matrix:
+          version: ["8.0"]
+          arch: [x64]
+          ts: [ts]
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup PHP
+        id: setup-php
+        uses: cmb69/setup-php-sdk@v0.6
+        with:
+          version: ${{matrix.version}}
+          arch: ${{matrix.arch}}
+          ts: ${{matrix.ts}}
+      - name: Fetch dependencies
+        run: |
+          curl -LO https://windows.php.net/downloads/pecl/deps/pthreads-2.11.0-vs16-${{matrix.arch}}.zip
+          7z x pthreads-2.11.0-vs16-${{matrix.arch}}.zip -o..\deps
+      - name: Enable Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{matrix.arch}}
+          toolset: ${{steps.setup-php.outputs.toolset}}
+      - name: phpize
+        run: phpize
+      - name: configure
+        run: configure --with-parallel --enable-debug-pack --with-prefix=${{steps.setup-php.outputs.prefix}}
+      - name: make
+        run: nmake
+      - name: test
+        run: nmake test TESTS="--show-diff tests"
+      - name: package
+        run: |
+          md .install
+          copy LICENSE .install
+          copy README.md .install
+          if exist x64 (
+            if exist x64\Release (set prefix=x64\Release) else set prefix=x64\Release_TS
+          ) else (
+            if exist Release (set prefix=Release) else set prefix=Release_TS
+          )
+          copy %prefix%\php_parallel.dll .install
+          copy %prefix%\php_parallel.pdb .install
+          copy ..\deps\COPYING .install\COPYING.PTHREADS
+          copy ..\deps\bin\* .install
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: parallel-${{matrix.version}}
+          path: .install
