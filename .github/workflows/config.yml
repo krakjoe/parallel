@@ -8,6 +8,7 @@ jobs:
     strategy:
       matrix:
           version: ["8.0"]
+          arch: [x64]
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -17,16 +18,16 @@ jobs:
         uses: cmb69/setup-php-sdk@v0.6
         with:
           version: ${{matrix.version}}
-          arch: x64
+          arch: ${{matrix.arch}}
           ts: ts
       - name: Fetch dependencies
         run: |
-          curl -LO https://windows.php.net/downloads/pecl/deps/pthreads-2.11.0-vs16-x64.zip
-          7z x pthreads-2.11.0-vs16-x64.zip -o..\deps
+          curl -LO https://windows.php.net/downloads/pecl/deps/pthreads-2.11.0-vs16-${{matrix.arch}}.zip
+          7z x pthreads-2.11.0-vs16-${{matrix.arch}}.zip -o..\deps
       - name: Enable Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: x64
+          arch: ${{matrix.arch}}
           toolset: ${{steps.setup-php.outputs.toolset}}
       - name: phpize
         run: phpize
