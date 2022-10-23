@@ -3,13 +3,15 @@
 find ./ -name run-tests.php
 
 if [ $? -ne 0 ]; then
-    phpize
+  PHP_RUN_TESTS=/opt/lib/php/build/run-tests.php
+else
+  PHP_RUN_TESTS=run-tests.php
 fi
 
 export NO_INTERACTION=1
 export REPORT_EXIT_STATUS=1
 
-php run-tests.php                           \
+php $PHP_RUN_TESTS                          \
     -P                                      \
     -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK      \
     --show-diff                             \
