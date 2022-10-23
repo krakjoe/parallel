@@ -8,6 +8,7 @@ fi
 
 export NO_INTERACTION=1
 export REPORT_EXIT_STATUS=1
+export TEST_TIMEOUT=360
 
 php $PHP_RUN_TESTS                          \
     -P                                      \
