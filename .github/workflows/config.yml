@@ -9,6 +9,7 @@ jobs:
       matrix:
           version: ["8.0"]
           arch: [x64]
+          ts: [ts]
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -19,7 +20,7 @@ jobs:
         with:
           version: ${{matrix.version}}
           arch: ${{matrix.arch}}
-          ts: ts
+          ts: ${{matrix.ts}}
       - name: Fetch dependencies
         run: |
           curl -LO https://windows.php.net/downloads/pecl/deps/pthreads-2.11.0-vs16-${{matrix.arch}}.zip
