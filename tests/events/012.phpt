@@ -19,37 +19,15 @@ $future  = $runtime->run(function(){
 $events = new Events();
 $events->addFuture("future", $future);
 
-var_dump($events->poll());
-?>
---EXPECTF--
-object(parallel\Events\Event)#%d (%d) {
-  ["type"]=>
-  int(4)
-  ["source"]=>
-  string(6) "future"
-  ["object"]=>
-  object(parallel\Future)#%d (%d) {
-    ["runtime"]=>
-    object(parallel\Runtime)#%d (%d) {
-    }
-  }
-  ["value"]=>
-  object(RuntimeException)#%d (%d) {
-    ["message":protected]=>
-    string(0) ""
-    ["string":"Exception":private]=>
-    string(0) ""
-    ["code":protected]=>
-    int(0)
-    ["file":protected]=>
-    string(%d) "%s"
-    ["line":protected]=>
-    int(7)
-    ["trace":"Exception":private]=>
-    array(%d) {
-      %A
-    }
-    ["previous":"Exception":private]=>
-    NULL
-  }
+$event = $events->poll();
+
+if (!$event->value instanceof RuntimeException) {
+  echo "FAIL \n";
+  var_dump($event);
+  exit;
 }
+
+echo "OK";
+?>
+--EXPECT--
+OK
