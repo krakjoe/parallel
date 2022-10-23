@@ -19,6 +19,10 @@ jobs:
           version: ${{matrix.version}}
           arch: x64
           ts: ts
+      - name: Fetch dependencies
+        run: |
+          curl -LO https://windows.php.net/downloads/pecl/deps/pthreads-2.11.0-${{env.VS}}-${{matrix.arch}}.zip
+          7z x pthreads-2.11.0-${{env.VS}}-${{matrix.arch}}.zip -o..\deps
       - name: Enable Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
         with:
