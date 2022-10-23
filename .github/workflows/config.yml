@@ -4,7 +4,7 @@ jobs:
   ubuntu:
     strategy:
       matrix:
-          version: ["8.0"]
+          version: ["8.0", "8.1", "8.2"]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,7 +21,7 @@ jobs:
         shell: cmd
     strategy:
       matrix:
-          version: ["8.0"]
+          version: ["8.0", "8.1"]
           arch: [x64]
           ts: [ts]
     runs-on: windows-latest

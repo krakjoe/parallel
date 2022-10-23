@@ -271,6 +271,13 @@ PHP_METHOD(Channel, close)
     php_parallel_monitor_unlock(php_parallel_channels.monitor);
 }
 
+#ifdef ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX
+ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(php_parallel_channel___toString_arginfo, 0, 0, IS_STRING, 0)
+#else
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_channel___toString_arginfo, 0, 0, IS_STRING, 0)
+#endif
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Channel, __toString)
 {
     php_parallel_channel_t *channel =
@@ -286,7 +293,7 @@ zend_function_entry php_parallel_channel_methods[] = {
     PHP_ME(Channel, send, php_parallel_channel_send_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Channel, recv, php_parallel_channel_recv_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Channel, close, php_parallel_channel_close_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Channel, __toString, php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Channel, __toString, php_parallel_channel___toString_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

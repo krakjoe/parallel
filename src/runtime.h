@@ -18,12 +18,17 @@
 #ifndef HAVE_PARALLEL_RUNTIME_H
 #define HAVE_PARALLEL_RUNTIME_H
 
+#if PHP_VERSION_ID < 80200
+# define zend_atomic_bool zend_bool
+# define zend_atomic_bool_store(dest, value) (*(dest) = value)
+#endif
+
 typedef struct _php_parallel_runtime_t {
     pthread_t                        thread;
     php_parallel_monitor_t          *monitor;
     zend_string                     *bootstrap;
     struct {
-        zend_bool                   *interrupt;
+        zend_atomic_bool                   *interrupt;
     } child;
     struct {
         void                        *server;

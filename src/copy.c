@@ -184,7 +184,7 @@ static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
 
     ht->u.flags |= HASH_FLAG_STATIC_KEYS;
     if (ht->nNumUsed == 0) {
-	ht->u.flags = HASH_FLAG_UNINITIALIZED;
+        ht->u.flags = HASH_FLAG_UNINITIALIZED;
         ht->nNextFreeElement = 0;
         ht->nTableMask = HT_MIN_MASK;
         HT_SET_DATA_ADDR(ht, &php_parallel_copy_uninitialized_bucket);
@@ -195,6 +195,28 @@ static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
     ht->nInternalPointer = 0;
 
     HT_SET_DATA_ADDR(ht, php_parallel_copy_memory_func(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht)));
+
+#ifdef HT_PACKED_SIZE
+    // if array is packed, copy it as packed
+    if (HT_IS_PACKED(ht)) {
+        for (idx = 0; idx < ht->nNumUsed; idx++) {
+            zval *zv = ht->arPacked + idx;
+
+            if (Z_TYPE_P(zv) == IS_UNDEF)
+                continue;
+
+            if (Z_OPT_REFCOUNTED_P(zv)) {
+                php_parallel_copy_zval_persistent(
+                    zv,
+                    zv,
+                    php_parallel_copy_string_func,
+                    php_parallel_copy_memory_func);
+            }
+        }
+        ht->nNextFreeElement = ht->nNumUsed;
+        return ht;
+    }
+#endif
     for (idx = 0; idx < ht->nNumUsed; idx++) {
         Bucket *p = ht->arData + idx;
 
@@ -240,7 +262,19 @@ static zend_always_inline HashTable* php_parallel_copy_hash_thread(HashTable *so
         HT_GET_DATA_ADDR(ht),
         HT_GET_DATA_ADDR(source),
         HT_HASH_SIZE(ht->nTableMask));
-
+#ifdef HT_PACKED_SIZE
+    if (HT_IS_PACKED(ht)) {
+        zval *p = ht->arPacked,
+        *q = source->arPacked,
+        *p_end = p + ht->nNumUsed;
+        for (; p < p_end; p++, q++) {
+            *p = *q;
+            if (Z_OPT_REFCOUNTED_P(p)) {
+                PARALLEL_ZVAL_COPY(p, q, 0);
+            }
+        }
+    } else
+#endif
     if (ht->u.flags & HASH_FLAG_STATIC_KEYS) {
         Bucket *p = ht->arData,
         *q = source->arData,
@@ -306,9 +340,6 @@ HashTable *php_parallel_copy_hash_persistent(HashTable *source,
 
 void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
     if (GC_DELREF(table) == (persistent ? 1 : 0)) {
-        Bucket *p = table->arData,
-               *end = p + table->nNumUsed;
-
         if (!persistent) {
             GC_REMOVE_FROM_BUFFER(table);
             GC_TYPE_INFO(table) =
@@ -319,7 +350,21 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
 #endif
         }
 
+#ifdef HT_PACKED_SIZE
+        if (HT_IS_PACKED(table)){
+            zval *p = table->arPacked,
+                *end = p + table->nNumUsed;
+            while (p < end) {
+                if (Z_OPT_REFCOUNTED_P(p)) {
+                    PARALLEL_ZVAL_DTOR(p);
+                }
+                p++;
+            }
+        } else
+#endif
         if (HT_HAS_STATIC_KEYS_ONLY(table)) {
+            Bucket *p = table->arData,
+                *end = p + table->nNumUsed;
             while (p < end) {
                 if (Z_OPT_REFCOUNTED(p->val)) {
                     PARALLEL_ZVAL_DTOR(&p->val);
@@ -327,6 +372,8 @@ void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
                 p++;
             }
         } else {
+            Bucket *p = table->arData,
+                *end = p + table->nNumUsed;
             while (p < end) {
                 if (Z_ISUNDEF(p->val)) {
                     p++;
@@ -381,7 +428,11 @@ static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zen
     void *rtc;
 
     function->fn_flags |= ZEND_ACC_HEAP_RT_CACHE;
+#if PHP_VERSION_ID >= 80200
+    rtc = emalloc(function->cache_size);
 
+    ZEND_MAP_PTR_INIT(function->run_time_cache, rtc);
+#else
     rtc = emalloc(sizeof(void*) + function->cache_size);
 
     ZEND_MAP_PTR_INIT(function->run_time_cache, rtc);
@@ -389,6 +440,7 @@ static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zen
     rtc = (char*)rtc + sizeof(void*);
 
     ZEND_MAP_PTR_SET(function->run_time_cache, rtc);
+#endif
 
     memset(rtc, 0, function->cache_size);
 }
@@ -423,7 +475,11 @@ static zend_always_inline zend_object* php_parallel_copy_closure_thread(zend_obj
             php_parallel_copy_hash_ctor(function->static_variables, 0);
     }
 
+#if PHP_VERSION_ID >= 80200
+    ZEND_MAP_PTR_INIT(function->static_variables_ptr, function->static_variables);
+#else
     ZEND_MAP_PTR_INIT(function->static_variables_ptr, &function->static_variables);
+#endif
 
     php_parallel_copy_closure_init_run_time_cache(function);
 

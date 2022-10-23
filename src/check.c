@@ -27,6 +27,10 @@ TSRM_TLS struct {
     HashTable classes;
 } php_parallel_check_globals;
 
+#ifndef ZEND_TYPE_IS_COMPLEX
+#define ZEND_TYPE_IS_COMPLEX ZEND_TYPE_HAS_CLASS
+#endif
+
 #define PCG(e) php_parallel_check_globals.e
 
 typedef struct _php_parallel_check_task_t {
@@ -159,8 +163,7 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
 
     if (function->common.fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
         it = function->op_array.arg_info - 1;
-
-        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_COMPLEX(it->type)) {
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_return_ce,
@@ -186,7 +189,7 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     }
 
     while (it < end) {
-        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_HAS_CLASS(it->type)) {
+        if (ZEND_TYPE_IS_SET(it->type) && ZEND_TYPE_IS_COMPLEX(it->type)) {
             if (!php_parallel_check_type(it->type)) {
                 php_parallel_exception_ex(
                     php_parallel_runtime_error_illegal_parameter_ce,
@@ -549,7 +552,7 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             goto _php_parallel_checked_class;
         }
 
-        if (!ZEND_TYPE_IS_SET(info->type) || !ZEND_TYPE_HAS_CLASS(info->type)) {
+        if (!ZEND_TYPE_IS_SET(info->type) || !ZEND_TYPE_IS_COMPLEX(info->type)) {
             continue;
         }
         
@@ -557,10 +560,12 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             zend_type *single;
             
             ZEND_TYPE_FOREACH(info->type, single) {
-                
+#ifdef ZEND_TYPE_HAS_CE
             	if (ZEND_TYPE_HAS_CE(*single)) {
             		next = ZEND_TYPE_CE(*single);
-            	} else if (ZEND_TYPE_HAS_NAME(*single)) {
+            	} else
+#endif
+                if (ZEND_TYPE_HAS_NAME(*single)) {
             		next = zend_lookup_class(ZEND_TYPE_NAME(*single));
             	} else {
             		continue;
@@ -608,9 +613,12 @@ static zend_always_inline php_parallel_check_class_result_t php_parallel_check_c
             } ZEND_TYPE_FOREACH_END();
             
         } else {
+#ifdef ZEND_TYPE_HAS_CE
             if (ZEND_TYPE_HAS_CE(info->type)) {
                 next = ZEND_TYPE_CE(info->type);
-            } else {
+            } else
+#endif
+            {
                 next = zend_lookup_class(
                         ZEND_TYPE_NAME(info->type));
             }
