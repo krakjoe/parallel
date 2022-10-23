@@ -14,7 +14,7 @@ try {
 	$parallel->run(function(){
 		thrower();
 	});
-} catch (Error $er) {
+} catch (Error $er) { 
 	/* can't catch here what is thrown in runtime */
 }
 ?>
@@ -22,7 +22,6 @@ try {
 Fatal error: Uncaught %s in %s:7
 Stack trace:
 #0 %s(6): thrower()
-#1 [internal function]: {closure}()
-#2 {main}
+#1 {main}
   thrown in %s on line 7
 
