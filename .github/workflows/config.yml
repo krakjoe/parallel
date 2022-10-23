@@ -1,6 +1,20 @@
 name: Build and Test
 on: [push, pull_request]
 jobs:
+  ubuntu:
+    strategy:
+      matrix:
+          version: ["8.0"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup PHP
+        run: docker-compose build php-${{matrix.version}}
+      - name: Setup parallel
+        run: docker-compose build parallel-${{matrix.version}}
+      - name: Test parallel
+        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test
   windows:
     defaults:
       run:
