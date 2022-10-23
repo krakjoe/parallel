@@ -1,0 +1,13 @@
+#!/bin/bash
+
+case $1 in
+    dist)
+        wget https://www.php.net/distributions/php-$2.$3.$4.tar.gz \
+            -O /opt/src/php-$2.$3.$4$5.tar.gz > /dev/null
+        tar -C /opt/src -xf opt/src/php-$2.$3.$4$5.tar.gz
+        ln -s /opt/src/php-$2.$3.$4$5 /opt/src/php-src
+    ;;
+    git)
+        git clone --branch php-$2.$3.$4$5 --depth 1 https://github.com/php/php-src /opt/src/php-src 1>/dev/null 2>/dev/null
+    ;;
+esac

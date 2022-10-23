@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ ! -f run-tests.php ]; then
+  PHP_RUN_TESTS=/opt/lib/php/build/run-tests.php
+else
+  PHP_RUN_TESTS=run-tests.php
+fi
+
+export NO_INTERACTION=1
+export REPORT_EXIT_STATUS=1
+
+php $PHP_RUN_TESTS                          \
+    -P                                      \
+    -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK      \
+    --show-diff
