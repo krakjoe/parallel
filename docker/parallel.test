@@ -1,6 +1,10 @@
 #!/bin/bash
 
-ls -lash ./*
+find ./ -name run-tests.php
+
+if [ $? -ne 0 ]; then
+    phpize
+fi
 
 export NO_INTERACTION=1
 export REPORT_EXIT_STATUS=1
