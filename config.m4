@@ -33,7 +33,7 @@ if test "$PHP_PARALLEL" != "no"; then
     return (__atomic_add_fetch(&variable, 1, __ATOMIC_SEQ_CST)) ? 1 : 0;
   ]])], [
     AC_MSG_RESULT([yes])
-    AC_DEFINE(HAVE_BUILTIN_ATOMIC, 1, [Define to 1 if supports __atomic_add_fetch()])
+    AC_DEFINE(HAVE_BUILTIN_ATOMIC_CPP11, 1, [Define to 1 if supports __atomic_add_fetch()])
   ], [
     AC_MSG_RESULT([no])
   ])

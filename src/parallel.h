@@ -1,8 +1,8 @@
 /*
   +----------------------------------------------------------------------+
-  | parallel                                                              |
+  | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019                                       |
+  | Copyright (c) Joe Watkins 2019-2022                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -87,7 +87,7 @@ static zend_always_inline void php_parallel_cond_destroy(pthread_cond_t *cond) {
 static zend_always_inline void php_parallel_atomic_addref(uint32_t *refcount) {
 #ifdef _WIN32
     InterlockedAdd(refcount, 1);
-#elif defined(HAVE_BUILTIN_ATOMIC)
+#elif defined(HAVE_BUILTIN_ATOMIC_CPP11)
     __atomic_add_fetch(refcount, 1, __ATOMIC_SEQ_CST);
 #else
     __sync_add_and_fetch(refcount, 1);
@@ -97,7 +97,7 @@ static zend_always_inline void php_parallel_atomic_addref(uint32_t *refcount) {
 static zend_always_inline uint32_t php_parallel_atomic_delref(uint32_t *refcount) {
 #ifdef _WIN32
     return InterlockedAdd(refcount, -1);
-#elif defined(HAVE_BUILTIN_ATOMIC)
+#elif defined(HAVE_BUILTIN_ATOMIC_CPP11)
     return __atomic_sub_fetch(refcount, 1, __ATOMIC_SEQ_CST);
 #else
     return __sync_sub_and_fetch(refcount, 1);
