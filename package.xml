@@ -16,10 +16,10 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2020-09-17</date>
+ <date>2022-10-24</date>
  <version>
-  <release>1.1.4</release>
-  <api>1.1.0</api>
+  <release>1.2.0</release>
+  <api>1.2.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -27,9 +27,8 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix #103: memory leaks in Sync
-- Fix #112: broken type hinting and instanceof operator
-- Fix #139: crash with opcache enabled
+- Add support for PHP 8.0, 8.1 and 8.2
+- Drop support for PHP 7
  </notes>
  <contents>
   <dir name="/">
@@ -146,9 +145,17 @@
       <file name="062.bootstrap.inc" role="test"/>
       <file name="062.immutable.inc" role="test"/>
       <file name="062.phpt" role="test"/>
+      <file name="063.phpt" role="test"/>
+      <file name="064.phpt" role="test"/>
+      <file name="065.phpt" role="test"/>
+      <file name="066-bootstrap.inc" role="test"/>
+      <file name="066.phpt" role="test"/>
+      <file name="067-bootstrap.inc" role="test"/>
+      <file name="067.phpt" role="test"/>
       <file name="bootstrapc.inc" role="test"/>
       <file name="bootstrape.inc" role="test"/>
       <file name="bootstrap.inc" role="test"/>
+      <file name="disabled_functions.phpt" role="test"/>
      </dir> <!-- base -->
      <dir name="channel">
       <file name="001.phpt" role="test"/>
@@ -241,7 +248,7 @@
  <dependencies>
   <required>
    <php>
-    <min>7.2.0</min>
+    <min>8.0.0</min>
    </php>
    <pearinstaller>
     <min>1.10</min>
@@ -251,6 +258,23 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2020-09-17</date>
+   <version>
+    <release>1.1.4</release>
+    <api>1.1.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix #103: memory leaks in Sync
+- Fix #112: broken type hinting and instanceof operator
+- Fix #139: crash with opcache enabled
+   </notes>
+  </release>
   <release>
    <date>2019-08-14</date>
    <version>
