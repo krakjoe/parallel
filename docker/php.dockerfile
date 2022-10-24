@@ -5,6 +5,7 @@ FROM ubuntu:$UBUNTU_VERSION_MAJOR.$UBUNTU_VERSION_MINOR
 
 ARG PHP_SRC_TYPE
 ARG PHP_SRC_DEBUG
+ARG PHP_SRC_OPCACHE
 ARG PHP_VERSION_MAJOR
 ARG PHP_VERSION_MINOR
 ARG PHP_VERSION_PATCH
@@ -24,12 +25,13 @@ RUN /opt/bin/php.src $PHP_SRC_TYPE $PHP_VERSION_MAJOR $PHP_VERSION_MINOR $PHP_VE
 
 WORKDIR /opt/src/php-src
 
-RUN ./buildconf --force >/dev/null 2>/dev/null
+RUN ./buildconf --force
 
 RUN ./configure --disable-all \
                 --disable-cgi \
                 --disable-phpdbg \
                 --$PHP_SRC_DEBUG-debug \
+                --$PHP_SRC_OPCACHE-opcache \
                 --enable-zts \
                 --prefix=/opt \
                 --with-config-file-scan-dir=/etc/php.d \
@@ -44,6 +46,10 @@ RUN cp php.ini-development /etc/php.ini
 RUN mkdir -p /etc/php.d
 
 ENV PATH=/opt/bin:$PATH
+
+RUN test $PHP_SRC_OPCACHE = "disable" || \
+        echo "zend_extension=opcache.so" > /etc/php.d/opcache.ini && \
+        echo "opcache.enable_cli=1"     >> /etc/php.d/opcache.ini
 
 RUN php -v
 
