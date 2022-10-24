@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019-2020                                  |
+  | Copyright (c) Joe Watkins 2019-2022                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -22,7 +22,7 @@
 extern zend_module_entry parallel_module_entry;
 # define phpext_parallel_ptr &parallel_module_entry
 
-# define PHP_PARALLEL_VERSION "1.1.5-dev"
+# define PHP_PARALLEL_VERSION "1.2.0"
 
 # if !defined(ZTS)
 # error Only ZTS build are supported
