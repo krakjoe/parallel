@@ -1,8 +1,8 @@
 /*
   +----------------------------------------------------------------------+
-  | parallel                                                              |
+  | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019                                       |
+  | Copyright (c) Joe Watkins 2019-2022                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -18,35 +18,22 @@
 #ifndef HAVE_PARALLEL_COPY_H
 #define HAVE_PARALLEL_COPY_H
 
-#if PHP_VERSION_ID < 70300
-# define GC_SET_REFCOUNT(ref, rc) (GC_REFCOUNT(ref) = (rc))
-# define GC_ADDREF(ref) GC_REFCOUNT(ref)++
-# define GC_DELREF(ref) --GC_REFCOUNT(ref)
-# define GC_SET_PERSISTENT_TYPE(ref, type) (GC_TYPE_INFO(ref) = type)
-# define GC_ADD_FLAGS(ref, flags) GC_FLAGS(ref) |= flags
-# define GC_DEL_FLAGS(ref, flags) GC_FLAGS(ref) &= ~flags
-# define GC_ARRAY (IS_ARRAY | (GC_COLLECTABLE << GC_FLAGS_SHIFT))
-# define GC_IMMUTABLE (1<<1)
-#else
-# define GC_SET_PERSISTENT_TYPE(ref, type) \
+#define GC_SET_PERSISTENT_TYPE(ref, type) \
     (GC_TYPE_INFO(ref) = type | (GC_PERSISTENT << GC_FLAGS_SHIFT))
-#endif
 
 #define PARALLEL_ZVAL_COPY php_parallel_copy_zval_ctor
 #define PARALLEL_ZVAL_DTOR php_parallel_copy_zval_dtor
 
-#if PHP_VERSION_ID >= 70300
+#if PHP_VERSION_ID >= 80100
+# define PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, key, destination) do { \
+	*key = NULL; \
+	*destination = (zend_function*) function->op_array.dynamic_func_defs[opline->op2.num]; \
+} while(0)
+#else
 # define PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, key, destination) do { \
      zval *_tmp; \
      *key = Z_STR_P(RT_CONSTANT(opline, opline->op1)); \
      _tmp  = zend_hash_find_ex(EG(function_table), *key, 1); \
-    *destination = Z_FUNC_P(_tmp); \
-  } while(0)
-#else
-# define PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, key, destination) do { \
-     zval *_tmp; \
-     *key = Z_STR_P(RT_CONSTANT(&function->op_array, opline->op1)); \
-     _tmp  = zend_hash_find(EG(function_table), *key); \
     *destination = Z_FUNC_P(_tmp); \
   } while(0)
 #endif

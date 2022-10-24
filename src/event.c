@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019                                       |
+  | Copyright (c) Joe Watkins 2019-2022                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -71,7 +71,7 @@ PHP_METHOD(Event, __construct)
 }
 
 zend_function_entry php_parallel_events_event_methods[] = {
-    PHP_ME(Event, __construct, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Event, __construct, php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

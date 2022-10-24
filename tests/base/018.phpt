@@ -33,27 +33,30 @@ try {
 } catch (\parallel\Runtime\Error\IllegalReturn $ex) {
 	var_dump($ex->getMessage());
 }
-
 try {
-	$parallel->run(function(&$arg) {});
+	$parallel->run(function(&$arg) {}, [1]);
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
 }
 
 try {
-	$parallel->run(function($arg, &$arg2) {});
+	$parallel->run(function($arg, &$arg2) {}, [1,2]);
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
 }
 
 try {
-	$parallel->run(function($arg, $arg2, & ... $arg3) {});
+	$parallel->run(function($arg, $arg2, & ... $arg3) {}, [1,2,3]);
 } catch (\parallel\Runtime\Error\IllegalParameter $ex) {
 	var_dump($ex->getMessage());
 }
 
 try {
-	$parallel->run(function & () : int {});
+	$parallel->run(function & () : int {
+		$var = 42;
+
+		return $var;
+	});
 } catch (\parallel\Runtime\Error\IllegalReturn $ex) {
 	var_dump($ex->getMessage());
 }

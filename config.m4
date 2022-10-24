@@ -11,6 +11,13 @@ PHP_ARG_ENABLE(parallel-dev, whether to enable parallel developer build flags,
 
 if test "$PHP_PARALLEL" != "no"; then
 
+  PHP_VERSION=$($PHP_CONFIG --vernum)
+  AC_MSG_CHECKING([PHP version]);
+  if test $PHP_VERSION -lt 80000; then
+    AC_MSG_ERROR([parallel requires PHP 8.0+]);
+  fi
+  AC_MSG_RESULT([$PHP_VERSION])
+
   AC_MSG_CHECKING([for ZTS])
   if test "$PHP_THREAD_SAFETY" != "no"; then
     AC_MSG_RESULT([ok])
@@ -26,7 +33,7 @@ if test "$PHP_PARALLEL" != "no"; then
     return (__atomic_add_fetch(&variable, 1, __ATOMIC_SEQ_CST)) ? 1 : 0;
   ]])], [
     AC_MSG_RESULT([yes])
-    AC_DEFINE(HAVE_BUILTIN_ATOMIC, 1, [Define to 1 if supports __atomic_add_fetch()])
+    AC_DEFINE(HAVE_BUILTIN_ATOMIC_CPP11, 1, [Define to 1 if supports __atomic_add_fetch()])
   ], [
     AC_MSG_RESULT([no])
   ])

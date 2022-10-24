@@ -13,7 +13,7 @@ $var     = null;
 
 try {
 	$parallel->run(function() {
-		yield from [];
+		yield from [1];
 	});
 } catch (\parallel\Runtime\Error\IllegalInstruction $ex) {
 	var_dump($ex->getMessage());

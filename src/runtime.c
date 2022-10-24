@@ -1,8 +1,8 @@
 /*
   +----------------------------------------------------------------------+
-  | parallel                                                              |
+  | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019                                       |
+  | Copyright (c) Joe Watkins 2019-2022                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -158,8 +158,12 @@ PHP_MINIT_FUNCTION(PARALLEL_RUNTIME)
     php_parallel_runtime_ce->create_object = php_parallel_runtime_create;
     php_parallel_runtime_ce->ce_flags |= ZEND_ACC_FINAL;
 
-    php_parallel_runtime_ce->serialize = zend_class_serialize_deny;
-    php_parallel_runtime_ce->unserialize = zend_class_unserialize_deny;
+    #ifdef ZEND_ACC_NOT_SERIALIZABLE
+        php_parallel_runtime_ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE;
+    #else
+        php_parallel_runtime_ce->serialize = zend_class_serialize_deny;
+        php_parallel_runtime_ce->unserialize = zend_class_unserialize_deny;
+    #endif
 
     PHP_MINIT(PARALLEL_FUTURE)(INIT_FUNC_ARGS_PASSTHRU);
 

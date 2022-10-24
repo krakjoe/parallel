@@ -31,6 +31,9 @@ config.sub
 configure
 configure.ac
 configure.in
+config.nice.bat
+configure.bat
+configure.js
 conftest
 conftest.c
 Makefile
@@ -51,3 +54,19 @@ modules
 run-tests.php
 run-tests.log
 tmp-php.ini
+
+# Windows build files
+x64
+arm64
+Debug
+Debug_TS
+Release
+Release_TS
+
+# test files
+tests/**/*.diff
+tests/**/*.exp
+tests/**/*.log
+tests/**/*.out
+tests/**/*.php
+tests/**/*.sh

@@ -1,8 +1,8 @@
 /*
   +----------------------------------------------------------------------+
-  | parallel                                                              |
+  | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019                                       |
+  | Copyright (c) Joe Watkins 2019-2022                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -230,6 +230,13 @@ PHP_METHOD(Events, poll)
     php_parallel_events_poll(events, return_value);
 }
 
+#ifdef ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX
+ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(php_parallel_events_count_arginfo, 0, 0, IS_LONG, 0)
+#else
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO(php_parallel_events_count_arginfo, IS_LONG, 0)
+#endif
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(Events, count)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
@@ -247,7 +254,7 @@ zend_function_entry php_parallel_events_methods[] = {
     PHP_ME(Events, setBlocking, php_parallel_events_set_blocking_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, setTimeout,  php_parallel_events_set_timeout_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Events, poll,        php_parallel_events_poll_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Events, count,       NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(Events, count,       php_parallel_events_count_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -270,10 +277,14 @@ PHP_MINIT_FUNCTION(PARALLEL_EVENTS)
     php_parallel_events_ce->get_iterator  = php_parallel_events_loop_create;
     php_parallel_events_ce->ce_flags |= ZEND_ACC_FINAL;
 
-    php_parallel_events_ce->serialize = zend_class_serialize_deny;
-    php_parallel_events_ce->unserialize = zend_class_unserialize_deny;
+    #ifdef ZEND_ACC_NOT_SERIALIZABLE
+        php_parallel_events_ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE;
+    #else
+        php_parallel_events_ce->serialize = zend_class_serialize_deny;
+        php_parallel_events_ce->unserialize = zend_class_unserialize_deny;
+    #endif
 
-    zend_class_implements(php_parallel_events_ce, 2, zend_ce_countable, zend_ce_traversable);
+    zend_class_implements(php_parallel_events_ce, 1, zend_ce_countable);
 
     PHP_MINIT(PARALLEL_EVENTS_EVENT)(INIT_FUNC_ARGS_PASSTHRU);
     PHP_MINIT(PARALLEL_EVENTS_INPUT)(INIT_FUNC_ARGS_PASSTHRU);

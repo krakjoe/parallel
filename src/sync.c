@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019                                       |
+  | Copyright (c) Joe Watkins 2019-2022                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -104,12 +104,7 @@ static void php_parallel_sync_object_destroy(zend_object *o) {
     zend_object_std_dtor(o);
 }
 
-#if PHP_VERSION_ID < 80000
-static HashTable* php_parallel_sync_object_debug(zval *zo, int *temp) {
-    zend_object *o = Z_OBJ_P(zo);
-#else
 static HashTable* php_parallel_sync_object_debug(zend_object *o, int *temp) {
-#endif
     php_parallel_sync_object_t *object =
         php_parallel_sync_object_fetch(o);
     HashTable *debug;
@@ -317,8 +312,12 @@ PHP_MINIT_FUNCTION(PARALLEL_SYNC)
     php_parallel_sync_ce->create_object = php_parallel_sync_object_create;
     php_parallel_sync_ce->ce_flags |= ZEND_ACC_FINAL;
 
-    php_parallel_sync_ce->serialize = zend_class_serialize_deny;
-    php_parallel_sync_ce->unserialize = zend_class_unserialize_deny;
+    #ifdef ZEND_ACC_NOT_SERIALIZABLE
+        php_parallel_sync_ce->ce_flags |= ZEND_ACC_NOT_SERIALIZABLE;
+    #else
+        php_parallel_sync_ce->serialize = zend_class_serialize_deny;
+        php_parallel_sync_ce->unserialize = zend_class_unserialize_deny;
+    #endif
 
     php_parallel_sync_string_value = zend_string_init_interned(ZEND_STRL("value"), 1);
 

@@ -1,8 +1,8 @@
 /*
   +----------------------------------------------------------------------+
-  | parallel                                                              |
+  | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019                                       |
+  | Copyright (c) Joe Watkins 2019-2022                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -58,6 +58,25 @@ void php_parallel_scheduler_destroy(php_parallel_runtime_t *runtime) {
     zend_llist_destroy(&runtime->schedule);
 }
 
+static PHP_FUNCTION(parallel_display_disabled_function)
+{
+    zend_throw_error(NULL, "Call to undefined function %s()", get_active_function_name());
+}
+
+// port from php 7.4 code
+static int php_parallel_disable_function(const char* function_name, size_t function_name_length) {
+    zend_internal_function *func;
+	if ((func = zend_hash_str_find_ptr(CG(function_table), function_name, function_name_length))) {
+		//zend_free_internal_arg_info(func);
+	    func->fn_flags &= ~(ZEND_ACC_VARIADIC | ZEND_ACC_HAS_TYPE_HINTS | ZEND_ACC_HAS_RETURN_TYPE);
+		func->num_args = 0;
+		func->arg_info = NULL;
+		func->handler = ZEND_FN(parallel_display_disabled_function);
+		return SUCCESS;
+	}
+	return FAILURE;
+}
+
 static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(php_parallel_runtime_t *runtime) {
     php_parallel_scheduler_context = runtime;
 
@@ -72,13 +91,11 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(p
     PG(expose_php)       = 0;
     PG(auto_globals_jit) = 1;
 
-    php_request_startup();
+    // we cannot use zend_disable_functions to disable functions at runtime since PHP 8.2
+    php_parallel_disable_function(ZEND_STRL("setlocale"));
+    php_parallel_disable_function(ZEND_STRL("dl"));
 
-    zend_disable_function(ZEND_STRL("setlocale"));
-#if PHP_VERSION_ID < 70400
-    zend_disable_function(ZEND_STRL("putenv"));
-#endif
-    zend_disable_function(ZEND_STRL("dl"));
+    php_request_startup();
 
     PG(during_request_startup)  = 0;
     SG(sapi_started)            = 0;
@@ -195,10 +212,7 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
         ZEND_CALL_TOP_FUNCTION,
         php_parallel_copy_function(function, 0),
         ZEND_CALL_NUM_ARGS(head->frame),
-#if PHP_VERSION_ID < 70400
-        NULL,
-#endif
-        NULL);
+        scope);
 
     if (scope != function->op_array.scope) {
         el->frame->func->op_array.scope = scope;
@@ -222,8 +236,11 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
 
         el->frame->func->op_array.static_variables =
             php_parallel_copy_hash_ctor(statics, 0);
-
-#ifdef ZEND_MAP_PTR_INIT
+#if PHP_VERSION_ID >= 80200
+        ZEND_MAP_PTR_INIT(
+            el->frame->func->op_array.static_variables_ptr,
+            el->frame->func->op_array.static_variables);
+#else
         ZEND_MAP_PTR_INIT(
             el->frame->func->op_array.static_variables_ptr,
             &el->frame->func->op_array.static_variables);
@@ -232,9 +249,7 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
         php_parallel_copy_hash_dtor(statics, 1);
     }
 
-#ifdef ZEND_MAP_PTR_NEW
     ZEND_MAP_PTR_NEW(el->frame->func->op_array.run_time_cache);
-#endif
 
     zend_init_func_execute_data(
         el->frame,
@@ -290,14 +305,10 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
         }
 
         if (frame->func->op_array.static_variables) {
-#ifdef ZEND_MAP_PTR_GET
             HashTable *statics =
                 ZEND_MAP_PTR_GET(
                     frame->func->op_array.static_variables_ptr);
-#else
-            HashTable *statics =
-                frame->func->op_array.static_variables;
-#endif
+
             if (!(GC_FLAGS(statics) & IS_ARRAY_IMMUTABLE)) {
                 zend_array_destroy(statics);
             }
@@ -341,7 +352,13 @@ static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
         return SUCCESS;
     }
 
+#if PHP_VERSION_ID >= 80100
+    zend_stream_init_filename_ex(&fh, file);
+    
+    result = php_stream_open_for_zend_ex(&fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
+#else
     result = php_stream_open_for_zend_ex(ZSTR_VAL(file), &fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
+#endif
 
     if (result != SUCCESS) {
         return FAILURE;
@@ -499,7 +516,7 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime) {
 
 void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure, zval *argv, zval *return_value) {
     zend_execute_data      *caller = EG(current_execute_data)->prev_execute_data;
-    const zend_function    *function = zend_get_closure_method_def(closure);
+    const zend_function    *function = zend_get_closure_method_def(Z_OBJ_P(closure));
     zend_bool               returns = 0;
     php_parallel_future_t  *future = NULL;
 
@@ -534,7 +551,7 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill
     if (kill){
         php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_KILLED);
 
-        *(runtime->child.interrupt) = 1;
+        zend_atomic_bool_store(runtime->child.interrupt, true);
     } else {
         php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSE);
     }
@@ -570,7 +587,7 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
         php_parallel_monitor_lock(future->monitor);
 
         if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY)) {
-            *(future->runtime->child.interrupt) = 1;
+            zend_atomic_bool_store(future->runtime->child.interrupt, true);
 
             php_parallel_monitor_set(future->monitor, PHP_PARALLEL_CANCELLED);
             php_parallel_monitor_wait_locked(future->monitor, PHP_PARALLEL_READY);

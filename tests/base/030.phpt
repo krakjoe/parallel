@@ -20,8 +20,4 @@ $future->value();
 --EXPECTF--
 Fatal error: Uncaught Exception in %s:4
 Stack trace:
-#0 {main}
-  thrown in %s on line 4
-
-
-
+%A
