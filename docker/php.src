@@ -3,7 +3,7 @@
 case $1 in
     dist)
         wget https://www.php.net/distributions/php-$2.$3.$4.tar.gz \
-            -O /opt/src/php-$2.$3.$4$5.tar.gz > /dev/null
+            -O /opt/src/php-$2.$3.$4$5.tar.gz
         tar -C /opt/src -xf opt/src/php-$2.$3.$4$5.tar.gz
         ln -s /opt/src/php-$2.$3.$4$5 /opt/src/php-src
     ;;
