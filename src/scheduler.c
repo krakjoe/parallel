@@ -58,25 +58,6 @@ void php_parallel_scheduler_destroy(php_parallel_runtime_t *runtime) {
     zend_llist_destroy(&runtime->schedule);
 }
 
-static PHP_FUNCTION(parallel_display_disabled_function)
-{
-    zend_throw_error(NULL, "Call to undefined function %s()", get_active_function_name());
-}
-
-// port from php 7.4 code
-static int php_parallel_disable_function(const char* function_name, size_t function_name_length) {
-    zend_internal_function *func;
-	if ((func = zend_hash_str_find_ptr(CG(function_table), function_name, function_name_length))) {
-		//zend_free_internal_arg_info(func);
-	    func->fn_flags &= ~(ZEND_ACC_VARIADIC | ZEND_ACC_HAS_TYPE_HINTS | ZEND_ACC_HAS_RETURN_TYPE);
-		func->num_args = 0;
-		func->arg_info = NULL;
-		func->handler = ZEND_FN(parallel_display_disabled_function);
-		return SUCCESS;
-	}
-	return FAILURE;
-}
-
 static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(php_parallel_runtime_t *runtime) {
     php_parallel_scheduler_context = runtime;
 
@@ -90,10 +71,11 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(p
 
     PG(expose_php)       = 0;
     PG(auto_globals_jit) = 1;
-
-    // we cannot use zend_disable_functions to disable functions at runtime since PHP 8.2
-    php_parallel_disable_function(ZEND_STRL("setlocale"));
-    php_parallel_disable_function(ZEND_STRL("dl"));
+#if PHP_VERSION_ID >= 80100
+    PG(enable_dl)        = false;
+#else
+    PG(enable_dl)        = 0;
+#endif
 
     php_request_startup();
 

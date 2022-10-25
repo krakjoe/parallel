@@ -9,8 +9,12 @@ if (!extension_loaded('parallel')) {
 --FILE--
 <?php
 $sync = new \parallel\Sync;
+$runtimes = [
+    new \parallel\Runtime,
+    new \parallel\Runtime
+];
 
-\parallel\run(function() use($sync){
+$f[] = $runtimes[0]->run(function() use($sync){
   $sync(function() use($sync) {
     while ($sync->get() != 42) {
       $sync->wait();
@@ -19,15 +23,18 @@ $sync = new \parallel\Sync;
   var_dump($sync);
 });
 
-$f = \parallel\run(function() use($sync) {
+$f[] = $runtimes[1]->run(function() use($sync) {
   $sync(function() use($sync) {
     $sync->set(42);
     $sync->notify();
   });
 });
 
-$f->value();
+foreach ($f as $r)
+    $r->value();
 
+foreach ($runtimes as $r)
+    $r->close();
 ?>
 --EXPECTF--
 object(parallel\Sync)#%d (%d) {
