@@ -1,25 +1,7 @@
-name: Build and Test
+name: Windows
 on: [push, pull_request]
 jobs:
-  ubuntu:
-    strategy:
-      matrix:
-          version: ["8.0", "8.1", "8.2"]
-          debug: ["enable", "disable"]
-          opcache: ["enable", "disable"]
-    if: success() || failure()
-    runs-on: ubuntu-latest
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, ${{matrix.opcache}}-opcache
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup PHP
-        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=${{matrix.opcache}} php-${{matrix.version}}
-      - name: Setup parallel
-        run: docker-compose build parallel-${{matrix.version}}
-      - name: Test parallel
-        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test
-  windows:
+  build:
     defaults:
       run:
         shell: cmd

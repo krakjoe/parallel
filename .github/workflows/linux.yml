@@ -1,0 +1,54 @@
+name: Linux
+on: [push, pull_request]
+jobs:
+  vanilla:
+    strategy:
+      matrix:
+          version: ["8.0", "8.1", "8.2"]
+          debug: ["enable", "disable"]
+    if: success() || failure()
+    runs-on: ubuntu-latest
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup PHP
+        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=disable php-${{matrix.version}}
+      - name: Setup parallel
+        run: docker-compose build parallel-${{matrix.version}}
+      - name: Test parallel
+        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test
+  opcache:
+    strategy:
+      matrix:
+          version: ["8.0", "8.1", "8.2"]
+          debug: ["enable", "disable"]
+    if: success() || failure()
+    runs-on: ubuntu-latest
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, opcache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup PHP
+        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
+      - name: Setup parallel
+        run: docker-compose build parallel-${{matrix.version}}
+      - name: Test parallel
+        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test -dopcache.enable_cli=1 -dopcache.jit=disable
+  jit:
+    strategy:
+      matrix:
+          version: ["8.0", "8.1", "8.2"]
+          debug: ["enable", "disable"]
+    if: success() || failure()
+    runs-on: ubuntu-latest
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, JIT
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup PHP
+        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
+      - name: Setup parallel
+        run: docker-compose build parallel-${{matrix.version}}
+      - name: Test parallel
+        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test -dopcache.enable_cli=1 -dopcache.jit=function -dopcache.jit_buffer_size=32M
