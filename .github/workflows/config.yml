@@ -7,6 +7,7 @@ jobs:
           version: ["8.0", "8.1", "8.2"]
           debug: ["enable", "disable"]
           opcache: ["enable", "disable"]
+    if: success() || failure()
     runs-on: ubuntu-latest
     name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, ${{matrix.opcache}}-opcache
     steps:
@@ -27,6 +28,7 @@ jobs:
           version: ["8.0", "8.1"]
           arch: [x64]
           ts: [ts]
+    if: success() || failure()
     runs-on: windows-latest
     name: Windows, PHP v${{matrix.version}}
     steps:
