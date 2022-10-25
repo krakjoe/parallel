@@ -19,12 +19,15 @@ $sync = new \parallel\Sync;
   var_dump($sync);
 });
 
-\parallel\run(function() use($sync) {
+$f = \parallel\run(function() use($sync) {
   $sync(function() use($sync) {
     $sync->set(42);
     $sync->notify();
   });
 });
+
+$f->value();
+
 ?>
 --EXPECTF--
 object(parallel\Sync)#%d (%d) {
