@@ -47,10 +47,7 @@ RUN mkdir -p /etc/php.d
 
 ENV PATH=/opt/bin:$PATH
 
-RUN test $PHP_SRC_OPCACHE = "disable" || \
-        echo "zend_extension=opcache.so" > /etc/php.d/opcache.ini && \
-        echo "opcache.enable_cli=1"     >> /etc/php.d/opcache.ini && \
-        echo "opcache.jit=function"     >> /etc/php.d/opcache.ini
+RUN test $PHP_SRC_OPCACHE = "disable" || echo "zend_extension=opcache.so" > /etc/php.d/opcache.ini
 
 RUN php -v
 

@@ -154,7 +154,8 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, zen
 #else
     ZEND_MAP_PTR_INIT(cached->static_variables_ptr, &cached->static_variables);
 #endif
-    ZEND_MAP_PTR_SET(cached->run_time_cache, NULL);
+
+    ZEND_MAP_PTR_INIT(cached->run_time_cache, NULL);
 
 #if PHP_VERSION_ID >= 80100
     if (cached->num_dynamic_func_defs) {
@@ -400,8 +401,6 @@ zend_function* php_parallel_cache_closure(const zend_function *source, zend_func
             &closure->op_array.static_variables);
 #endif
     }
-
-    ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
 
     return closure;
 } /* }}} */
