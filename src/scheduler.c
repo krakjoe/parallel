@@ -169,7 +169,7 @@ zend_bool php_parallel_scheduler_busy(php_parallel_runtime_t *runtime) {
     return busy;
 }
 
-static zend_always_inline void php_parallel_scheduler_pull(zend_function *function) {
+static void php_parallel_scheduler_pull(zend_function *function) {
     if (function->op_array.static_variables) {
         HashTable *statics =
             function->op_array.static_variables;
@@ -203,7 +203,7 @@ static zend_always_inline void php_parallel_scheduler_pull(zend_function *functi
 #endif
 }
 
-static zend_always_inline void php_parallel_scheduler_clean(zend_function *function) {
+static void php_parallel_scheduler_clean(zend_function *function) {
     if (function->op_array.static_variables) {
         HashTable *statics =
             ZEND_MAP_PTR_GET(
