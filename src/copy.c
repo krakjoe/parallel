@@ -191,14 +191,11 @@ static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
         return ht;
     }
 
-    ht->nNextFreeElement = 0;
-    ht->nInternalPointer = 0;
-
-    HT_SET_DATA_ADDR(ht, php_parallel_copy_memory_func(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht)));
-
 #ifdef HT_PACKED_SIZE
     // if array is packed, copy it as packed
     if (HT_IS_PACKED(ht)) {
+        HT_SET_DATA_ADDR(ht, php_parallel_copy_memory_func(HT_GET_DATA_ADDR(source), HT_PACKED_SIZE_EX(source->nTableSize, HT_MIN_MASK)));
+
         for (idx = 0; idx < ht->nNumUsed; idx++) {
             zval *zv = ht->arPacked + idx;
 
@@ -217,6 +214,11 @@ static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
         return ht;
     }
 #endif
+    ht->nNextFreeElement = 0;
+    ht->nInternalPointer = 0;
+
+    HT_SET_DATA_ADDR(ht, php_parallel_copy_memory_func(HT_GET_DATA_ADDR(source), HT_SIZE(source)));
+
     for (idx = 0; idx < ht->nNumUsed; idx++) {
         Bucket *p = ht->arData + idx;
 
