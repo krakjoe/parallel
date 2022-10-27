@@ -15,7 +15,7 @@ jobs:
       - name: Setup PHP
         run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=disable php-${{matrix.version}}
       - name: Setup parallel
-        run: docker-compose build parallel-${{matrix.version}}
+        run: docker-compose build --build-arg PHP_SRC_ASAN=disable parallel-${{matrix.version}}
       - name: Test parallel
         run: docker-compose run parallel-${{matrix.version}} docker/parallel.test
   opcache:
@@ -32,7 +32,7 @@ jobs:
       - name: Setup PHP
         run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
       - name: Setup parallel
-        run: docker-compose build parallel-${{matrix.version}}
+        run: docker-compose build --build-arg PHP_SRC_ASAN=disable parallel-${{matrix.version}}
       - name: Test parallel
         run: docker-compose run parallel-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
   jit:
@@ -49,6 +49,6 @@ jobs:
       - name: Setup PHP
         run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
       - name: Setup parallel
-        run: docker-compose build parallel-${{matrix.version}}
+        run: docker-compose build --build-arg PHP_SRC_ASAN=disable parallel-${{matrix.version}}
       - name: Test parallel
         run: docker-compose run parallel-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
