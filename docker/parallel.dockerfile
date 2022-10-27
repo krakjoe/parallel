@@ -1,6 +1,5 @@
 ARG PHP_SRC_TYPE
 ARG PHP_SRC_DEBUG
-ARG PHP_SRC_ASAN
 ARG PHP_VERSION_MAJOR
 ARG PHP_VERSION_MINOR
 ARG PHP_VERSION_PATCH
@@ -14,6 +13,8 @@ RUN php -v
 RUN phpize --clean >/dev/null
 
 RUN phpize >/dev/null
+
+ARG PHP_SRC_ASAN
 
 RUN ./configure --enable-parallel --$PHP_SRC_ASAN-address-sanitizer >/dev/null
 
