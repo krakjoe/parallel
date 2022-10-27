@@ -36,7 +36,7 @@ services:
         UBUNTU_VERSION_MINOR: "04",
         PHP_SRC_TYPE:         dist,
         PHP_SRC_DEBUG:        enable,
-        PHP_SRC_ASAN:         asan,
+        PHP_SRC_ASAN:         disable,
         PHP_SRC_OPCACHE:      disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    0,

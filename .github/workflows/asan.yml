@@ -1,0 +1,51 @@
+name: ASAN
+on: [push, pull_request]
+jobs:
+  vanilla:
+    strategy:
+      matrix:
+          version: ["8.1", "8.2"]
+    if: success() || failure()
+    runs-on: ubuntu-latest
+    name: ASAN, PHP v${{matrix.version}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup PHP
+        run: docker-compose build --build-arg PHP_SRC_DEBUG=enable --build-arg PHP_SRC_ASAN=enable --build-arg PHP_SRC_OPCACHE=disable php-${{matrix.version}}
+      - name: Setup parallel
+        run: docker-compose build parallel-${{matrix.version}}
+      - name: Test parallel
+        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test --asan
+  opcache:
+    strategy:
+      matrix:
+          version: ["8.1", "8.2"]
+    if: success() || failure()
+    runs-on: ubuntu-latest
+    name: ASAN, PHP v${{matrix.version}}, opcache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup PHP
+        run: docker-compose build --build-arg PHP_SRC_DEBUG=enable --build-arg PHP_SRC_ASAN=enable --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
+      - name: Setup parallel
+        run: docker-compose build parallel-${{matrix.version}}
+      - name: Test parallel
+        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable --asan
+  jit:
+    strategy:
+      matrix:
+          version: ["8.1", "8.2"]
+    if: success() || failure()
+    runs-on: ubuntu-latest
+    name: ASAN, PHP v${{matrix.version}}, JIT
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup PHP
+        run: docker-compose build --build-arg PHP_SRC_DEBUG=enable --build-arg PHP_SRC_ASAN=enable --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
+      - name: Setup parallel
+        run: docker-compose build parallel-${{matrix.version}}
+      - name: Test parallel
+        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M --asan
