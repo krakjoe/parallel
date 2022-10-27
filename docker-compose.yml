@@ -12,6 +12,7 @@ x-aliases:
       args:
         - PHP_SRC_TYPE
         - PHP_SRC_DEBUG
+        - PHP_SRC_ASAN
         - PHP_SRC_OPCACHE
         - PHP_VERSION_MAJOR
         - PHP_VERSION_MINOR
@@ -35,6 +36,7 @@ services:
         UBUNTU_VERSION_MINOR: "04",
         PHP_SRC_TYPE:         dist,
         PHP_SRC_DEBUG:        enable,
+        PHP_SRC_ASAN:         asan,
         PHP_SRC_OPCACHE:      disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    0,
@@ -51,6 +53,7 @@ services:
       args: {
         PHP_SRC_TYPE:         dist,
         PHP_SRC_DEBUG:        enable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    0,
         PHP_VERSION_PATCH:    23,
@@ -70,6 +73,7 @@ services:
         PHP_SRC_TYPE:         dist,
         PHP_SRC_DEBUG:        enable,
         PHP_SRC_OPCACHE:      disable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
         PHP_VERSION_PATCH:    11,
@@ -85,6 +89,7 @@ services:
       args: {
         PHP_SRC_TYPE:         dist,
         PHP_SRC_DEBUG:        enable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
         PHP_VERSION_PATCH:    11,
@@ -104,6 +109,7 @@ services:
         PHP_SRC_TYPE:         git,
         PHP_SRC_DEBUG:        enable,
         PHP_SRC_OPCACHE:      disable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
         PHP_VERSION_PATCH:    0,
@@ -120,6 +126,7 @@ services:
       args: {
         PHP_SRC_TYPE:         git,
         PHP_SRC_DEBUG:        enable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
         PHP_VERSION_PATCH:    0,

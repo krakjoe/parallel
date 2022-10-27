@@ -29,6 +29,24 @@ static zend_always_inline int php_parallel_scheduler_list_delete(void *lhs, void
     return lhs == rhs;
 }
 
+static void php_parallel_schedule_free_function(zend_function *function) {
+    if (function->op_array.static_variables) {
+        php_parallel_copy_hash_dtor(function->op_array.static_variables, 1);
+    }
+
+#if PHP_VERSION_ID >= 80100
+    if (function->op_array.num_dynamic_func_defs) {
+        uint32_t it = 0;
+
+        while (it < function->op_array.num_dynamic_func_defs) {
+            php_parallel_schedule_free_function(
+                (zend_function*) function->op_array.dynamic_func_defs[it]);
+            it++;
+        }
+    }
+#endif
+}
+
 static void php_parallel_schedule_free(void *scheduleed) {
     php_parallel_schedule_el_t *el =
         (php_parallel_schedule_el_t*) scheduleed;
@@ -41,9 +59,8 @@ static void php_parallel_schedule_free(void *scheduleed) {
     }
 
     if (el->frame->func) {
-        if (el->frame->func->op_array.static_variables) {
-            php_parallel_copy_hash_dtor(el->frame->func->op_array.static_variables, 1);
-        }
+        php_parallel_schedule_free_function(
+            el->frame->func);
         pefree(el->frame->func, 1);
     }
 
@@ -186,6 +203,8 @@ static void php_parallel_scheduler_pull(zend_function *function) {
             function->op_array.static_variables_ptr,
             &function->op_array.static_variables);
 #endif
+
+        php_parallel_copy_hash_dtor(statics, 1);
     }
 
     ZEND_MAP_PTR_NEW(function->op_array.run_time_cache);

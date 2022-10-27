@@ -9,6 +9,9 @@ PHP_ARG_ENABLE(parallel-coverage,      whether to enable parallel coverage suppo
 PHP_ARG_ENABLE(parallel-dev, whether to enable parallel developer build flags,
 [  --enable-parallel-dev      Enable parallel developer flags], no, no)
 
+PHP_ARG_ENABLE(address-sanitizer, whether to enable address sanitizer flags,
+[  --enable-address-sanitizer Enable address sanitizer flags], no, no)
+
 if test "$PHP_PARALLEL" != "no"; then
 
   PHP_VERSION=$($PHP_CONFIG --vernum)
@@ -44,6 +47,12 @@ if test "$PHP_PARALLEL" != "no"; then
     AX_CHECK_COMPILE_FLAG(-Wno-unused-parameter,    _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -Wno-unused-parameter")
     AX_CHECK_COMPILE_FLAG(-fstack-protector,        _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fstack-protector")
     AX_CHECK_COMPILE_FLAG(-fstack-protector-strong, _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fstack-protector-strong")
+  fi
+
+  if test "$PHP_ADDRESS_SANITIZER" != "no"; then
+    AX_CHECK_COMPILE_FLAG(-fsanitize=address,       _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fsanitize=address")
+    AX_CHECK_COMPILE_FLAG(-fno-omit-frame-pointer,  _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fno-omit-frame-pointer")
+
   fi
 
   PHP_NEW_EXTENSION(parallel, php_parallel.c src/exceptions.c src/monitor.c src/parallel.c src/runtime.c src/scheduler.c src/future.c src/copy.c src/check.c src/dependencies.c src/cache.c src/channel.c src/link.c src/handlers.c src/events.c src/poll.c src/loop.c src/event.c src/input.c src/sync.c, $ext_shared,, "-Wall -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 $_MAINTAINER_CFLAGS")

@@ -1,5 +1,6 @@
 ARG PHP_SRC_TYPE
 ARG PHP_SRC_DEBUG
+ARG PHP_SRC_ASAN
 ARG PHP_VERSION_MAJOR
 ARG PHP_VERSION_MINOR
 ARG PHP_VERSION_PATCH
@@ -14,12 +15,13 @@ RUN phpize --clean >/dev/null
 
 RUN phpize >/dev/null
 
-RUN ./configure --enable-parallel >/dev/null
+RUN ./configure --enable-parallel --$PHP_SRC_ASAN-address-sanitizer >/dev/null
 
 RUN make -j >/dev/null
 
 RUN make install >/dev/null
 
-RUN echo "extension=parallel.so" > /etc/php.d/parallel.ini
+RUN echo "extension=parallel.so" > \
+        /etc/php.d/parallel.ini
 
 RUN php -m

@@ -6,14 +6,15 @@ jobs:
       matrix:
           version: ["8.0", "8.1", "8.2"]
           debug: ["enable", "disable"]
+          asan: ["enable", "disable"]
     if: success() || failure()
     runs-on: ubuntu-latest
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, ${{matrix.asan}}-asan
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup PHP
-        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=disable php-${{matrix.version}}
+        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=disable --build-arg PHP_SRC_ASAN=${{matrix.asan}} php-${{matrix.version}}
       - name: Setup parallel
         run: docker-compose build parallel-${{matrix.version}}
       - name: Test parallel
@@ -23,14 +24,15 @@ jobs:
       matrix:
           version: ["8.0", "8.1", "8.2"]
           debug: ["enable", "disable"]
+          asan: ["enable", "disable"]
     if: success() || failure()
     runs-on: ubuntu-latest
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, opcache
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, ${{matrix.asan}}-asan, opcache
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup PHP
-        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
+        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable --build-arg PHP_SRC_ASAN=${{matrix.asan}} php-${{matrix.version}}
       - name: Setup parallel
         run: docker-compose build parallel-${{matrix.version}}
       - name: Test parallel
@@ -40,14 +42,15 @@ jobs:
       matrix:
           version: ["8.0", "8.1", "8.2"]
           debug: ["enable", "disable"]
+          asan: ["enable", "disable"]
     if: success() || failure()
     runs-on: ubuntu-latest
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, JIT
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, ${{matrix.asan}}-asan, JIT
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup PHP
-        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
+        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable --build-arg PHP_SRC_ASAN=${{matrix.asan}} php-${{matrix.version}}
       - name: Setup parallel
         run: docker-compose build parallel-${{matrix.version}}
       - name: Test parallel
