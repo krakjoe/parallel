@@ -204,7 +204,9 @@ static void php_parallel_scheduler_pull(zend_function *function) {
             &function->op_array.static_variables);
 #endif
 
-        php_parallel_copy_hash_dtor(statics, 1);
+        if (GC_FLAGS(statics) & IS_ARRAY_PERSISTENT) {
+            php_parallel_copy_hash_dtor(statics, 1);
+        }
     }
 
     ZEND_MAP_PTR_NEW(function->op_array.run_time_cache);
