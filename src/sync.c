@@ -86,7 +86,7 @@ void php_parallel_sync_release(php_parallel_sync_t *sync) {
 static zend_object* php_parallel_sync_object_create(zend_class_entry *ce) {
     php_parallel_sync_object_t *object =
         (php_parallel_sync_object_t*)
-            ecalloc(1, sizeof(php_parallel_sync_t) + zend_object_properties_size(ce));
+            ecalloc(1, sizeof(php_parallel_sync_object_t) + zend_object_properties_size(ce));
 
     zend_object_std_init(&object->std, ce);
 
