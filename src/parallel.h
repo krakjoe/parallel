@@ -41,6 +41,23 @@
 #include "zend_exceptions.h"
 #include "zend_vm.h"
 
+typedef union _php_parallel_platform_align_test {
+    void *v;
+    double d;
+    zend_long l;
+} php_parallel_platform_align_test;
+
+#if ZEND_GCC_VERSION >= 2000
+# define PARALLEL_PLATFORM_ALIGNMENT \
+    (__alignof__(php_parallel_platform_align_test) < 8 ? \
+        8 : __alignof__(php_parallel_platform_align_test))
+#else
+# define PARALLEL_PLATFORM_ALIGNMENT \
+    (sizeof(php_parallel_platform_align_test))
+#endif
+#define PARALLEL_PLATFORM_ALIGNED(size) \
+    ZEND_MM_ALIGNED_SIZE_EX(size, PARALLEL_PLATFORM_ALIGNMENT)
+
 #include "dependencies.h"
 #include "cache.h"
 #include "copy.h"

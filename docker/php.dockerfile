@@ -6,6 +6,7 @@ FROM ubuntu:$UBUNTU_VERSION_MAJOR.$UBUNTU_VERSION_MINOR
 ARG PHP_SRC_TYPE
 ARG PHP_SRC_DEBUG
 ARG PHP_SRC_OPCACHE
+ARG PHP_SRC_ASAN
 ARG PHP_VERSION_MAJOR
 ARG PHP_VERSION_MINOR
 ARG PHP_VERSION_PATCH
@@ -32,6 +33,7 @@ RUN ./configure --disable-all \
                 --disable-phpdbg \
                 --$PHP_SRC_DEBUG-debug \
                 --$PHP_SRC_OPCACHE-opcache \
+                --$PHP_SRC_ASAN-address-sanitizer \
                 --enable-zts \
                 --prefix=/opt \
                 --with-config-file-scan-dir=/etc/php.d \
@@ -47,9 +49,7 @@ RUN mkdir -p /etc/php.d
 
 ENV PATH=/opt/bin:$PATH
 
-RUN test $PHP_SRC_OPCACHE = "disable" || \
-        echo "zend_extension=opcache.so" > /etc/php.d/opcache.ini && \
-        echo "opcache.enable_cli=1"     >> /etc/php.d/opcache.ini
+RUN test $PHP_SRC_OPCACHE = "disable" || echo "zend_extension=opcache.so" > /etc/php.d/opcache.ini
 
 RUN php -v
 

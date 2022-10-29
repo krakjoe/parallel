@@ -8,9 +8,10 @@ fi
 
 export NO_INTERACTION=1
 export REPORT_EXIT_STATUS=1
+export ZEND_DONT_UNLOAD_MODULES=1
 
 php $PHP_RUN_TESTS                          \
     -P                                      \
-    -d opcache.jit_buffer_size=32M          \
     -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK      \
-    --show-diff
+    --show-diff \
+    $@

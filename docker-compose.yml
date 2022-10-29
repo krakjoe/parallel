@@ -12,6 +12,7 @@ x-aliases:
       args:
         - PHP_SRC_TYPE
         - PHP_SRC_DEBUG
+        - PHP_SRC_ASAN
         - PHP_SRC_OPCACHE
         - PHP_VERSION_MAJOR
         - PHP_VERSION_MINOR
@@ -35,14 +36,15 @@ services:
         UBUNTU_VERSION_MINOR: "04",
         PHP_SRC_TYPE:         dist,
         PHP_SRC_DEBUG:        enable,
+        PHP_SRC_ASAN:         disable,
         PHP_SRC_OPCACHE:      disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    0,
-        PHP_VERSION_PATCH:    23,
+        PHP_VERSION_PATCH:    24,
       }
     },
-    container_name:  php-dist-8.0.23,
-    image:           php-dist-8.0.23:parallel,
+    container_name:  php-dist-8.0.24,
+    image:           php-dist-8.0.24:parallel,
     <<: *dev
   }
   "parallel-8.0": { <<: *parallel,
@@ -51,13 +53,14 @@ services:
       args: {
         PHP_SRC_TYPE:         dist,
         PHP_SRC_DEBUG:        enable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    0,
-        PHP_VERSION_PATCH:    23,
+        PHP_VERSION_PATCH:    24,
       }
     },
-    container_name:  parallel-dist-8.0.23,
-    image:           parallel-dist-8.0.23:latest,
+    container_name:  parallel-dist-8.0.24,
+    image:           parallel-dist-8.0.24:latest,
     depends_on:      [php-8.0],
     <<: *dev
   }
@@ -70,6 +73,7 @@ services:
         PHP_SRC_TYPE:         dist,
         PHP_SRC_DEBUG:        enable,
         PHP_SRC_OPCACHE:      disable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
         PHP_VERSION_PATCH:    11,
@@ -85,6 +89,7 @@ services:
       args: {
         PHP_SRC_TYPE:         dist,
         PHP_SRC_DEBUG:        enable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
         PHP_VERSION_PATCH:    11,
@@ -104,10 +109,11 @@ services:
         PHP_SRC_TYPE:         git,
         PHP_SRC_DEBUG:        enable,
         PHP_SRC_OPCACHE:      disable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
         PHP_VERSION_PATCH:    0,
-        PHP_VERSION_RC:       RC4,
+        PHP_VERSION_RC:       RC5,
       }
     },
     container_name:  php-git-8.2.0,
@@ -120,6 +126,7 @@ services:
       args: {
         PHP_SRC_TYPE:         git,
         PHP_SRC_DEBUG:        enable,
+        PHP_SRC_ASAN:         disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
         PHP_VERSION_PATCH:    0,
