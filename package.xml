@@ -16,9 +16,9 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
- <date>2022-10-24</date>
+ <date>2022-10-29</date>
  <version>
-  <release>1.2.0</release>
+  <release>1.2.1</release>
   <api>1.2.0</api>
  </version>
  <stability>
@@ -27,13 +27,16 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Add support for PHP 8.0, 8.1 and 8.2
-- Drop support for PHP 7
+- Fix segfault when constructing sync objects
+- Fix heap buffer overflows when copying functions
+- Drop disabling functions (dl, setlocale) by force and adopt PG(enable_dl) mechanism for that most important use case
+- Fix some leaks in scheduler
  </notes>
  <contents>
   <dir name="/">
    <file name="LICENSE" role="doc"/>
    <file name="README.md" role="doc"/>
+   <file name="CONTRIBUTING.md" role="doc"/>
    <file name="config.m4" role="src"/>
    <file name="config.w32" role="src"/>
    <file name="php_parallel.h" role="src"/>
@@ -155,7 +158,6 @@
       <file name="bootstrapc.inc" role="test"/>
       <file name="bootstrape.inc" role="test"/>
       <file name="bootstrap.inc" role="test"/>
-      <file name="disabled_functions.phpt" role="test"/>
      </dir> <!-- base -->
      <dir name="channel">
       <file name="001.phpt" role="test"/>
@@ -241,6 +243,10 @@
      <dir name="sync">
       <file name="001.phpt" role="test"/>
       <file name="002.phpt" role="test"/>
+      <file name="003.phpt" role="test"/>
+      <file name="004.phpt" role="test"/>
+      <file name="005.phpt" role="test"/>
+      <file name="006.phpt" role="test"/>
      </dir> <!-- sync -->
    </dir> <!-- tests -->
   </dir>
@@ -258,6 +264,22 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2022-10-24</date>
+   <version>
+    <release>1.2.0</release>
+    <api>1.2.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Add support for PHP 8.0, 8.1 and 8.2
+- Drop support for PHP 7
+   </notes>
+  </release>
   <release>
    <date>2020-09-17</date>
    <version>
