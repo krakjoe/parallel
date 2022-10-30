@@ -5,35 +5,27 @@ To ease reproduction of test cases, development, and CI, parallel has adopted do
 
 parallel requires a ZTS build of PHP which is built as a separate environment upon which the testing environment relies.
 
-Executing:
+PHP Services
+============
 
-    docker-compose build parallel-8.0
+php-[dbg|gcov|asan|release]-[version]
 
+PHP Versions
+============
 
-Will build a php-8.0 environment (if not available), then build a parallel-8.0 image, and so executing:
+  - 8.0 (no asan support)
+  - 8.1
+  - 8.2
 
-    docker-compose run parallel-8.0
+Parallel Services
+=================
 
-Will enter into a testing environment with PHP-8.0 and parallel installed.
-
-Build Arguments
-===============
-
-| Name              | Default           | Options          |
-|-------------------|-------------------|------------------|
-| PHP_SRC_TYPE      | dist              | dist, git        |
-| PHP_SRC_DEBUG     | enable            | enable, disable  |
-| PHP_SRC_OPCACHE   | disable           | enable, disable  |
-| PHP_SRC_ASAN      | disable           | enable, disable  |
-| PHP_VERSION_MAJOR | -                 | numeric          |
-| PHP_VERSION_MINOR | -                 | numeric          |
-| PHP_VERSION_MINOR | -                 | numeric          |
-| PHP_VERSION_RC    | -                 | alphanumeric     |
+parallel-[dbg|gcov|asan|release]-[version]
 
 Testing
 =======
 
-The various kinds of testing you may want to perform are all covered in workflow files.
+The various kinds of testing you may want to perform are all covered in docker-compose.yml.
 
 In summary, `docker/parallel.test` is a helper for `run-tests.php`, arguments passed to it are forwarded to `run-tests.php`.
 
