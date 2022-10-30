@@ -24,7 +24,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: coverage.info
-          base-path: /opt/parallel
+          base-path: /opt/parallel/src
+          parallel: vanilla-${{matrix.version}}
   opcache:
     strategy:
       matrix:
@@ -42,6 +43,14 @@ jobs:
         run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
         run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
+      - name: Send Coverage
+        if: ${{ matrix.build == 'gcov' }}
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: coverage.info
+          base-path: /opt/parallel/src
+          parallel: opcache-${{matrix.version}}
   jit:
     strategy:
       matrix:
@@ -59,3 +68,11 @@ jobs:
         run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
         run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+      - name: Send Coverage
+        if: ${{ matrix.build == 'gcov' }}
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: coverage.info
+          base-path: /opt/parallel/src
+          parallel: jit-${{matrix.version}}
