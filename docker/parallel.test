@@ -22,7 +22,10 @@ if [ $EXIT_STATUS -eq 0 ]; then
   readelf -Ws $(which php) | grep _gcov_merge_add >/dev/null
 
   if [ $? -eq 0 ]; then
-    lcov -c --directory /opt/build/parallel/src/.libs --output-file $PWD/coverage.info
+    lcov -c --directory /opt/build/parallel/src/.libs --exclude '/opt/include/*' --output-file $PWD/coverage.info
+    sed -i \
+      's/\/opt\/parallel\///g' \
+      $PWD/coverage.info
   fi
 else
   exit $EXIT_STATUS

@@ -26,7 +26,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
-          base-path: /opt/parallel/src
   opcache:
     strategy:
       matrix:
@@ -50,7 +49,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
-          base-path: /opt/parallel/src
   jit:
     strategy:
       matrix:
@@ -74,4 +72,3 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
-          base-path: /opt/parallel/src
