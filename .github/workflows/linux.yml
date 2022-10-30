@@ -8,6 +8,8 @@ jobs:
           build: ["gcov", "release"]
     if: success() || failure()
     runs-on: ubuntu-latest
+    env:
+      - NODE_COVERALLS_DEBUG=true
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}
     steps:
       - name: Checkout
