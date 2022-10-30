@@ -26,7 +26,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
-          parallel: vanilla-${{matrix.version}}
+          flag-name: vanilla-${{matrix.version}}
+          parallel: true
   opcache:
     strategy:
       matrix:
@@ -50,7 +51,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
-          parallel: opcache-${{matrix.version}}
+          flag-name: opcache-${{matrix.version}}
+          parallel: true
   jit:
     strategy:
       matrix:
@@ -74,7 +76,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
-          parallel: jit-${{matrix.version}}
+          flag-name: jit-${{matrix.version}}
+          parallel: true
   finish:
     if: always()
     runs-on: ubuntu-latest
