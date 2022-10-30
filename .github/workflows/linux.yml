@@ -18,6 +18,8 @@ jobs:
         run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
         run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test
+      - name: Cat Coverage
+        run: cat coverage.info
       - name: Send Coverage
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@master
