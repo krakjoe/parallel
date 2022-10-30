@@ -23,9 +23,8 @@ jobs:
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: coverage.info
+          path-to-lcov: ${{ github.workspace }}/coverage.info
           base-path: /opt/parallel/src
-          parallel: vanilla-${{matrix.version}}
   opcache:
     strategy:
       matrix:
@@ -48,9 +47,8 @@ jobs:
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: coverage.info
+          path-to-lcov: ${{ github.workspace }}/coverage.info
           base-path: /opt/parallel/src
-          parallel: opcache-${{matrix.version}}
   jit:
     strategy:
       matrix:
@@ -73,6 +71,5 @@ jobs:
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: coverage.info
+          path-to-lcov: ${{ github.workspace }}/coverage.info
           base-path: /opt/parallel/src
-          parallel: jit-${{matrix.version}}
