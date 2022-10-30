@@ -19,7 +19,7 @@ jobs:
       - name: Test parallel
         run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test
       - name: Send Coverage
-        if: matrix.build == "gcov"
+        if: ${{ matrix.build == "gcov" }}
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
