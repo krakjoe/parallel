@@ -26,6 +26,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
+          parallel: vanilla-${{matrix.version}}
   opcache:
     strategy:
       matrix:
@@ -43,12 +44,13 @@ jobs:
         run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
         run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
-      - name: Send Coverage
+      - name: Build Coveralls
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
+          parallel: opcache-${{matrix.version}}
   jit:
     strategy:
       matrix:
@@ -66,9 +68,20 @@ jobs:
         run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
         run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
-      - name: Send Coverage
+      - name: Build Coveralls
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
+          parallel: jit-${{matrix.version}}
+  finish:
+    if: always()
+    runs-on: ubuntu-latest
+    needs: [vanilla, opcache, jit]
+    steps:
+    - name: Finish Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        parallel-finished: true
