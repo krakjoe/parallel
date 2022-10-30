@@ -5,50 +5,56 @@ jobs:
     strategy:
       matrix:
           version: ["8.0", "8.1", "8.2"]
-          debug: ["enable", "disable"]
+          build: ["gcov", "release"]
     if: success() || failure()
     runs-on: ubuntu-latest
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup PHP
-        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=disable php-${{matrix.version}}
+        run: docker-compose build php-${{matrix.build}}-${{matrix.version}}
       - name: Setup parallel
-        run: docker-compose build --build-arg PHP_SRC_ASAN=disable parallel-${{matrix.version}}
+        run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
-        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test
+        run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test
+      - name: Send Coverage
+        if: matrix.build == "gcov"
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: coverage.info
   opcache:
     strategy:
       matrix:
           version: ["8.0", "8.1", "8.2"]
-          debug: ["enable", "disable"]
+          build: ["gcov", "release"]
     if: success() || failure()
     runs-on: ubuntu-latest
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, opcache
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, opcache
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup PHP
-        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
+        run: docker-compose build php-${{matrix.build}}-${{matrix.version}}
       - name: Setup parallel
-        run: docker-compose build --build-arg PHP_SRC_ASAN=disable parallel-${{matrix.version}}
+        run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
-        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
+        run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
   jit:
     strategy:
       matrix:
           version: ["8.0", "8.1", "8.2"]
-          debug: ["enable", "disable"]
+          build: ["gcov", "release"]
     if: success() || failure()
     runs-on: ubuntu-latest
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.debug}}-debug, JIT
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, JIT
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup PHP
-        run: docker-compose build --build-arg PHP_SRC_DEBUG=${{matrix.debug}} --build-arg PHP_SRC_OPCACHE=enable php-${{matrix.version}}
+        run: docker-compose build php-${{matrix.build}}-${{matrix.version}}
       - name: Setup parallel
-        run: docker-compose build --build-arg PHP_SRC_ASAN=disable parallel-${{matrix.version}}
+        run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
-        run: docker-compose run parallel-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+        run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
