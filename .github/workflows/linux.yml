@@ -1,5 +1,7 @@
 name: Linux
 on: [push, pull_request]
+env:
+  NODE_COVERALLS_DEBUG: true
 jobs:
   vanilla:
     strategy:
@@ -8,8 +10,6 @@ jobs:
           build: ["gcov", "release"]
     if: success() || failure()
     runs-on: ubuntu-latest
-    env:
-      - NODE_COVERALLS_DEBUG=true
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}
     steps:
       - name: Checkout
