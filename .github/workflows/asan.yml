@@ -11,12 +11,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup PHP
-        run: docker-compose build php-asan-${{matrix.version}}
-      - name: Setup parallel
-        run: docker-compose build parallel-asan-${{matrix.version}}
       - name: Test parallel
-        run: docker-compose run parallel-asan-${{matrix.version}} docker/parallel.test --asan
+        run: docker compose run parallel-asan-${{matrix.version}} docker/parallel.test --asan
   opcache:
     strategy:
       matrix:
@@ -27,12 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup PHP
-        run: docker-compose build php-asan-${{matrix.version}}
-      - name: Setup parallel
-        run: docker-compose build parallel-asan-${{matrix.version}}
       - name: Test parallel
-        run: docker-compose run parallel-asan-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable --asan
+        run: docker compose run parallel-asan-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable --asan
   jit:
     strategy:
       matrix:
@@ -43,9 +35,5 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup PHP
-        run: docker-compose build php-asan-${{matrix.version}}
-      - name: Setup parallel
-        run: docker-compose build parallel-asan-${{matrix.version}}
       - name: Test parallel
-        run: docker-compose run parallel-asan-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M --asan
+        run: docker compose run parallel-asan-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M --asan
