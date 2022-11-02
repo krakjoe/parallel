@@ -14,12 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup PHP
-        run: docker-compose build php-${{matrix.build}}-${{matrix.version}}
-      - name: Setup parallel
-        run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
-        run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test
+        run: docker compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test
       - name: Send Coverage
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@master
@@ -39,12 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup PHP
-        run: docker-compose build php-${{matrix.build}}-${{matrix.version}}
-      - name: Setup parallel
-        run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
-        run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
+        run: docker compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
       - name: Build Coveralls
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@master
@@ -64,12 +56,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup PHP
-        run: docker-compose build php-${{matrix.build}}-${{matrix.version}}
-      - name: Setup parallel
-        run: docker-compose build parallel-${{matrix.build}}-${{matrix.version}}
       - name: Test parallel
-        run: docker-compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+        run: docker compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
       - name: Build Coveralls
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@master
