@@ -16,6 +16,10 @@ $sync = new \parallel\Sync;
       $sync->wait();
     }
   });
+
+  $sync(function() use($sync){
+    var_dump($sync);
+  });
 });
 
 \parallel\run(function() use($sync) {
@@ -32,44 +36,19 @@ $f = \parallel\run(function() use($sync) {
     }
   });
 
-  var_dump($sync);
-});
-
-$f->value();
-
-$sync->set("parallel\\sync");
-$sync->set("parallel\\sync"); # not a mistake, testing dtor
-
-var_dump($sync->get());
-
-# test notify one
-$f = \parallel\run(function() use($sync) {
-  $sync(function() use($sync) {
-    while ($sync->get() == "parallel\\sync") {
-      $sync->wait();
-    }  
+  $sync(function() use($sync){
+    var_dump($sync);
   });
 });
 
-$sync(function() use($sync){
-  $sync->set(42);
-  $sync->notify();
-});
-
 $f->value();
-
-$sync->set("parallel\\sync"); # test release string
-
-try {
-  $sync->set([]);
-} catch (\parallel\Sync\Error\IllegalValue $ex) {
-  var_dump($ex->getMessage());
-}
 ?>
 --EXPECTF--
 object(parallel\Sync)#%d (%d) {
   ["value"]=>
   int(42)
 }
-string(%d) "parallel\sync"
-string(%d) "sync cannot contain non-scalar array"
+object(parallel\Sync)#%d (%d) {
+  ["value"]=>
+  int(42)
+}

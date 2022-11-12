@@ -34,35 +34,19 @@ static struct {
 #define PCG(e) php_parallel_cache_globals.e
 #define PCM(e) PCG(memory).e
 
-typedef union _php_parallel_cache_align_test {
-    void *v;
-    double d;
-    zend_long l;
-} php_parallel_cache_align_test;
-
-#if ZEND_GCC_VERSION >= 2000
-# define PARALLEL_PLATFORM_ALIGNMENT \
-    (__alignof__(php_parallel_cache_align_test) < 8 ? \
-        8 : __alignof__(php_parallel_cache_align_test))
-#else
-# define PARALLEL_PLATFORM_ALIGNMENT \
-    (sizeof(php_parallel_cache_align_test))
-#endif
-#define PARALLEL_CACHE_ALIGNED(size) \
-    ZEND_MM_ALIGNED_SIZE_EX(size, PARALLEL_PLATFORM_ALIGNMENT)
 #define PARALLEL_CACHE_CHUNK \
-    PARALLEL_CACHE_ALIGNED((1024 * 1024) * 8)
+    PARALLEL_PLATFORM_ALIGNED((1024 * 1024) * 8)
 
 /* {{{ */
 static zend_always_inline void* php_parallel_cache_alloc(size_t size) {
     void *mem;
     size_t aligned =
-        PARALLEL_CACHE_ALIGNED(size);
+        PARALLEL_PLATFORM_ALIGNED(size);
 
     ZEND_ASSERT(size < PARALLEL_CACHE_CHUNK);
 
     if ((PCM(used) + aligned) >= PCM(size)) {
-        PCM(size) = PARALLEL_CACHE_ALIGNED(
+        PCM(size) = PARALLEL_PLATFORM_ALIGNED(
             PCM(size) + PARALLEL_CACHE_CHUNK);
         PCM(mem) = (void*) realloc(PCM(mem), PCM(size));
 
@@ -154,7 +138,8 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, zen
 #else
     ZEND_MAP_PTR_INIT(cached->static_variables_ptr, &cached->static_variables);
 #endif
-    ZEND_MAP_PTR_SET(cached->run_time_cache, NULL);
+
+    ZEND_MAP_PTR_INIT(cached->run_time_cache, NULL);
 
 #if PHP_VERSION_ID >= 80100
     if (cached->num_dynamic_func_defs) {
@@ -182,10 +167,11 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, zen
     if (cached->last_literal) {
         zval     *literal = cached->literals,
                  *end     = literal + cached->last_literal;
-        zval     *slot    = cached->literals =
-                                php_parallel_cache_copy_mem(
+        zval     *slot    = php_parallel_cache_copy_mem(
                                     cached->literals,
                                         sizeof(zval) * cached->last_literal);
+
+        cached->literals = slot;
 
         while (literal < end) {
             if (Z_TYPE_P(literal) == IS_ARRAY) {
@@ -199,7 +185,7 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, zen
                     php_parallel_copy_string_interned(Z_STR_P(literal)));
             }
 
-	    Z_TYPE_FLAGS_P(slot) &= ~(IS_TYPE_REFCOUNTED|IS_TYPE_COLLECTABLE);
+	        Z_TYPE_FLAGS_P(slot) &= ~(IS_TYPE_REFCOUNTED|IS_TYPE_COLLECTABLE);
             literal++;
             slot++;
         }
@@ -400,8 +386,6 @@ zend_function* php_parallel_cache_closure(const zend_function *source, zend_func
             &closure->op_array.static_variables);
 #endif
     }
-
-    ZEND_MAP_PTR_NEW(closure->op_array.run_time_cache);
 
     return closure;
 } /* }}} */

@@ -3,11 +3,14 @@ dnl config.m4 for extension parallel
 PHP_ARG_ENABLE(parallel, whether to enable parallel support,
 [  --enable-parallel          Enable parallel support], no)
 
-PHP_ARG_ENABLE(parallel-coverage,      whether to enable parallel coverage support,
-[  --enable-parallel-coverage Enable parallel coverage support], no, no)
-
 PHP_ARG_ENABLE(parallel-dev, whether to enable parallel developer build flags,
 [  --enable-parallel-dev      Enable parallel developer flags], no, no)
+
+PHP_ARG_ENABLE(parallel-address-sanitizer, whether to enable address sanitizer flags for parallel,
+[  --enable-parallel-address-sanitizer Enable address sanitizer flags for parallel], no, no)
+
+PHP_ARG_ENABLE(parallel-gcov, whether to enable gcov for parallel,
+[  --enable-parallel-gcov              Enable gcov for parallel], no, no)
 
 if test "$PHP_PARALLEL" != "no"; then
 
@@ -46,18 +49,22 @@ if test "$PHP_PARALLEL" != "no"; then
     AX_CHECK_COMPILE_FLAG(-fstack-protector-strong, _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fstack-protector-strong")
   fi
 
+  if test "$PHP_PARALLEL_ADDRESS_SANITIZER" != "no"; then
+    AX_CHECK_COMPILE_FLAG(-fsanitize=address,       _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fsanitize=address")
+    AX_CHECK_COMPILE_FLAG(-fno-omit-frame-pointer,  _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fno-omit-frame-pointer")
+  fi
+
+  if test "$PHP_PARALLEL_GCOV" != "no"; then
+    AX_CHECK_COMPILE_FLAG(-fprofile-arcs,           EXTRA_CFLAGS="$EXTRA_CFLAGS -fprofile-arcs")
+    AX_CHECK_COMPILE_FLAG(-ftest-coverage,          EXTRA_CFLAGS="$EXTRA_CFLAGS -ftest-coverage")
+  fi
+
   PHP_NEW_EXTENSION(parallel, php_parallel.c src/exceptions.c src/monitor.c src/parallel.c src/runtime.c src/scheduler.c src/future.c src/copy.c src/check.c src/dependencies.c src/cache.c src/channel.c src/link.c src/handlers.c src/events.c src/poll.c src/loop.c src/event.c src/input.c src/sync.c, $ext_shared,, "-Wall -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 $_MAINTAINER_CFLAGS")
 
   PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
   PHP_ADD_INCLUDE($ext_srcdir)
 
-  AC_MSG_CHECKING([parallel coverage])
-  if test "$PHP_PARALLEL_COVERAGE" != "no"; then
-    AC_MSG_RESULT([enabled])
-
-    PHP_ADD_MAKEFILE_FRAGMENT
-  else
-    AC_MSG_RESULT([disabled])
+  if test "$PHP_PARALLEL_GCOV" != "no"; then
+    PHP_SUBST(EXTRA_CFLAGS)
   fi
-
 fi
