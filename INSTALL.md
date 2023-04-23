@@ -24,7 +24,7 @@ Installation
 
 **Binary distributions**
 
-  * **Microsoft Windows**: use zip archive from [https://windows.php.net/downloads/pecl/releases/parallel/](https://windows.php.net/downloads/pecl/releases/parallel/)
+  * **Microsoft Windows**: use zip archive from [https://windows.php.net/downloads/pecl/releases/parallel/](https://windows.php.net/downloads/pecl/releases/parallel/) (PHP <8)
 
 
 
