@@ -14,6 +14,7 @@ cmake --build . --config Release --target install
 copy /Y ..\PTHREADS-BUILT\lib\*.* ..\..\deps\lib\
 copy /Y ..\PTHREADS-BUILT\include\*.* ..\..\deps\include\
 copy /Y ..\PTHREADS-BUILT\bin\*.* ..\..\deps\bin\
+copy /Y ..\PTHREADS-BUILT\bin\*.* ..\..\php-%PHP_VER%\%ARCH%\Release_TS\php-%PHP_VER%
 cd ..\..
 
 del pthreads4w-code-v3.0.0.zip
