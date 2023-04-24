@@ -70,3 +70,5 @@ tests/**/*.log
 tests/**/*.out
 tests/**/*.php
 tests/**/*.sh
+php-src-php-*/
+php-sdk/
