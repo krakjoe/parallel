@@ -20,7 +20,11 @@
 
 #include "parallel.h"
 
+#if PHP_VERSION_ID >= 80400
+#include "ext/random/php_random.h"
+#else
 #include "ext/standard/php_mt_rand.h"
+#endif
 
 typedef struct _php_parallel_events_poll_t {
     struct timeval stop;
