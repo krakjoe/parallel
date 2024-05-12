@@ -30,10 +30,10 @@ x-aliases:
 
 services:
   # PHP-8.0
-  "php-dbg-8.0": { <<: *parallel,
+  "php-dbg-8.0": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    0,
         PHP_VERSION_PATCH:    24,
@@ -42,12 +42,12 @@ services:
     container_name:  php-dbg-8.0,
     image:           parallelphp/php-dbg-8.0:8.0.24,
     profiles:        [php-8.0,dbg],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "php-gcov-8.0": { <<: *parallel,
+  "php-gcov-8.0": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_SRC_GCOV:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    0,
@@ -57,12 +57,12 @@ services:
     container_name:  php-gcov-8.0,
     image:           parallelphp/php-gcov-8.0:8.0.24,
     profiles:        [php-8.0,gcov],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "php-release-8.0": { <<: *parallel,
+  "php-release-8.0": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_SRC_DEBUG:        disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    0,
@@ -72,11 +72,11 @@ services:
     container_name:  php-release-8.0,
     image:           parallelphp/php-release-8.0:8.0.24,
     profiles:        [php-8.0,release],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
 
   # parallel + PHP-8.0
-  "parallel-dbg-8.0": { <<: *parallel,
+  "parallel-dbg-8.0": {
     build: {        <<: *build,
       dockerfile:    docker/parallel.dockerfile,
       args: {       <<: *php,
@@ -89,9 +89,9 @@ services:
     container_name:  parallel-dbg-8.0,
     image:           parallelphp/parallel-dbg-8.0:latest,
     profiles:        [parallel-8.0,dbg],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "parallel-gcov-8.0": { <<: *parallel,
+  "parallel-gcov-8.0": {
     build: {        <<: *build,
       dockerfile:    docker/parallel.dockerfile,
       args: {       <<: *php,
@@ -105,9 +105,9 @@ services:
     container_name:  parallel-gcov-8.0,
     image:           parallelphp/parallel-gcov-8.0:latest,
     profiles:        [parallel-8.0,gcov],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "parallel-release-8.0": { <<: *parallel,
+  "parallel-release-8.0": {
     build: {        <<: *build,
       dockerfile:    docker/parallel.dockerfile,
       args: {       <<: *php,
@@ -121,14 +121,14 @@ services:
     container_name:  parallel-release-8.0,
     image:           parallelphp/parallel-release-8.0:latest,
     profiles:        [parallel-8.0,release],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
 
   # PHP-8.1
-  "php-dbg-8.1": { <<: *parallel,
+  "php-dbg-8.1": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
         PHP_VERSION_PATCH:    11,
@@ -137,12 +137,12 @@ services:
     container_name:  php-dbg-8.1,
     image:           parallelphp/php-dbg-8.1:8.1.11,
     profiles:        [php-8.1,dbg],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "php-gcov-8.1": { <<: *parallel,
+  "php-gcov-8.1": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_SRC_GCOV:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
@@ -152,12 +152,12 @@ services:
     container_name:  php-gcov-8.1,
     image:           parallelphp/php-gcov-8.1:8.1.11,
     profiles:        [php-8.1,gcov],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "php-asan-8.1": { <<: *parallel,
+  "php-asan-8.1": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_SRC_ASAN:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
@@ -167,12 +167,12 @@ services:
     container_name:  php-asan-8.1,
     image:           parallelphp/php-asan-8.1:8.1.11,
     profiles:        [php-8.1,asan],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "php-release-8.1": { <<: *parallel,
+  "php-release-8.1": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_SRC_DEBUG:        disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
@@ -182,10 +182,10 @@ services:
     container_name:  php-release-8.1,
     image:           parallelphp/php-release-8.1:8.1.11,
     profiles:        [php-8.1,release],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
   # parallel + PHP-8.1
-  "parallel-dbg-8.1": { <<: *parallel,
+  "parallel-dbg-8.1": {
     build: {        <<: *build,
       dockerfile:    docker/parallel.dockerfile,
       args: {       <<: *php,
@@ -198,9 +198,9 @@ services:
     container_name:  parallel-dbg-8.1,
     image:           parallelphp/parallel-dbg-8.1:latest,
     profiles:        [parallel-8.1,dbg],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "parallel-gcov-8.1": { <<: *parallel,
+  "parallel-gcov-8.1": {
     build: {        <<: *build,
       dockerfile:    docker/parallel.dockerfile,
       args: {       <<: *php,
@@ -214,9 +214,9 @@ services:
     container_name:  parallel-gcov-8.1,
     image:           parallelphp/parallel-gcov-8.1:latest,
     profiles:        [parallel-8.1,gcov],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "parallel-asan-8.1": { <<: *parallel,
+  "parallel-asan-8.1": {
     build: {        <<: *build,
       dockerfile:    docker/parallel.dockerfile,
       args: {       <<: *php,
@@ -229,9 +229,9 @@ services:
     container_name:  parallel-asan-8.1,
     image:           parallelphp/parallel-asan-8.1:latest,
     profiles:        [parallel-8.1,asan],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "parallel-release-8.1": { <<: *parallel,
+  "parallel-release-8.1": {
     build: {        <<: *build,
       dockerfile:    docker/parallel.dockerfile,
       args: {       <<: *php,
@@ -244,14 +244,14 @@ services:
     container_name:  parallel-release-8.1,
     image:           parallelphp/parallel-release-8.1:latest,
     profiles:        [parallel-8.1,release],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
 
   # PHP-8.2
-  "php-dbg-8.2": { <<: *parallel,
+  "php-dbg-8.2": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_SRC_TYPE:         git,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
@@ -262,12 +262,12 @@ services:
     container_name:  php-dbg-8.2,
     image:           parallelphp/php-dbg-8.2:8.2.0RC5,
     profiles:        [php-8.2,dbg],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "php-gcov-8.2": { <<: *parallel,
+  "php-gcov-8.2": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_SRC_TYPE:         git,
         PHP_SRC_GCOV:         enable,
         PHP_VERSION_MAJOR:    8,
@@ -279,12 +279,12 @@ services:
     container_name:  php-gcov-8.2,
     image:           parallelphp/php-gcov-8.2:8.2.0RC5,
     profiles:        [php-8.2,gcov],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "php-asan-8.2": { <<: *parallel,
+  "php-asan-8.2": {
     build: {        <<: *build,
       dockerfile:    docker/php.dockerfile,
-      args: {       <<: *ubuntu, <<: *php,
+      args: {       <<: [*ubuntu, *php],
         PHP_SRC_ASAN:         enable,
         PHP_SRC_TYPE:         git,
         PHP_VERSION_MAJOR:    8,
@@ -296,12 +296,12 @@ services:
     container_name:  php-asan-8.2,
     image:           parallelphp/php-asan-8.2:8.2.0RC5,
     profiles:        [php-8.2,asan],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "php-release-8.2": { <<: *parallel,
+  "php-release-8.2": {
     build: {           <<: *build,
       dockerfile: docker/php.dockerfile,
-      args: { <<: *ubuntu, <<: *php,
+      args: { <<: [*ubuntu, *php],
         PHP_SRC_DEBUG:        disable,
         PHP_SRC_TYPE:         git,
         PHP_VERSION_MAJOR:    8,
@@ -313,10 +313,10 @@ services:
     container_name:  php-release-8.2,
     image:           parallelphp/php-release-8.2:8.2.0RC5,
     profiles:        [php-8.2,release],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
   # parallel + PHP-8.2
-  "parallel-dbg-8.2": { <<: *parallel,
+  "parallel-dbg-8.2": {
     build: { <<: *build,
       dockerfile: docker/parallel.dockerfile,
       args: {        <<: *php,
@@ -330,9 +330,9 @@ services:
     container_name:  parallel-dbg-8.2,
     image:           parallelphp/parallel-dbg-8.2:latest,
     profiles:        [parallel-8.2,dbg],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "parallel-gcov-8.2": { <<: *parallel,
+  "parallel-gcov-8.2": {
     build: { <<: *build,
       dockerfile: docker/parallel.dockerfile,
       args: {        <<: *php,
@@ -347,9 +347,9 @@ services:
     container_name:  parallel-gcov-8.2,
     image:           parallelphp/parallel-gcov-8.2:latest,
     profiles:        [parallel-8.2,gcov],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "parallel-asan-8.2": { <<: *parallel,
+  "parallel-asan-8.2": {
     build: {        <<: *build,
       dockerfile:    docker/parallel.dockerfile,
       args: {       <<: *php,
@@ -364,9 +364,9 @@ services:
     container_name:  parallel-asan-8.2,
     image:           parallelphp/parallel-asan-8.2:latest,
     profiles:        [parallel-8.2,asan],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
-  "parallel-release-8.2": { <<: *parallel,
+  "parallel-release-8.2": {
     build: {        <<: *build,
       dockerfile:    docker/parallel.dockerfile,
       args: {       <<: *php,
@@ -381,5 +381,5 @@ services:
     container_name:  parallel-release-8.2,
     image:           parallelphp/parallel-release-8.2:latest,
     profiles:        [parallel-8.2,release],
-    <<: *dev
+    <<: [*dev, *parallel]
   }
