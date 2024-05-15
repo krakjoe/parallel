@@ -1,0 +1,118 @@
+name: Docker
+on: [workflow_dispatch, push]
+
+jobs:
+  docker:
+    name: PHP v${{ matrix.php.major }}.${{ matrix.php.minor }}, ${{ matrix.flags.name }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        ubuntu:
+          - major: '22'
+            minor: '04'
+        php:
+          - major: 8
+            minor: 0
+            patch: 24
+            rc: ''
+          - major: 8
+            minor: 1
+            patch: 11
+            rc: ''
+          - major: 8
+            minor: 2
+            patch: 0
+            rc: 'RC5'
+          - major: 8
+            minor: 3
+            patch: 7
+            rc: ''
+        src:
+          - dist
+        flags:
+          - name: asan
+            debug: disable
+            asan: enable
+            gcov: disable
+          - name: dbg
+            debug: enable
+            asan: disable
+            gcov: disable
+          - name: gcov
+            debug: disable
+            asan: disable
+            gcov: enable
+          - name: release
+            debug: disable
+            asan: disable
+            gcov: disable
+        exclude:
+          - php: {major: 8, minor: 0}
+            flags: {name: asan}
+
+    steps:
+      - name: Prepare build variables
+        id: build-vars
+        run: echo "tag=ghcr.io/${{ github.repository_owner }}/php-${{ matrix.flags.name }}-${{ matrix.php.major }}.${{ matrix.php.minor }}:latest" >> $GITHUB_OUTPUT
+
+      - name: Repository checkout
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # https://docs.docker.com/build/ci/github-actions/cache/
+      - name: Build and export Docker Image
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
+        with:
+          load: true
+          build-args: |
+            "UBUNTU_VERSION_MAJOR=${{ matrix.ubuntu.major }}"
+            "UBUNTU_VERSION_MINOR=${{ matrix.ubuntu.minor }}"
+            "PHP_SRC_TYPE=${{ matrix.src }}"
+            "PHP_SRC_DEBUG=${{ matrix.flags.debug }}"
+            "PHP_SRC_ASAN=${{ matrix.flags.asan }}"
+            "PHP_SRC_GCOV=${{ matrix.flags.gcov }}"
+            "PHP_VERSION_MAJOR=${{ matrix.php.major }}"
+            "PHP_VERSION_MINOR=${{ matrix.php.minor }}"
+            "PHP_VERSION_PATCH=${{ matrix.php.patch }}"
+            "PHP_VERSION_RC=${{ matrix.php.rc }}"
+          tags: ${{ steps.build-vars.outputs.tag }}
+          file: ./docker/php.dockerfile
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # https://docs.docker.com/build/ci/github-actions/test-before-push/
+      - name: Test Docker Image
+        run: docker run --rm ${{ steps.build-vars.outputs.tag }} php --version
+
+      - name: Build and push Docker Image
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
+        with:
+          push: true
+          build-args: |
+            "UBUNTU_VERSION_MAJOR=${{ matrix.ubuntu.major }}"
+            "UBUNTU_VERSION_MINOR=${{ matrix.ubuntu.minor }}"
+            "PHP_SRC_TYPE=${{ matrix.src }}"
+            "PHP_SRC_DEBUG=${{ matrix.flags.debug }}"
+            "PHP_SRC_ASAN=${{ matrix.flags.asan }}"
+            "PHP_SRC_GCOV=${{ matrix.flags.gcov }}"
+            "PHP_VERSION_MAJOR=${{ matrix.php.major }}"
+            "PHP_VERSION_MINOR=${{ matrix.php.minor }}"
+            "PHP_VERSION_PATCH=${{ matrix.php.patch }}"
+            "PHP_VERSION_RC=${{ matrix.php.rc }}"
+          tags: |
+            ${{ steps.build-vars.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/php-${{ matrix.flags.name }}-${{ matrix.php.major }}.${{ matrix.php.minor }}:${{ matrix.php.major }}.${{ matrix.php.minor }}.${{ matrix.php.patch }}${{ matrix.php.rc }}
+          file: ./docker/php.dockerfile
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
