@@ -24,7 +24,7 @@ jobs:
           - major: 8
             minor: 2
             patch: 0
-            rc: 'RC5'
+            rc: ''
           - major: 8
             minor: 3
             patch: 7
