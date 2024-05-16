@@ -1,12 +1,23 @@
 name: ASAN
 on: [push, pull_request]
 jobs:
+  auth:
+    runs-on: ubuntu-latest
+    name: Login to GitHub Container Registry
+    steps:
+      - uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
   vanilla:
     strategy:
       matrix:
           version: ["8.1", "8.2"]
     if: success() || failure()
     runs-on: ubuntu-latest
+    needs: auth
     name: ASAN, PHP v${{matrix.version}}
     steps:
       - name: Checkout
@@ -19,6 +30,7 @@ jobs:
           version: ["8.1", "8.2"]
     if: success() || failure()
     runs-on: ubuntu-latest
+    needs: auth
     name: ASAN, PHP v${{matrix.version}}, opcache
     steps:
       - name: Checkout
@@ -31,6 +43,7 @@ jobs:
           version: ["8.1", "8.2"]
     if: success() || failure()
     runs-on: ubuntu-latest
+    needs: auth
     name: ASAN, PHP v${{matrix.version}}, JIT
     steps:
       - name: Checkout
