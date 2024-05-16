@@ -1,5 +1,5 @@
 name: Docker
-on: [workflow_dispatch, push]
+on: [workflow_dispatch, pull_request]
 
 jobs:
   docker:
