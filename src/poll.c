@@ -20,7 +20,7 @@
 
 #include "parallel.h"
 
-#if PHP_VERSION_ID >= 80400
+#if PHP_VERSION_ID >= 80200
 #include "ext/random/php_random.h"
 #else
 #include "ext/standard/php_mt_rand.h"
