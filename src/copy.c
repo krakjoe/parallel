@@ -565,10 +565,6 @@ static zend_always_inline void php_parallel_copy_closure_dtor(zend_object *sourc
         return;
     }
 
-    if (GC_DELREF(source)) {
-        return;
-    }
-
     closure = (zend_closure_t*) source;
 
     if (closure->func.op_array.static_variables) {
