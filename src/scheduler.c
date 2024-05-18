@@ -136,6 +136,11 @@ static zend_always_inline void php_parallel_scheduler_add(
         zval *slot = ZEND_CALL_ARG(frame, 1);
         zval *param;
         uint32_t argc = 0;
+        php_parallel_copy_context_t *context, *restore;
+
+        context = php_parallel_copy_context_start(
+            PHP_PARALLEL_COPY_DIRECTION_PERSISTENT,
+            &restore);
 
         ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(argv), param) {
             PARALLEL_ZVAL_COPY(slot, param, 1);
@@ -144,6 +149,8 @@ static zend_always_inline void php_parallel_scheduler_add(
         } ZEND_HASH_FOREACH_END();
 
         ZEND_CALL_NUM_ARGS(frame) = argc;
+
+        php_parallel_copy_context_end(context, restore);
     } else {
         ZEND_CALL_NUM_ARGS(frame) = 0;
     }
@@ -286,11 +293,19 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
              *end  = slot + ZEND_CALL_NUM_ARGS(head->frame);
         zval *param = ZEND_CALL_ARG(el->frame, 1);
 
+        php_parallel_copy_context_t *context, *restore;
+
+        context = php_parallel_copy_context_start(
+            PHP_PARALLEL_COPY_DIRECTION_THREAD,
+            &restore);
+
         while (slot < end) {
             PARALLEL_ZVAL_COPY(param, slot, 0);
             slot++;
             param++;
         }
+
+        php_parallel_copy_context_end(context, restore);
     }
 
     zend_init_func_execute_data(

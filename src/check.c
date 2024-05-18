@@ -692,9 +692,16 @@ static zend_always_inline zend_bool php_parallel_check_object(zend_object *objec
              *end      = property + object->ce->default_properties_count;
 
         while (property < end) {
+            if ((Z_TYPE_P(property) == IS_OBJECT) &&
+                (Z_OBJ_P(property) == object)) {
+                property++;
+                continue;
+            }
+
             if (!php_parallel_check_zval(property, error)) {
                 return 0;
             }
+
             property++;
         }
     }
@@ -703,6 +710,11 @@ static zend_always_inline zend_bool php_parallel_check_object(zend_object *objec
         zval *property;
 
         ZEND_HASH_FOREACH_VAL(object->properties, property) {
+            if ((Z_TYPE_P(property) == IS_OBJECT) &&
+                (Z_OBJ_P(property) == object)) {
+                continue;
+            }
+
             if (!php_parallel_check_zval(property, error)) {
                 return 0;
             }
@@ -747,6 +759,11 @@ zend_bool php_parallel_check_zval(zval *zv, zval **error) { /* {{{ */
             zval *el;
 
             ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(zv), el) {
+                if ((Z_TYPE_P(el) == IS_ARRAY) &&
+                    (Z_ARRVAL_P(el) == Z_ARRVAL_P(zv))) {
+                    continue;
+                }
+
                 if (!php_parallel_check_zval(el, error)) {
                     if (error) {
                         *error = el;
