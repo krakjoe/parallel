@@ -120,7 +120,24 @@ zend_class_entry* php_parallel_copy_scope(zend_class_entry *class) {
         return scope;
     }
 
+#ifdef ZSTR_HAS_CE_CACHE
+    void *caching = NULL;
+
+    if (ZSTR_HAS_CE_CACHE(class->name) &&
+        ZSTR_VALID_CE_CACHE(class->name)) {
+        caching =
+            ZSTR_GET_CE_CACHE(class->name);
+        ZSTR_SET_CE_CACHE(class->name, NULL);
+    }
+#endif
+
     scope = zend_lookup_class(class->name);
+
+#ifdef ZSTR_HAS_CE_CACHE
+    if (caching) {
+        ZSTR_SET_CE_CACHE(class->name, caching);
+    }
+#endif
 
     if (!scope) {
         return php_parallel_copy_type_unavailable_ce;
@@ -545,6 +562,10 @@ static zend_always_inline void php_parallel_copy_closure_dtor(zend_object *sourc
 
     if (!persistent) {
         OBJ_RELEASE(source);
+        return;
+    }
+
+    if (GC_DELREF(source)) {
         return;
     }
 
