@@ -23,6 +23,7 @@ typedef struct _php_parallel_events_t {
     HashTable   targets;
     zend_long   timeout;
     zend_bool   blocking;
+    zval        blocker;
     zend_object std;
 } php_parallel_events_t;
 

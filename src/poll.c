@@ -28,6 +28,11 @@
 
 typedef struct _php_parallel_events_poll_t {
     struct timeval stop;
+    struct {
+        zend_fcall_info       fci;
+        zend_fcall_info_cache fcc;
+        zval                  ival;
+    } block;
 } php_parallel_events_poll_t;
 
 static zend_always_inline zend_bool php_parallel_events_poll_init(php_parallel_events_poll_t *poll, php_parallel_events_t *events) {
@@ -42,6 +47,14 @@ static zend_always_inline zend_bool php_parallel_events_poll_init(php_parallel_e
             poll->stop.tv_usec = (poll->stop.tv_usec + (events->timeout % 1000000L)) % 1000000L;
         }
         /* return 0 ? */
+    }
+
+    if (!Z_ISUNDEF(events->blocker)) {
+        zend_fcall_info_init(&events->blocker, 0, 
+            &poll->block.fci, &poll->block.fcc, NULL, NULL);
+        poll->block.fci.retval = &poll->block.ival;
+    } else {
+        memset(&poll->block, 0, sizeof(poll->block));
     }
 
     return 1;
@@ -287,12 +300,27 @@ _php_parallel_events_poll_null:
                 goto _php_parallel_events_poll_null;
             }
 
-            if (php_parallel_events_poll_timeout(&poll, events)) {
-                return;
+            if (poll.block.fci.size) {
+                zend_call_function(
+                    &poll.block.fci, &poll.block.fcc);
+
+                if (zend_is_true(&poll.block.ival)) {
+                    zval_ptr_dtor(
+                        &poll.block.ival);
+
+                    goto _php_parallel_events_poll_null;
+                }
+
+                zval_ptr_dtor(
+                    &poll.block.ival);
+            } else {
+                if ((try++ % 10) == 0) {
+                    usleep(1);
+                }
             }
 
-            if ((try++ % 10) == 0) {
-                usleep(1);
+            if (php_parallel_events_poll_timeout(&poll, events)) {
+                return;
             }
 
             continue;
