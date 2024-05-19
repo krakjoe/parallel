@@ -40,6 +40,11 @@ zend_class_entry* php_parallel_copy_object_unavailable_ce;
 #define PCG(e) php_parallel_copy_globals.e
 #define PCS(e) php_parallel_copy_strings.e
 
+static void php_parallel_copy_zval_persistent(
+                zval *dest, zval *source,
+                zend_string* (*php_parallel_copy_string_func)(zend_string*),
+                void* (*php_parallel_copy_memory_func)(void *source, zend_long size));
+
 static const uint32_t php_parallel_copy_uninitialized_bucket[-HT_MIN_MASK] = {HT_INVALID_IDX, HT_INVALID_IDX};
 
 static void php_parallel_copy_string_free(zval *zv) {
@@ -160,33 +165,6 @@ static zend_always_inline zend_long php_parallel_copy_resource_ctor(zend_resourc
     return -1;
 }
 
-static void php_parallel_copy_zval_persistent(
-                zval *dest, zval *source,
-                zend_string* (*php_parallel_copy_string_func)(zend_string*),
-                void* (*php_parallel_copy_memory_func)(void *source, zend_long size)) {
-    if (Z_TYPE_P(source) == IS_ARRAY) {
-        ZVAL_ARR(dest,
-            php_parallel_copy_hash_persistent(
-                Z_ARRVAL_P(source),
-                php_parallel_copy_string_func,
-                php_parallel_copy_memory_func));
-    } else if (Z_TYPE_P(source) == IS_REFERENCE) {
-        ZVAL_REF(dest,
-            php_parallel_copy_memory_func(
-                Z_REF_P(source), sizeof(zend_reference)));
-        php_parallel_copy_zval_persistent(
-            Z_REFVAL_P(dest), Z_REFVAL_P(source),
-            php_parallel_copy_string_func,
-            php_parallel_copy_memory_func);
-        GC_SET_REFCOUNT(Z_REF_P(dest), 1);
-        GC_ADD_FLAGS(Z_REF_P(dest), GC_IMMUTABLE);
-    } else if (Z_TYPE_P(source) == IS_STRING) {
-        ZVAL_STR(dest, php_parallel_copy_string_func(Z_STR_P(source)));
-    } else {
-        PARALLEL_ZVAL_COPY(dest, source, 1);
-    }
-}
-
 static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
                 HashTable *source,
                 zend_string* (*php_parallel_copy_string_func)(zend_string*),
@@ -210,7 +188,7 @@ static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
             context, source, ht);
     }
 
-    GC_SET_REFCOUNT(ht, 2);
+    GC_SET_REFCOUNT(ht, 1);
     GC_SET_PERSISTENT_TYPE(ht, GC_ARRAY);
     GC_ADD_FLAGS(ht, IS_ARRAY_IMMUTABLE);
 
@@ -396,7 +374,7 @@ HashTable *php_parallel_copy_hash_persistent(HashTable *source,
 }
 
 void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
-    if (GC_DELREF(table) == (persistent ? 1 : 0)) {
+    if (GC_DELREF(table) == 0) {
         if (!persistent) {
             GC_REMOVE_FROM_BUFFER(table);
             GC_TYPE_INFO(table) =
@@ -982,6 +960,27 @@ void php_parallel_copy_zval_dtor(zval *zv) {
     }
 }
 
+static void php_parallel_copy_zval_persistent(
+                zval *dest, zval *source,
+                zend_string* (*php_parallel_copy_string_func)(zend_string*),
+                void* (*php_parallel_copy_memory_func)(void *source, zend_long size)) {
+    if (Z_TYPE_P(source) == IS_ARRAY) {
+        ZVAL_ARR(dest,
+            php_parallel_copy_hash_persistent(
+                Z_ARRVAL_P(source),
+                php_parallel_copy_string_func,
+                php_parallel_copy_memory_func));
+    } else if (Z_TYPE_P(source) == IS_REFERENCE) {
+        ZVAL_REF(dest,
+            php_parallel_copy_reference_persistent(
+                Z_REF_P(source)));
+    } else if (Z_TYPE_P(source) == IS_STRING) {
+        ZVAL_STR(dest, php_parallel_copy_string_func(Z_STR_P(source)));
+    } else {
+        PARALLEL_ZVAL_COPY(dest, source, 1);
+    }
+}
+
 zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent) {
     if (persistent) {
         function =      	
@@ -1012,7 +1011,8 @@ php_parallel_copy_context_t* php_parallel_copy_context_start(
         (php_parallel_copy_context_t*)
             pemalloc(sizeof(php_parallel_copy_context_t), 1);
     zend_hash_init(
-        &PCG(context)->copied, 32, NULL, NULL, 1);
+        &PCG(context)->copied, 32, NULL,
+        NULL, 1);
     PCG(context)->refcount = 1;
     PCG(context)->direction = direction;
 
