@@ -890,25 +890,23 @@ static zend_always_inline void php_parallel_copy_object_dtor(zend_object *source
         return;
     }
 
-    if (GC_DELREF(source)) {
-        return;
-    }
+    if (GC_DELREF(source) == 0) {
+        if (source->ce->default_properties_count) {
+            zval *property = source->properties_table,
+                 *end      = property + source->ce->default_properties_count;
 
-    if (source->ce->default_properties_count) {
-        zval *property = source->properties_table,
-             *end      = property + source->ce->default_properties_count;
-
-        while (property < end) {
-            PARALLEL_ZVAL_DTOR(property);
-            property++;
+            while (property < end) {
+                PARALLEL_ZVAL_DTOR(property);
+                property++;
+            }
         }
-    }
 
-    if (source->properties) {
-        php_parallel_copy_hash_dtor(source->properties, 1);
-    }
+        if (source->properties) {
+            php_parallel_copy_hash_dtor(source->properties, 1);
+        }
 
-    pefree(source, 1);
+        pefree(source, 1);
+    }
 }
 
 void php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent) {
