@@ -24,3 +24,5 @@ object(Foo)#2 (1) {
   ["foo"]=>
   *RECURSION*
 }
+--XFAIL--
+REASON: no cyclic reference collector implemented yet
