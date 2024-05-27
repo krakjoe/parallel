@@ -16,6 +16,12 @@
   <email>remi@php.net</email>
   <active>yes</active>
  </lead>
+ <lead>
+  <name>Florian Engelhardt</name>
+  <user>flowcontrol</user>
+  <email>flo@dotbox.org</email>
+  <active>yes</active>
+ </lead>
  <date>2022-10-29</date>
  <version>
   <release>1.2.1</release>
