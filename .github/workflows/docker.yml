@@ -19,11 +19,11 @@ jobs:
             rc: ''
           - major: 8
             minor: 1
-            patch: 11
+            patch: 28
             rc: ''
           - major: 8
             minor: 2
-            patch: 0
+            patch: 19
             rc: ''
           - major: 8
             minor: 3
