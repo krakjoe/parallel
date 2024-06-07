@@ -15,7 +15,7 @@ jobs:
         php:
           - major: 8
             minor: 0
-            patch: 24
+            patch: 30 
             rc: ''
           - major: 8
             minor: 1

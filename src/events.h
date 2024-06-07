@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019-2022                                  |
+  | Copyright (c) Joe Watkins 2019-2024                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -23,6 +23,7 @@ typedef struct _php_parallel_events_t {
     HashTable   targets;
     zend_long   timeout;
     zend_bool   blocking;
+    zval        blocker;
     zend_object std;
 } php_parallel_events_t;
 

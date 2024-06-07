@@ -17,6 +17,7 @@
 parallel-*.tgz
 
 # autotools
+*.dep
 .deps
 .libs
 config.cache
