@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2022-10-29</date>
+ <date>2024-06-16</date>
  <version>
-  <release>1.2.1</release>
+  <release>1.2.2</release>
   <api>1.2.0</api>
  </version>
  <stability>
@@ -33,10 +33,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix segfault when constructing sync objects
-- Fix heap buffer overflows when copying functions
-- Drop disabling functions (dl, setlocale) by force and adopt PG(enable_dl) mechanism for that most important use case
-- Fix some leaks in scheduler
+- CI: move docker images from Docker Hub to GHCR
+- fix compilation issues with PHP 8.2 and 8.3 on 32 bit hardware
+- fix compilation issues with PHP 8.4 (current master)
+- fix Sync object debug handlers in PHP 8.3
  </notes>
  <contents>
   <dir name="/">
@@ -270,6 +270,24 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2022-10-29</date>
+   <version>
+    <release>1.2.1</release>
+    <api>1.2.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix segfault when constructing sync objects
+- Fix heap buffer overflows when copying functions
+- Drop disabling functions (dl, setlocale) by force and adopt PG(enable_dl) mechanism for that most important use case
+- Fix some leaks in scheduler
+   </notes>
+  </release>
   <release>
    <date>2022-10-24</date>
    <version>
