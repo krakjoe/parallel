@@ -650,6 +650,9 @@ static zend_always_inline zend_object* php_parallel_copy_sync_thread(zend_object
     GC_DEL_FLAGS(&dest->std, GC_IMMUTABLE);
 
     zend_object_std_init(&dest->std, dest->std.ce);
+#if PHP_VERSION_ID >= 80300
+    dest->std.handlers = source->handlers;
+#endif
 
     dest->sync = php_parallel_sync_copy(object->sync);
 

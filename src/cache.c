@@ -244,7 +244,9 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, zen
                 case ZEND_FAST_CALL:
                     opline->op1.jmp_addr = &opcodes[opline->op1.jmp_addr - source->op_array.opcodes];
                 break;
+#if PHP_VERSION_ID < 80200
                 case ZEND_JMPZNZ:
+#endif
                 case ZEND_JMPZ:
                 case ZEND_JMPNZ:
                 case ZEND_JMPZ_EX:

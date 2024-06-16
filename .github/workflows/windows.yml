@@ -7,7 +7,7 @@ jobs:
         shell: cmd
     strategy:
       matrix:
-          version: ["8.0", "8.1"]
+          version: ["8.0", "8.1", "8.2", "8.3"]
           arch: [x64]
           ts: [ts]
     if: success() || failure()
@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Setup PHP
         id: setup-php
-        uses: cmb69/setup-php-sdk@v0.6
+        uses: cmb69/setup-php-sdk@v0.7
         with:
           version: ${{matrix.version}}
           arch: ${{matrix.arch}}
