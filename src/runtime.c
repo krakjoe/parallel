@@ -128,6 +128,7 @@ zend_object* php_parallel_runtime_create(zend_class_entry *type) {
     php_parallel_scheduler_init(runtime);
 
     runtime->parent.server = SG(server_context);
+    runtime->parent.request_info = &SG(request_info);
 
     return &runtime->std;
 }
