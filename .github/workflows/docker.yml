@@ -27,7 +27,7 @@ jobs:
             rc: ''
           - major: 8
             minor: 3
-            patch: 7
+            patch: 9
             rc: ''
         src:
           - dist
