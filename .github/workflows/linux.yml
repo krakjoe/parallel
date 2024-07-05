@@ -3,13 +3,24 @@ on: [push, pull_request]
 env:
   NODE_COVERALLS_DEBUG: true
 jobs:
+  auth:
+    runs-on: ubuntu-latest
+    name: Login to GitHub Container Registry
+    steps:
+      - uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
   vanilla:
     strategy:
       matrix:
-          version: ["8.0", "8.1", "8.2"]
+          version: ["8.0", "8.1", "8.2", "8.3"]
           build: ["gcov", "release"]
     if: success() || failure()
     runs-on: ubuntu-latest
+    needs: auth
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}
     steps:
       - name: Checkout
@@ -27,10 +38,11 @@ jobs:
   opcache:
     strategy:
       matrix:
-          version: ["8.0", "8.1", "8.2"]
+          version: ["8.0", "8.1", "8.2", "8.3"]
           build: ["gcov", "release"]
     if: success() || failure()
     runs-on: ubuntu-latest
+    needs: auth
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, opcache
     steps:
       - name: Checkout
@@ -48,10 +60,11 @@ jobs:
   jit:
     strategy:
       matrix:
-          version: ["8.0", "8.1", "8.2"]
+          version: ["8.0", "8.1", "8.2", "8.3"]
           build: ["gcov", "release"]
     if: success() || failure()
     runs-on: ubuntu-latest
+    needs: auth
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, JIT
     steps:
       - name: Checkout
