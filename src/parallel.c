@@ -235,7 +235,7 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE)
     // In case of a `zend_bailout()` this mutex could still be locked, so we
     // unlock it just in case.
     // See https://github.com/krakjoe/parallel/issues/313 for more details
-    if (CG(unclean_shutdown) == 1) {
+    if (UNEXPECTED(CG(unclean_shutdown) == 1)) {
         pthread_mutex_unlock(&php_parallel_output_mutex);
     }
 
