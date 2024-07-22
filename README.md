@@ -8,6 +8,8 @@ parallel
 
 A succinct parallel concurrency API for PHP 8
 
+[![GoFundMe](https://img.shields.io/badge/GoFundMe-00B964.svg?style=for-the-badge&logo=GoFundMe&logoColor=white)](https://gofund.me/c34f3dde)
+
 Documentation
 =============
 
