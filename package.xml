@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2024-06-19</date>
+ <date>2024-07-22</date>
  <version>
-  <release>1.2.2</release>
+  <release>1.2.3</release>
   <api>1.2.0</api>
  </version>
  <stability>
@@ -33,10 +33,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- CI: move docker images from Docker Hub to GHCR
-- fix compilation issues with PHP 8.2 and 8.3 on 32 bit hardware
-- fix compilation issues with PHP 8.4 (current master)
-- fix Sync object debug handlers in PHP 8.3
+- CI: fix Windows tests #304
+- CI: updated to PHP 8.3.9 #305
+- FrankenPHP support: unlock mutex in case of `zend_bailout` #314
+- Make `request_info` from SAPI globals accessible in threads #307 
  </notes>
  <contents>
   <dir name="/">
@@ -270,6 +270,24 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+  <release>
+   <date>2022-06-19</date>
+   <version>
+    <release>1.2.2</release>
+    <api>1.2.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- CI: move docker images from Docker Hub to GHCR
+- fix compilation issues with PHP 8.2 and 8.3 on 32 bit hardware
+- fix compilation issues with PHP 8.4 (current master)
+- fix Sync object debug handlers in PHP 8.3
+   </notes>
+  </release>
   <release>
    <date>2022-10-29</date>
    <version>
