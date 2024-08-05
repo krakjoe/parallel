@@ -25,8 +25,8 @@ jobs:
           ts: ${{matrix.ts}}
       - name: Fetch dependencies
         run: |
-          curl -LO https://windows.php.net/downloads/pecl/deps/pthreads-2.11.0-vs16-${{matrix.arch}}.zip
-          7z x pthreads-2.11.0-vs16-${{matrix.arch}}.zip -o..\deps
+          curl -LO https://downloads.php.net/~windows/pecl/deps/pthreads-3.0.0-vs16-${{matrix.arch}}.zip
+          7z x pthreads-3.0.0-vs16-${{matrix.arch}}.zip -o..\deps
       - name: Enable Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
         with:
