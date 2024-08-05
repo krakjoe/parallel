@@ -11,7 +11,7 @@ jobs:
           arch: [x64]
           ts: [ts]
     if: success() || failure()
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: Windows, PHP v${{matrix.version}}
     steps:
       - name: Checkout
