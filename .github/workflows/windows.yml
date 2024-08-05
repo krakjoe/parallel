@@ -7,7 +7,7 @@ jobs:
         shell: cmd
     strategy:
       matrix:
-          version: ["8.0", "8.1", "8.2", "8.3"]
+          version: ["8.0", "8.1", "8.2", "8.3", "8.4"]
           arch: [x64]
           ts: [ts]
     if: success() || failure()
@@ -15,10 +15,10 @@ jobs:
     name: Windows, PHP v${{matrix.version}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup PHP
         id: setup-php
-        uses: php/setup-php-sdk@v0.8
+        uses: php/setup-php-sdk@v0.9
         with:
           version: ${{matrix.version}}
           arch: ${{matrix.arch}}
@@ -55,7 +55,7 @@ jobs:
           copy ..\deps\COPYING .install\COPYING.PTHREADS
           copy ..\deps\bin\* .install
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: parallel-${{matrix.version}}
           path: .install
