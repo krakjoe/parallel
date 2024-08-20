@@ -7,26 +7,26 @@ jobs:
         shell: cmd
     strategy:
       matrix:
-          version: ["8.0", "8.1", "8.2", "8.3"]
+          version: ["8.0", "8.1", "8.2", "8.3", "8.4"]
           arch: [x64]
           ts: [ts]
     if: success() || failure()
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: Windows, PHP v${{matrix.version}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup PHP
         id: setup-php
-        uses: php/setup-php-sdk@v0.8
+        uses: php/setup-php-sdk@v0.9
         with:
           version: ${{matrix.version}}
           arch: ${{matrix.arch}}
           ts: ${{matrix.ts}}
       - name: Fetch dependencies
         run: |
-          curl -LO https://windows.php.net/downloads/pecl/deps/pthreads-2.11.0-vs16-${{matrix.arch}}.zip
-          7z x pthreads-2.11.0-vs16-${{matrix.arch}}.zip -o..\deps
+          curl -LO https://downloads.php.net/~windows/pecl/deps/pthreads-3.0.0-vs16-${{matrix.arch}}.zip
+          7z x pthreads-3.0.0-vs16-${{matrix.arch}}.zip -o..\deps
       - name: Enable Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -55,7 +55,7 @@ jobs:
           copy ..\deps\COPYING .install\COPYING.PTHREADS
           copy ..\deps\bin\* .install
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: parallel-${{matrix.version}}
           path: .install
