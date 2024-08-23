@@ -3,7 +3,7 @@
  <name>parallel</name>
  <channel>pecl.php.net</channel>
  <summary>Parallel concurrency API</summary>
- <description>A succinct parallel concurrency API for PHP 7.</description>
+ <description>A succinct parallel concurrency API for PHP 7 and 8.</description>
  <lead>
   <name>Joe Watkins</name>
   <user>krakjoe</user>
