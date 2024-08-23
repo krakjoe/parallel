@@ -64,7 +64,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_input_add_arginfo, 0
     ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Input, add)
+PHP_METHOD(Parallel_Input, add)
 {
     php_parallel_events_input_t *input =
         php_parallel_events_input_from(getThis());
@@ -103,7 +103,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_input_remove_arginfo
     ZEND_ARG_TYPE_INFO(0, target, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Input, remove)
+PHP_METHOD(Parallel_Input, remove)
 {
     php_parallel_events_input_t *input =
         php_parallel_events_input_from(getThis());
@@ -124,7 +124,7 @@ PHP_METHOD(Input, remove)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_events_input_clear_arginfo, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Input, clear)
+PHP_METHOD(Parallel_Input, clear)
 {
     php_parallel_events_input_t *input =
         php_parallel_events_input_from(getThis());
@@ -135,9 +135,9 @@ PHP_METHOD(Input, clear)
 }
 
 zend_function_entry php_parallel_events_input_methods[] = {
-    PHP_ME(Input, add, php_parallel_events_input_add_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Input, remove, php_parallel_events_input_remove_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Input, clear, php_parallel_events_input_clear_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Input, add, php_parallel_events_input_add_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Input, remove, php_parallel_events_input_remove_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Input, clear, php_parallel_events_input_clear_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

@@ -63,7 +63,7 @@ void php_parallel_events_event_construct(
     zend_hash_del(&events->targets, source);
 }
 
-PHP_METHOD(Event, __construct)
+PHP_METHOD(Parallel_Event, __construct)
 {
     php_parallel_exception_ex(
         php_parallel_events_event_error_ce,
@@ -71,7 +71,7 @@ PHP_METHOD(Event, __construct)
 }
 
 zend_function_entry php_parallel_events_event_methods[] = {
-    PHP_ME(Event, __construct, php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Event, __construct, php_parallel_no_args_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

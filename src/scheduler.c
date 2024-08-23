@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_SCHEDULER
 
 #include "parallel.h"
+#include "zend_types.h"
 
 TSRM_TLS php_parallel_runtime_t* php_parallel_scheduler_context = NULL;
 TSRM_TLS php_parallel_future_t* php_parallel_scheduler_future = NULL;
