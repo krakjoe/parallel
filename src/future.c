@@ -77,7 +77,7 @@ zend_bool php_parallel_future_unlock(php_parallel_future_t *future) {
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_value_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Future, value)
+PHP_METHOD(Parallel_Future, value)
 {
     php_parallel_future_t *future = php_parallel_future_from(getThis());
     int32_t state;
@@ -145,7 +145,7 @@ _php_parallel_future_value:
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_future_cancel_arginfo, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Future, cancel)
+PHP_METHOD(Parallel_Future, cancel)
 {
     php_parallel_future_t *future =
         php_parallel_future_from(getThis());
@@ -172,7 +172,7 @@ PHP_METHOD(Future, cancel)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_future_cancelled_arginfo, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Future, cancelled)
+PHP_METHOD(Parallel_Future, cancelled)
 {
     php_parallel_future_t *future =
         php_parallel_future_from(getThis());
@@ -185,7 +185,7 @@ PHP_METHOD(Future, cancelled)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_future_done_arginfo, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Future, done)
+PHP_METHOD(Parallel_Future, done)
 {
     php_parallel_future_t *future =
         php_parallel_future_from(getThis());
@@ -196,7 +196,7 @@ PHP_METHOD(Future, done)
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_future_construct_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Future, __construct)
+PHP_METHOD(Parallel_Future, __construct)
 {
     php_parallel_future_t *future = php_parallel_future_from(getThis());
 
@@ -208,11 +208,11 @@ PHP_METHOD(Future, __construct)
 }
 
 zend_function_entry php_parallel_future_methods[] = {
-    PHP_ME(Future, __construct, php_parallel_future_construct_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Future, value, php_parallel_future_value_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Future, done, php_parallel_future_done_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Future, cancel, php_parallel_future_cancel_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Future, cancelled, php_parallel_future_cancelled_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Future, __construct, php_parallel_future_construct_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Future, value, php_parallel_future_value_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Future, done, php_parallel_future_done_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Future, cancel, php_parallel_future_cancel_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Future, cancelled, php_parallel_future_cancelled_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

@@ -133,7 +133,7 @@ ZEND_BEGIN_ARG_INFO_EX(php_parallel_sync_construct_arginfo, 0, 0, 0)
     ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Sync, __construct)
+PHP_METHOD(Parallel_Sync, __construct)
 {
     php_parallel_sync_object_t *object = php_parallel_sync_object_from(getThis());
     zval *value = NULL;
@@ -164,7 +164,7 @@ ZEND_BEGIN_ARG_INFO_EX(php_parallel_sync_set_arginfo, 0, 0, 1)
     ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Sync, set)
+PHP_METHOD(Parallel_Sync, set)
 {
     php_parallel_sync_object_t *object =
         php_parallel_sync_object_from(getThis());
@@ -199,7 +199,7 @@ PHP_METHOD(Sync, set)
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_sync_get_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Sync, get)
+PHP_METHOD(Parallel_Sync, get)
 {
     php_parallel_sync_object_t *object =
         php_parallel_sync_object_from(getThis());
@@ -218,7 +218,7 @@ ZEND_BEGIN_ARG_INFO_EX(php_parallel_sync_invoke_arginfo, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, block, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Sync, __invoke)
+PHP_METHOD(Parallel_Sync, __invoke)
 {
     php_parallel_sync_object_t *object = php_parallel_sync_object_from(getThis());
     zend_fcall_info fci;
@@ -242,7 +242,7 @@ PHP_METHOD(Sync, __invoke)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_sync_wait_arginfo, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Sync, wait)
+PHP_METHOD(Parallel_Sync, wait)
 {
     php_parallel_sync_object_t *object =
         php_parallel_sync_object_from(getThis());
@@ -262,7 +262,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_sync_notify_arginfo, 0, 0, 
     ZEND_ARG_TYPE_INFO(0, all, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Sync, notify)
+PHP_METHOD(Parallel_Sync, notify)
 {
     php_parallel_sync_object_t *object =
         php_parallel_sync_object_from(getThis());
@@ -287,12 +287,12 @@ PHP_METHOD(Sync, notify)
 }
 
 static zend_function_entry php_parallel_sync_methods[] = {
-    PHP_ME(Sync, __construct, php_parallel_sync_construct_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Sync, set, php_parallel_sync_set_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Sync, get, php_parallel_sync_get_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Sync, wait, php_parallel_sync_wait_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Sync, notify, php_parallel_sync_notify_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Sync, __invoke,    php_parallel_sync_invoke_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Sync, __construct, php_parallel_sync_construct_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Sync, set, php_parallel_sync_set_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Sync, get, php_parallel_sync_get_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Sync, wait, php_parallel_sync_wait_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Sync, notify, php_parallel_sync_notify_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Sync, __invoke,    php_parallel_sync_invoke_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

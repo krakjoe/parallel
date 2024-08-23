@@ -46,7 +46,7 @@ ZEND_BEGIN_ARG_INFO_EX(php_parallel_runtime_construct_arginfo, 0, 0, 0)
     ZEND_ARG_TYPE_INFO(0, bootstrap, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Runtime, __construct)
+PHP_METHOD(Parallel_Runtime, __construct)
 {
     php_parallel_runtime_t *runtime = php_parallel_runtime_from(getThis());
     zend_string            *bootstrap = NULL;
@@ -64,7 +64,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_runtime_run_arginfo, 0, 1, \
     ZEND_ARG_TYPE_INFO(0, argv, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Runtime, run)
+PHP_METHOD(Parallel_Runtime, run)
 {
     php_parallel_runtime_t  *runtime = php_parallel_runtime_from(getThis());
     zval *closure = NULL;
@@ -89,7 +89,7 @@ PHP_METHOD(Runtime, run)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_runtime_close_or_kill_arginfo, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Runtime, close)
+PHP_METHOD(Parallel_Runtime, close)
 {
     php_parallel_runtime_t *runtime =
         php_parallel_runtime_from(getThis());
@@ -99,7 +99,7 @@ PHP_METHOD(Runtime, close)
     php_parallel_scheduler_join(runtime, 0);
 }
 
-PHP_METHOD(Runtime, kill)
+PHP_METHOD(Parallel_Runtime, kill)
 {
     php_parallel_runtime_t *runtime =
         php_parallel_runtime_from(getThis());
@@ -110,10 +110,10 @@ PHP_METHOD(Runtime, kill)
 }
 
 zend_function_entry php_parallel_runtime_methods[] = {
-    PHP_ME(Runtime, __construct, php_parallel_runtime_construct_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Runtime, run, php_parallel_runtime_run_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Runtime, close, php_parallel_runtime_close_or_kill_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Runtime, kill, php_parallel_runtime_close_or_kill_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Runtime, __construct, php_parallel_runtime_construct_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Runtime, run, php_parallel_runtime_run_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Runtime, close, php_parallel_runtime_close_or_kill_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Runtime, kill, php_parallel_runtime_close_or_kill_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

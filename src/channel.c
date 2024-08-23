@@ -92,7 +92,7 @@ ZEND_BEGIN_ARG_INFO_EX(php_parallel_channel_construct_arginfo, 0, 0, 0)
     ZEND_ARG_TYPE_INFO(0, capacity, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Channel, __construct)
+PHP_METHOD(Parallel_Channel, __construct)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
     zend_long capacity = -1;
@@ -131,7 +131,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_make_arginfo, 0, 1, 
     ZEND_ARG_TYPE_INFO(0, capacity, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Channel, make)
+PHP_METHOD(Parallel_Channel, make)
 {
     zend_string *name = NULL;
     zend_bool    buffered = 0;
@@ -174,7 +174,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(php_parallel_channel_open_arginfo, 0, 1, 
     ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Channel, open)
+PHP_METHOD(Parallel_Channel, open)
 {
     zend_string *name = NULL;
     php_parallel_link_t *link;
@@ -201,7 +201,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_channel_send_arginfo, 0, 1,
     ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Channel, send)
+PHP_METHOD(Parallel_Channel, send)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
     zval *value, *error;
@@ -233,7 +233,7 @@ PHP_METHOD(Channel, send)
 ZEND_BEGIN_ARG_INFO_EX(php_parallel_channel_recv_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Channel, recv)
+PHP_METHOD(Parallel_Channel, recv)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
 
@@ -251,7 +251,7 @@ PHP_METHOD(Channel, recv)
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_channel_close_arginfo, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Channel, close)
+PHP_METHOD(Parallel_Channel, close)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
 
@@ -278,7 +278,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(php_parallel_channel___toString_arginfo,
 #endif
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Channel, __toString)
+PHP_METHOD(Parallel_Channel, __toString)
 {
     php_parallel_channel_t *channel =
         php_parallel_channel_from(getThis());
@@ -287,13 +287,13 @@ PHP_METHOD(Channel, __toString)
 }
 
 zend_function_entry php_parallel_channel_methods[] = {
-    PHP_ME(Channel, __construct, php_parallel_channel_construct_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Channel, make, php_parallel_channel_make_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-    PHP_ME(Channel, open, php_parallel_channel_open_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-    PHP_ME(Channel, send, php_parallel_channel_send_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Channel, recv, php_parallel_channel_recv_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Channel, close, php_parallel_channel_close_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Channel, __toString, php_parallel_channel___toString_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Channel, __construct, php_parallel_channel_construct_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Channel, make, php_parallel_channel_make_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+    PHP_ME(Parallel_Channel, open, php_parallel_channel_open_arginfo, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+    PHP_ME(Parallel_Channel, send, php_parallel_channel_send_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Channel, recv, php_parallel_channel_recv_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Channel, close, php_parallel_channel_close_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Parallel_Channel, __toString, php_parallel_channel___toString_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
