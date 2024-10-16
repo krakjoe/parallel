@@ -1,4 +1,4 @@
-name: ASANa
+name: ASAN
 
 on:
   pull_request: null
