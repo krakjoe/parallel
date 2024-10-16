@@ -188,7 +188,7 @@ static zend_always_inline HashTable* php_parallel_copy_hash_persistent_inline(
             context, source, ht);
     }
 
-    GC_SET_REFCOUNT(ht, 1);
+    GC_SET_REFCOUNT(ht, 2);
     GC_SET_PERSISTENT_TYPE(ht, GC_ARRAY);
     GC_ADD_FLAGS(ht, IS_ARRAY_IMMUTABLE);
 
@@ -374,7 +374,7 @@ HashTable *php_parallel_copy_hash_persistent(HashTable *source,
 }
 
 void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent) {
-    if (GC_DELREF(table) == 0) {
+    if (GC_DELREF(table) == (persistent ? 1 : 0)) {
         if (!persistent) {
             GC_REMOVE_FROM_BUFFER(table);
             GC_TYPE_INFO(table) =
