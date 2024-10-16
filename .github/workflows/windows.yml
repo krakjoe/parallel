@@ -2,7 +2,9 @@ name: Windows
 
 on:
   pull_request: null
-  push: null
+  push:
+    branches:
+      - master
   schedule:
     - cron: "30 4 * * *"
 
