@@ -1,5 +1,11 @@
-name: ASAN
-on: [push, pull_request]
+name: ASANa
+
+on:
+  pull_request: null
+  push: null
+  schedule:
+    - cron: "30 4 * * *"
+
 jobs:
   auth:
     runs-on: ubuntu-latest

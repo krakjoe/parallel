@@ -1,5 +1,11 @@
 name: Linux
-on: [push, pull_request]
+
+on:
+  pull_request: null
+  push: null
+  schedule:
+    - cron: "30 4 * * *"
+
 env:
   NODE_COVERALLS_DEBUG: true
 jobs:
