@@ -1,5 +1,15 @@
 name: ASAN
-on: [push, pull_request]
+
+on:
+  pull_request: null
+  push:
+    branches:
+      - master
+      - develop
+      - release
+  schedule:
+    - cron: "30 4 * * *"
+
 jobs:
   auth:
     runs-on: ubuntu-latest
@@ -21,7 +31,7 @@ jobs:
     name: ASAN, PHP v${{matrix.version}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Test parallel
         run: docker compose run parallel-asan-${{matrix.version}} docker/parallel.test --asan
   opcache:
@@ -34,7 +44,7 @@ jobs:
     name: ASAN, PHP v${{matrix.version}}, opcache
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Test parallel
         run: docker compose run parallel-asan-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable --asan
   jit:
@@ -47,6 +57,6 @@ jobs:
     name: ASAN, PHP v${{matrix.version}}, JIT
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Test parallel
         run: docker compose run parallel-asan-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M --asan
