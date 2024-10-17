@@ -218,7 +218,11 @@ static void php_parallel_scheduler_pull(zend_function *function) {
         }
     }
 
+#if PHP_VERSION_ID < 80200
     ZEND_MAP_PTR_NEW(function->op_array.run_time_cache);
+#else
+    ZEND_MAP_PTR_INIT(function->op_array.run_time_cache, NULL);
+#endif
 
 #if PHP_VERSION_ID >= 80100
     if (function->op_array.num_dynamic_func_defs) {
