@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2024-08-23</date>
+ <date>2024-11-04</date>
  <version>
-  <release>1.2.4</release>
+  <release>1.2.5</release>
   <api>1.2.0</api>
  </version>
  <stability>
@@ -33,7 +33,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Namespace PHP_METHODs to avoid collisions with ext-event #321
+- fix memleaks and crashes with PHP 8.2, 8.3 and 8.4 (still crashes in 8.1) - thanks Arnaud Le Blanc
+- fix refcounts to make `develop` branch stable again - thanks to Arnaud Le Blanc
+- fix double runs in CI
  </notes>
  <contents>
   <dir name="/">
@@ -267,6 +269,21 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+ <release>
+   <date>2024-11-04</date>
+   <version>
+    <release>1.2.5</release>
+    <api>1.2.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Namespace PHP_METHODs to avoid collisions with ext-event #321
+   </notes>
+ </release>
  <release>
    <date>2024-07-22</date>
    <version>
