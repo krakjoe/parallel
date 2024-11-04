@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019-2022                                  |
+  | Copyright (c) Joe Watkins 2019-2024                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -138,6 +138,11 @@ static zend_always_inline void php_parallel_scheduler_add(
         zval *slot = ZEND_CALL_ARG(frame, 1);
         zval *param;
         uint32_t argc = 0;
+        php_parallel_copy_context_t *context, *restore;
+
+        context = php_parallel_copy_context_start(
+            PHP_PARALLEL_COPY_DIRECTION_PERSISTENT,
+            &restore);
 
         ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(argv), param) {
             PARALLEL_ZVAL_COPY(slot, param, 1);
@@ -146,6 +151,8 @@ static zend_always_inline void php_parallel_scheduler_add(
         } ZEND_HASH_FOREACH_END();
 
         ZEND_CALL_NUM_ARGS(frame) = argc;
+
+        php_parallel_copy_context_end(context, restore);
     } else {
         ZEND_CALL_NUM_ARGS(frame) = 0;
     }
@@ -211,7 +218,11 @@ static void php_parallel_scheduler_pull(zend_function *function) {
         }
     }
 
+#if PHP_VERSION_ID < 80200
     ZEND_MAP_PTR_NEW(function->op_array.run_time_cache);
+#else
+    ZEND_MAP_PTR_INIT(function->op_array.run_time_cache, NULL);
+#endif
 
 #if PHP_VERSION_ID >= 80100
     if (function->op_array.num_dynamic_func_defs) {
@@ -288,11 +299,19 @@ static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runt
              *end  = slot + ZEND_CALL_NUM_ARGS(head->frame);
         zval *param = ZEND_CALL_ARG(el->frame, 1);
 
+        php_parallel_copy_context_t *context, *restore;
+
+        context = php_parallel_copy_context_start(
+            PHP_PARALLEL_COPY_DIRECTION_THREAD,
+            &restore);
+
         while (slot < end) {
             PARALLEL_ZVAL_COPY(param, slot, 0);
             slot++;
             param++;
         }
+
+        php_parallel_copy_context_end(context, restore);
     }
 
     zend_init_func_execute_data(

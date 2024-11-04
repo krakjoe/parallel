@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019-2022                                  |
+  | Copyright (c) Joe Watkins 2019-2024                                  |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -68,6 +68,26 @@ void           php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool p
 void           php_parallel_copy_zval_dtor(zval *zv);
 
 zend_class_entry* php_parallel_copy_scope(zend_class_entry *);
+
+typedef enum _php_parallel_copy_direction_t {
+    PHP_PARALLEL_COPY_DIRECTION_PERSISTENT,
+    PHP_PARALLEL_COPY_DIRECTION_THREAD,
+} php_parallel_copy_direction_t;
+
+typedef struct _php_parallel_copy_context_t {
+    php_parallel_copy_direction_t direction;
+    HashTable                     copied;
+    uint32_t                      refcount;
+} php_parallel_copy_context_t;
+
+php_parallel_copy_context_t* php_parallel_copy_context_start(
+    php_parallel_copy_direction_t direction,
+    php_parallel_copy_context_t **previous);
+void* php_parallel_copy_context_find(php_parallel_copy_context_t *context, void *address);
+void php_parallel_copy_context_insert(php_parallel_copy_context_t *context, void *address, void *assigned);
+void php_parallel_copy_context_end(
+    php_parallel_copy_context_t *context,
+    php_parallel_copy_context_t *previous);
 
 PHP_RINIT_FUNCTION(PARALLEL_COPY);
 PHP_RSHUTDOWN_FUNCTION(PARALLEL_COPY);

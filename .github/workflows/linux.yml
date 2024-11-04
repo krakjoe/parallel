@@ -1,5 +1,15 @@
 name: Linux
-on: [push, pull_request]
+
+on:
+  pull_request: null
+  push:
+    branches:
+      - master
+      - develop
+      - release
+  schedule:
+    - cron: "30 4 * * *"
+
 env:
   NODE_COVERALLS_DEBUG: true
 jobs:
@@ -24,7 +34,7 @@ jobs:
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Test parallel
         run: docker compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test
       - name: Send Coverage
@@ -46,7 +56,7 @@ jobs:
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, opcache
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Test parallel
         run: docker compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
       - name: Build Coveralls
@@ -68,7 +78,7 @@ jobs:
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, JIT
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Test parallel
         run: docker compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
       - name: Build Coveralls
