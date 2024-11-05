@@ -53,20 +53,20 @@ jobs:
         run: nmake test TESTS="--show-diff tests"
       - name: package
         run: |
-          md ..\install
-          copy LICENSE ..\install
-          copy README.md ..\install
+          md win-install
+          copy LICENSE win-install
+          copy README.md win-install
           if exist x64 (
             if exist x64\Release (set prefix=x64\Release) else set prefix=x64\Release_TS
           ) else (
             if exist Release (set prefix=Release) else set prefix=Release_TS
           )
-          copy %prefix%\php_parallel.dll ..\install
-          copy %prefix%\php_parallel.pdb ..\install
-          copy ..\deps\COPYING ..\install\COPYING.PTHREADS
-          copy ..\deps\bin\* ..\install
+          copy %prefix%\php_parallel.dll win-install
+          copy %prefix%\php_parallel.pdb win-install
+          copy ..\deps\COPYING win-install\COPYING.PTHREADS
+          copy ..\deps\bin\* win-install
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: parallel-${{matrix.version}}
-          path: ..\install
+          path: win-install
