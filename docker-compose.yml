@@ -131,7 +131,7 @@ services:
       args: {       <<: [*ubuntu, *php],
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
-        PHP_VERSION_PATCH:    28,
+        PHP_VERSION_PATCH:    31,
       }
     },
     container_name:  php-dbg-8.1,
@@ -146,7 +146,7 @@ services:
         PHP_SRC_GCOV:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
-        PHP_VERSION_PATCH:    28,
+        PHP_VERSION_PATCH:    31,
       }
     },
     container_name:  php-gcov-8.1,
@@ -161,7 +161,7 @@ services:
         PHP_SRC_ASAN:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
-        PHP_VERSION_PATCH:    28,
+        PHP_VERSION_PATCH:    31,
       }
     },
     container_name:  php-asan-8.1,
@@ -176,7 +176,7 @@ services:
         PHP_SRC_DEBUG:        disable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
-        PHP_VERSION_PATCH:    28,
+        PHP_VERSION_PATCH:    31,
       }
     },
     container_name:  php-release-8.1,
@@ -192,7 +192,7 @@ services:
         PHP_SRC_TYPE:         dbg,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
-        PHP_VERSION_PATCH:    28,
+        PHP_VERSION_PATCH:    31,
       }
     },
     container_name:  parallel-dbg-8.1,
@@ -208,7 +208,7 @@ services:
         PHP_SRC_GCOV:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
-        PHP_VERSION_PATCH:    28,
+        PHP_VERSION_PATCH:    31,
       }
     },
     container_name:  parallel-gcov-8.1,
@@ -223,7 +223,7 @@ services:
         PHP_SRC_TYPE:         asan,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
-        PHP_VERSION_PATCH:    28,
+        PHP_VERSION_PATCH:    31,
       }
     },
     container_name:  parallel-asan-8.1,
@@ -238,7 +238,7 @@ services:
         PHP_SRC_TYPE:         release,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    1,
-        PHP_VERSION_PATCH:    28,
+        PHP_VERSION_PATCH:    31,
       }
     },
     container_name:  parallel-release-8.1,
@@ -255,7 +255,7 @@ services:
         PHP_SRC_TYPE:         git,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
-        PHP_VERSION_PATCH:    19,
+        PHP_VERSION_PATCH:    26,
       }
     },
     container_name:  php-dbg-8.2,
@@ -271,7 +271,7 @@ services:
         PHP_SRC_GCOV:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
-        PHP_VERSION_PATCH:    19,
+        PHP_VERSION_PATCH:    26,
       }
     },
     container_name:  php-gcov-8.2,
@@ -287,7 +287,7 @@ services:
         PHP_SRC_TYPE:         git,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
-        PHP_VERSION_PATCH:    19,
+        PHP_VERSION_PATCH:    26,
       }
     },
     container_name:  php-asan-8.2,
@@ -303,7 +303,7 @@ services:
         PHP_SRC_TYPE:         git,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
-        PHP_VERSION_PATCH:    19,
+        PHP_VERSION_PATCH:    26,
       }
     },
     container_name:  php-release-8.2,
@@ -319,7 +319,7 @@ services:
         PHP_SRC_TYPE:         dbg,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
-        PHP_VERSION_PATCH:    19,
+        PHP_VERSION_PATCH:    26,
       }
     },
     container_name:  parallel-dbg-8.2,
@@ -335,7 +335,7 @@ services:
         PHP_SRC_GCOV:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
-        PHP_VERSION_PATCH:    19,
+        PHP_VERSION_PATCH:    26,
       }
     },
     container_name:  parallel-gcov-8.2,
@@ -351,7 +351,7 @@ services:
         PHP_SRC_TYPE:         asan,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
-        PHP_VERSION_PATCH:    19,
+        PHP_VERSION_PATCH:    26,
       }
     },
     container_name:  parallel-asan-8.2,
@@ -367,7 +367,7 @@ services:
         PHP_SRC_TYPE:         release,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    2,
-        PHP_VERSION_PATCH:    19,
+        PHP_VERSION_PATCH:    26,
       }
     },
     container_name:  parallel-release-8.2,
@@ -384,7 +384,7 @@ services:
         PHP_SRC_TYPE:         git,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    3,
-        PHP_VERSION_PATCH:    9,
+        PHP_VERSION_PATCH:    14,
       }
     },
     container_name:  php-dbg-8.3,
@@ -400,7 +400,7 @@ services:
         PHP_SRC_GCOV:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    3,
-        PHP_VERSION_PATCH:    9,
+        PHP_VERSION_PATCH:    14,
       }
     },
     container_name:  php-gcov-8.3,
@@ -416,7 +416,7 @@ services:
         PHP_SRC_TYPE:         git,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    3,
-        PHP_VERSION_PATCH:    9,
+        PHP_VERSION_PATCH:    14,
       }
     },
     container_name:  php-asan-8.3,
@@ -432,7 +432,7 @@ services:
         PHP_SRC_TYPE:         git,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    3,
-        PHP_VERSION_PATCH:    9,
+        PHP_VERSION_PATCH:    14,
       }
     },
     container_name:  php-release-8.3,
@@ -448,7 +448,7 @@ services:
         PHP_SRC_TYPE:         dbg,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    3,
-        PHP_VERSION_PATCH:    9,
+        PHP_VERSION_PATCH:    14,
       }
     },
     container_name:  parallel-dbg-8.3,
@@ -464,7 +464,7 @@ services:
         PHP_SRC_GCOV:         enable,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    3,
-        PHP_VERSION_PATCH:    9,
+        PHP_VERSION_PATCH:    14,
       }
     },
     container_name:  parallel-gcov-8.3,
@@ -480,7 +480,7 @@ services:
         PHP_SRC_TYPE:         asan,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    3,
-        PHP_VERSION_PATCH:    9,
+        PHP_VERSION_PATCH:    14,
       }
     },
     container_name:  parallel-asan-8.3,
@@ -496,7 +496,7 @@ services:
         PHP_SRC_TYPE:         release,
         PHP_VERSION_MAJOR:    8,
         PHP_VERSION_MINOR:    3,
-        PHP_VERSION_PATCH:    9,
+        PHP_VERSION_PATCH:    14,
       }
     },
     container_name:  parallel-release-8.3,

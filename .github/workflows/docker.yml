@@ -19,15 +19,15 @@ jobs:
             rc: ''
           - major: 8
             minor: 1
-            patch: 28
+            patch: 31
             rc: ''
           - major: 8
             minor: 2
-            patch: 19
+            patch: 26
             rc: ''
           - major: 8
             minor: 3
-            patch: 9
+            patch: 14
             rc: ''
           - major: 8
             minor: 4
