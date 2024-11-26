@@ -29,6 +29,10 @@ jobs:
             minor: 3
             patch: 9
             rc: ''
+          - major: 8
+            minor: 4
+            patch: 1
+            rc: ''
         src:
           - dist
         flags:
