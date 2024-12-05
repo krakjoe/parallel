@@ -14,12 +14,14 @@ PHP_ARG_ENABLE(parallel-gcov, whether to enable gcov for parallel,
 
 if test "$PHP_PARALLEL" != "no"; then
 
-  PHP_VERSION=$($PHP_CONFIG --vernum)
+  if test -z "$PHP_VERSION_ID"; then
+    PHP_VERSION_ID=$($PHP_CONFIG --vernum);
+  fi
   AC_MSG_CHECKING([PHP version]);
-  if test $PHP_VERSION -lt 80000; then
+  if test $PHP_VERSION_ID -lt 80000; then
     AC_MSG_ERROR([parallel requires PHP 8.0+]);
   fi
-  AC_MSG_RESULT([$PHP_VERSION])
+  AC_MSG_RESULT([$PHP_VERSION_ID])
 
   AC_MSG_CHECKING([for ZTS])
   if test "$PHP_THREAD_SAFETY" != "no"; then
