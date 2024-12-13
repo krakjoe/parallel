@@ -30,10 +30,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Fetch dependencies
-        run: |
-          curl -LO https://downloads.php.net/~windows/pecl/deps/pthreads-3.0.0-vs16-${{matrix.arch}}.zip
-          7z x pthreads-3.0.0-vs16-${{matrix.arch}}.zip -- -o..\deps
       - name: Build the extension
         uses: php/php-windows-builder/extension@v1
         with:
