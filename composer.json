@@ -1,0 +1,33 @@
+{
+  "name": "pcov/parallel",
+  "type": "php-ext",
+  "license": "PHP-3.01",
+  "description": "A succinct parallel concurrency API for PHP 8",
+  "require": {
+    "php": ">= 8.0.0"
+  },
+  "php-ext": {
+    "extension-name": "parallel",
+    "support-nts": false,
+    "support-zts": true,
+    "configure-options": [
+      {
+        "name": "enable-parallel",
+        "description": "Enable parallel support",
+        "needs-value": false
+      }, {
+        "name": "enable-parallel-dev",
+        "description": "Enable parallel developer flags",
+        "needs-value": false
+      }, {
+        "name": "enable-parallel-address-sanitizer",
+        "description": "Enable address sanitizer flags for parallel",
+        "needs-value": false
+      }, {
+        "name": "enable-parallel-gcov",
+        "description": "Enable gcov for parallel",
+        "needs-value": false
+      }
+    ]
+  }
+}
