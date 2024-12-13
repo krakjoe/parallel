@@ -1,5 +1,5 @@
 {
-  "name": "pcov/parallel",
+  "name": "pecl/parallel",
   "type": "php-ext",
   "license": "PHP-3.01",
   "description": "A succinct parallel concurrency API for PHP 8",
