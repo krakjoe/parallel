@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2024-11-04</date>
+ <date>2025-01-29</date>
  <version>
-  <release>1.2.5</release>
+  <release>1.2.6</release>
   <api>1.2.0</api>
  </version>
  <stability>
@@ -33,9 +33,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- fix memleaks and crashes with PHP 8.2, 8.3 and 8.4 (still crashes in 8.1) - thanks Arnaud Le Blanc
-- fix refcounts to make `develop` branch stable again - thanks to Arnaud Le Blanc
-- fix double runs in CI
+- fix/update Windows CI #330
+- upgrade docker images and add PHP 8.4 containers #331
+- support in-tree build #334
+- support building via pie #335, #336
  </notes>
  <contents>
   <dir name="/">
@@ -273,6 +274,23 @@
    <date>2024-11-04</date>
    <version>
     <release>1.2.5</release>
+    <api>1.2.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- fix memleaks and crashes with PHP 8.2, 8.3 and 8.4 (still crashes in 8.1) - thanks Arnaud Le Blanc
+- fix refcounts to make `develop` branch stable again - thanks to Arnaud Le Blanc
+- fix double runs in CI
+   </notes>
+ </release>
+ <release>
+   <date>2024-08-23</date>
+   <version>
+    <release>1.2.4</release>
     <api>1.2.0</api>
    </version>
    <stability>
