@@ -11,32 +11,23 @@ if (!version_compare(PHP_VERSION, "8.1", ">=")) {
 ?>
 --FILE--
 <?php
-function transformChunk($n)
-{
-  $fibonacci = function ($n) use (&$fibonacci) {
-    if ($n == 0) {
-      return 0;
-    }
-    if ($n == 1) {
-      return 1;
-    }
-    return $fibonacci($n - 1) + $fibonacci($n - 2);
-  };
-  return $fibonacci($n);
-}
 
-$runtime = new \parallel\Runtime();
+$app = function ($n) {
+  return transformChunk($n);
+};
+
+$runtime = new \parallel\Runtime(__DIR__.'/072-bootstrap.php');
 $future = $runtime->run(
-  transformChunk(...),
+  $app,
   [
     10
   ]
 );
 var_dump($future->value());
 
-$runtime = new \parallel\Runtime();
+$runtime = new \parallel\Runtime(__DIR__.'/072-bootstrap.php');
 $future = $runtime->run(
-  transformChunk(...),
+  $app,
   [
     10
   ]
