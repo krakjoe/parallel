@@ -409,7 +409,7 @@ static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
 
 #if PHP_VERSION_ID >= 80100
     zend_stream_init_filename_ex(&fh, file);
-    
+
     result = php_stream_open_for_zend_ex(&fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
 #else
     result = php_stream_open_for_zend_ex(ZSTR_VAL(file), &fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
@@ -569,6 +569,8 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime) {
     runtime->monitor = NULL;
 }
 
+/// Adds the task in `closure` to the thread referenced by `runtime`. In case
+/// the task returns anything it also creates the future to return.
 void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure, zval *argv, zval *return_value) {
     zend_execute_data      *caller = EG(current_execute_data)->prev_execute_data;
     const zend_function    *function = zend_get_closure_method_def(Z_OBJ_P(closure));
