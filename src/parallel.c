@@ -90,6 +90,9 @@ static PHP_NAMED_FUNCTION(php_parallel_bootstrap)
     pthread_mutex_unlock(&PCG(mutex));
 } /* }}} */
 
+// This will return an idle runtime (aka thread) or spawn a new one, bootstap it
+// and return that. This method is solely called by the userlands
+// `\parallel\run()` function call.
 /* {{{ */
 static zend_always_inline php_parallel_runtime_t* php_parallel_runtimes_fetch() {
     php_parallel_runtime_t *runtime;
