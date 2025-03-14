@@ -449,6 +449,10 @@ static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
     return FAILURE;
 }
 
+// Implements the thread main loop. This bootstraps the thread by including the
+// bootstrap PHP file in case one was specified and afterwards set the runtimes
+// monitor to ready and running (and with this unblocking the calling
+// `php_parallel_scheduler_start()` function).
 static void* php_parallel_thread(void *arg) {
     int32_t state = 0;
 
@@ -513,6 +517,9 @@ _php_parallel_thread_exit:
     return NULL;
 }
 
+// Creates a monitor for the `runtime` and spawns a new thread. After spawning
+// blocks until the newly created thread enters either the ready or the failure
+// state. Throws a userland exception in case the thread creation failed.
 void php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *bootstrap) {
     uint32_t state = SUCCESS;
 
