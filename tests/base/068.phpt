@@ -20,5 +20,5 @@ array(1) {
   ["self"]=>
   *RECURSION*
 }
---XFAIL--
+--XLEAK--
 REASON: no cyclic reference collector implemented yet

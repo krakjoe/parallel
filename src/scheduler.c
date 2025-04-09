@@ -33,6 +33,8 @@ static zend_always_inline int php_parallel_scheduler_list_delete(void *lhs, void
 static void php_parallel_schedule_free_function(zend_function *function) {
     if (function->op_array.static_variables) {
         php_parallel_copy_hash_dtor(function->op_array.static_variables, 1);
+        ZEND_MAP_PTR_SET(function->op_array.static_variables_ptr, NULL);
+        function->op_array.static_variables = NULL;
     }
 
 #if PHP_VERSION_ID >= 80100
@@ -245,6 +247,8 @@ static void php_parallel_scheduler_clean(zend_function *function) {
 
         if (!(GC_FLAGS(statics) & IS_ARRAY_IMMUTABLE)) {
             zend_array_destroy(statics);
+            ZEND_MAP_PTR_SET(function->op_array.static_variables_ptr, NULL);
+            function->op_array.static_variables = NULL;
         }
     }
 
@@ -254,8 +258,9 @@ static void php_parallel_scheduler_clean(zend_function *function) {
 
     	while (it < function->op_array.num_dynamic_func_defs) {
     	    php_parallel_scheduler_clean(
-               (zend_function*) function->op_array.dynamic_func_defs[it]);
-            it++;
+              (zend_function*) function->op_array.dynamic_func_defs[it]);
+          pefree(function->op_array.dynamic_func_defs[it],1);
+          it++;
     	}
     }
 #endif
