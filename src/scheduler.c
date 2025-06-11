@@ -86,7 +86,6 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(p
     TSRMLS_CACHE_UPDATE();
 
     SG(server_context) = runtime->parent.server;
-    SG(request_info)   = *runtime->parent.request_info;
 
     runtime->child.interrupt = &EG(vm_interrupt);
 

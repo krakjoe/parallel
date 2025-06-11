@@ -15,8 +15,6 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#include "SAPI.h"
-
 #ifndef HAVE_PARALLEL_RUNTIME_H
 #define HAVE_PARALLEL_RUNTIME_H
 
@@ -34,7 +32,6 @@ typedef struct _php_parallel_runtime_t {
     } child;
     struct {
         void                        *server;
-        sapi_request_info           *request_info;
     } parent;
     zend_llist                       schedule;
     zend_object                      std;
