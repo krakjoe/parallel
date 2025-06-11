@@ -16,6 +16,8 @@ PHP Versions
   - 8.0 (no asan support)
   - 8.1
   - 8.2
+  - 8.3
+  - 8.4
 
 Parallel Services
 =================
@@ -47,4 +49,15 @@ Executing:
 
 Will execute the test suite with AddressSanitizer support (if enabled in the build).
 
-See workflow files for extensive exemplary builds.
+Testing (an example)
+====================
+
+```sh
+docker compose build php-asan-8.4
+docker compose build parallel-asan-8.4
+docker compose run --rm parallel-asan-8.4
+phpize
+./configure --enable-parallel
+make
+./docker/parallel.test --asan
+```

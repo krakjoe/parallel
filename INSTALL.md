@@ -1,17 +1,23 @@
 Requirements
 ============
 
-  * PHP 8.0
+  * PHP >= 8.0
   * ZTS
   * <pthread.h>
 
 Installation
 ============
 
-**From PECL (recommended)**
+**From PECL**
 
 ```bash
 pecl install parallel
+```
+
+**From PIE**
+
+```bash
+pie install parallel
 ```
 
 **Binary distributions**
@@ -30,6 +36,6 @@ make test
 make install
 ```
 
-> [!NOTE]  
+> [!NOTE]
 > This will install the latest version from the `develop` branch and should be
 > considered unstable!

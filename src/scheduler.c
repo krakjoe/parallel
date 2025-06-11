@@ -33,6 +33,8 @@ static zend_always_inline int php_parallel_scheduler_list_delete(void *lhs, void
 static void php_parallel_schedule_free_function(zend_function *function) {
     if (function->op_array.static_variables) {
         php_parallel_copy_hash_dtor(function->op_array.static_variables, 1);
+        ZEND_MAP_PTR_SET(function->op_array.static_variables_ptr, NULL);
+        function->op_array.static_variables = NULL;
     }
 
 #if PHP_VERSION_ID >= 80100
@@ -84,7 +86,6 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(p
     TSRMLS_CACHE_UPDATE();
 
     SG(server_context) = runtime->parent.server;
-    SG(request_info)   = *runtime->parent.request_info;
 
     runtime->child.interrupt = &EG(vm_interrupt);
 
@@ -245,6 +246,8 @@ static void php_parallel_scheduler_clean(zend_function *function) {
 
         if (!(GC_FLAGS(statics) & IS_ARRAY_IMMUTABLE)) {
             zend_array_destroy(statics);
+            ZEND_MAP_PTR_SET(function->op_array.static_variables_ptr, NULL);
+            function->op_array.static_variables = NULL;
         }
     }
 
@@ -254,8 +257,9 @@ static void php_parallel_scheduler_clean(zend_function *function) {
 
     	while (it < function->op_array.num_dynamic_func_defs) {
     	    php_parallel_scheduler_clean(
-               (zend_function*) function->op_array.dynamic_func_defs[it]);
-            it++;
+              (zend_function*) function->op_array.dynamic_func_defs[it]);
+          pefree(function->op_array.dynamic_func_defs[it],1);
+          it++;
     	}
     }
 #endif
@@ -409,7 +413,7 @@ static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
 
 #if PHP_VERSION_ID >= 80100
     zend_stream_init_filename_ex(&fh, file);
-    
+
     result = php_stream_open_for_zend_ex(&fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
 #else
     result = php_stream_open_for_zend_ex(ZSTR_VAL(file), &fh, USE_PATH|REPORT_ERRORS|STREAM_OPEN_FOR_INCLUDE);
@@ -449,6 +453,10 @@ static zend_always_inline int php_parallel_thread_bootstrap(zend_string *file) {
     return FAILURE;
 }
 
+// Implements the thread main loop. This bootstraps the thread by including the
+// bootstrap PHP file in case one was specified and afterwards set the runtimes
+// monitor to ready and running (and with this unblocking the calling
+// `php_parallel_scheduler_start()` function).
 static void* php_parallel_thread(void *arg) {
     int32_t state = 0;
 
@@ -513,6 +521,9 @@ _php_parallel_thread_exit:
     return NULL;
 }
 
+// Creates a monitor for the `runtime` and spawns a new thread. After spawning
+// blocks until the newly created thread enters either the ready or the failure
+// state. Throws a userland exception in case the thread creation failed.
 void php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *bootstrap) {
     uint32_t state = SUCCESS;
 
@@ -569,6 +580,8 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime) {
     runtime->monitor = NULL;
 }
 
+/// Adds the task in `closure` to the thread referenced by `runtime`. In case
+/// the task returns anything it also creates the future to return.
 void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure, zval *argv, zval *return_value) {
     zend_execute_data      *caller = EG(current_execute_data)->prev_execute_data;
     const zend_function    *function = zend_get_closure_method_def(Z_OBJ_P(closure));
