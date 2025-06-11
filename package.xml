@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2025-01-29</date>
+ <date>2025-06-11</date>
  <version>
-  <release>1.2.6</release>
+  <release>1.2.7</release>
   <api>1.2.0</api>
  </version>
  <stability>
@@ -33,10 +33,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- fix/update Windows CI #330
-- upgrade docker images and add PHP 8.4 containers #331
-- support in-tree build #334
-- support building via pie #335, #336
+- Crash less and allow more cyclomatic refs #339
+- Update docs #340
+- Fix PHP-FPM POST bug #343
  </notes>
  <contents>
   <dir name="/">
@@ -271,6 +270,24 @@
  <extsrcrelease/>
  <changelog>
  <release>
+   <date>2025-01-29</date>
+   <version>
+    <release>1.2.6</release>
+    <api>1.2.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- fix/update Windows CI #330
+- upgrade docker images and add PHP 8.4 containers #331
+- support in-tree build #334
+- support building via pie #335, #336
+   </notes>
+ </release>
+ <release>
    <date>2024-11-04</date>
    <version>
     <release>1.2.5</release>
@@ -317,7 +334,7 @@
 - CI: fix Windows tests #304
 - CI: updated to PHP 8.3.9 #305
 - FrankenPHP support: unlock mutex in case of `zend_bailout` #314
-- Make `request_info` from SAPI globals accessible in threads #307 
+- Make `request_info` from SAPI globals accessible in threads #307
    </notes>
   </release>
   <release>
