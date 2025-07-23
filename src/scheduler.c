@@ -258,9 +258,12 @@ static void php_parallel_scheduler_clean(zend_function *function) {
     	while (it < function->op_array.num_dynamic_func_defs) {
     	    php_parallel_scheduler_clean(
               (zend_function*) function->op_array.dynamic_func_defs[it]);
-          pefree(function->op_array.dynamic_func_defs[it],1);
+          pefree(function->op_array.dynamic_func_defs[it], 1);
           it++;
     	}
+        /* Free the dynamic_func_defs array itself */
+        pefree(function->op_array.dynamic_func_defs, 1);
+        function->op_array.dynamic_func_defs = NULL;
     }
 #endif
 }

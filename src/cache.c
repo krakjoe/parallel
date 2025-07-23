@@ -394,7 +394,10 @@ zend_function* php_parallel_cache_closure(const zend_function *source, zend_func
 #if PHP_VERSION_ID >= 80100
     if (source->op_array.num_dynamic_func_defs) {
         uint32_t it = 0;
-        closure->op_array.dynamic_func_defs = php_parallel_cache_copy_mem(
+        /* Use regular persistent memory for dynamic_func_defs array, not cache pool */
+        closure->op_array.dynamic_func_defs = pemalloc(
+            sizeof(zend_op_array*) * source->op_array.num_dynamic_func_defs, 1);
+        memcpy(closure->op_array.dynamic_func_defs,
             source->op_array.dynamic_func_defs,
             sizeof(zend_op_array*) * source->op_array.num_dynamic_func_defs);
         while (it < source->op_array.num_dynamic_func_defs) {
