@@ -1,10 +1,10 @@
 parallel
 ========
 
-[![Linux](https://github.com/krakjoe/parallel/actions/workflows/linux.yml/badge.svg)](https://github.com/krakjoe/parallel/actions/workflows/linux.yml)
-[![AddressSanitizer](https://github.com/krakjoe/parallel/actions/workflows/asan.yml/badge.svg)](https://github.com/krakjoe/parallel/actions/workflows/asan.yml)
-[![Windows](https://github.com/krakjoe/parallel/actions/workflows/windows.yml/badge.svg)](https://github.com/krakjoe/parallel/actions/workflows/windows.yml)
-[![Coverage Status](https://coveralls.io/repos/github/krakjoe/parallel/badge.svg?branch=develop)](https://coveralls.io/github/krakjoe/parallel)
+[![Linux](https://img.shields.io/github/actions/workflow/status/krakjoe/parallel/linux.yml?branch=develop&style=for-the-badge&logo=github%20actions&label=Linux)](https://github.com/krakjoe/parallel/actions/workflows/linux.yml)
+[![AddressSanitizer](https://img.shields.io/github/actions/workflow/status/krakjoe/parallel/asan.yml?branch=develop&style=for-the-badge&logo=github%20actions&label=ASAN)](https://github.com/krakjoe/parallel/actions/workflows/asan.yml)
+[![Windows](https://img.shields.io/github/actions/workflow/status/krakjoe/parallel/windows.yml?branch=develop&style=for-the-badge&logo=github%20actions&label=Windows)](https://github.com/krakjoe/parallel/actions/workflows/windows.yml)
+[![Coverage Status](https://img.shields.io/coverallsCoverage/github/krakjoe/parallel?branch=develop&style=for-the-badge&logo=coveralls)](https://coveralls.io/github/krakjoe/parallel)
 
 A succinct parallel concurrency API for PHP 8
 
