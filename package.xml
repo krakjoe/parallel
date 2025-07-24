@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2025-06-11</date>
+ <date>2025-07-24</date>
  <version>
-  <release>1.2.7</release>
+  <release>1.2.8</release>
   <api>1.2.0</api>
  </version>
  <stability>
@@ -33,9 +33,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Crash less and allow more cyclomatic refs #339
-- Update docs #340
-- Fix PHP-FPM POST bug #343
+- fix memory leak in nested closure handling #347
  </notes>
  <contents>
   <dir name="/">
@@ -269,6 +267,23 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+ <release>
+   <date>2025-06-11</date>
+   <version>
+    <release>1.2.7</release>
+    <api>1.2.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Crash less and allow more cyclomatic refs #339
+- Update docs #340
+- Fix PHP-FPM POST bug #343
+   </notes>
+ </release>
  <release>
    <date>2025-01-29</date>
    <version>
