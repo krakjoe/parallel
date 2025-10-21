@@ -36,7 +36,7 @@ jobs:
           - major: 8
             minor: 5
             patch: 0
-            rc: RC1
+            rc: RC2
         src:
           - dist
         flags:
