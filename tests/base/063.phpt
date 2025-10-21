@@ -24,9 +24,9 @@ $ch = Channel::make("sv", 3);
 
 for ($i=0;$i<3;$i++){
 	$sarr[$i]->run(function() use($ch) {
-		$functions = array("addslashes", "chunk_split", "metaphone", "strip_tags", "md5", "sha1", "strtoupper", "strtolower", "strrev", "strlen", "soundex", "ord");
+		$functions = array("addslashes", "chunk_split", "metaphone", "strip_tags", "md5", "sha1", "strtoupper", "strtolower", "strrev", "strlen", "soundex");
 		$string = "the quick brown fox jumps over the lazy dog";
-		
+
 		for ($i = 0; $i < 4000; $i++) {
 			foreach ($functions as $function) {
 				call_user_func_array($function, array($string));
