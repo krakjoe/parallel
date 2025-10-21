@@ -15,7 +15,7 @@ jobs:
         php:
           - major: 8
             minor: 0
-            patch: 30 
+            patch: 30
             rc: ''
           - major: 8
             minor: 1
@@ -33,6 +33,10 @@ jobs:
             minor: 4
             patch: 1
             rc: ''
+          - major: 8
+            minor: 5
+            patch: 0
+            rc: RC2
         src:
           - dist
         flags:
