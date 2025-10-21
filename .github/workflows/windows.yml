@@ -17,10 +17,9 @@ jobs:
         shell: cmd
     strategy:
       matrix:
-          version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
+          version: ["8.0", "8.1", "8.2", "8.3", "8.4"]
           arch: [x64]
           ts: [ts]
-    continue-on-error: ${{ matrix.version == '8.5' }}
     if: success() || failure()
     runs-on: windows-2022
     name: Windows, PHP v${{matrix.version}}
