@@ -32,6 +32,8 @@ typedef struct _php_parallel_runtime_t {
     } child;
     struct {
         void                        *server;
+        int                          argc;
+        char                       **argv;
     } parent;
     zend_llist                       schedule;
     zend_object                      std;
