@@ -36,6 +36,6 @@ ZEND_TSRMLS_CACHE_EXTERN()
 # define PARALLEL_API __attribute__ ((visibility("default")))
 #endif
 
-PARALLEL_API zend_bool php_parallel_is_parallel_worker_thread(void);
+PARALLEL_API bool php_parallel_is_parallel_worker_thread(void);
 
 #endif	/* PHP_PARALLEL_H */

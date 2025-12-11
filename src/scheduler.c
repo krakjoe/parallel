@@ -180,7 +180,7 @@ static zend_always_inline void php_parallel_scheduler_add(
     }
 }
 
-static zend_always_inline zend_bool php_parallel_scheduler_empty(php_parallel_runtime_t *runtime) {
+static zend_always_inline bool php_parallel_scheduler_empty(php_parallel_runtime_t *runtime) {
     return !zend_llist_count(&runtime->schedule);
 }
 
