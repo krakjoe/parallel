@@ -463,26 +463,7 @@ static zend_always_inline zend_object* php_parallel_copy_closure_persistent(zend
     return &copy->std;
 }
 
-static zend_always_inline void php_parallel_copy_closure_init_run_time_cache(zend_op_array *function) {
-    void *rtc;
 
-    function->fn_flags |= ZEND_ACC_HEAP_RT_CACHE;
-#if PHP_VERSION_ID >= 80200
-    rtc = emalloc(function->cache_size);
-
-    ZEND_MAP_PTR_INIT(function->run_time_cache, rtc);
-#else
-    rtc = emalloc(sizeof(void*) + function->cache_size);
-
-    ZEND_MAP_PTR_INIT(function->run_time_cache, rtc);
-
-    rtc = (char*)rtc + sizeof(void*);
-
-    ZEND_MAP_PTR_SET(function->run_time_cache, rtc);
-#endif
-
-    memset(rtc, 0, function->cache_size);
-}
 
 static zend_always_inline zend_object* php_parallel_copy_closure_thread(zend_object *source) {
     zend_closure_t *copy =
@@ -520,7 +501,7 @@ static zend_always_inline zend_object* php_parallel_copy_closure_thread(zend_obj
     ZEND_MAP_PTR_INIT(function->static_variables_ptr, &function->static_variables);
 #endif
 
-    php_parallel_copy_closure_init_run_time_cache(function);
+    php_parallel_copy_init_run_time_cache(function);
 
     if (Z_TYPE(copy->this_ptr) == IS_OBJECT) {
         PARALLEL_ZVAL_COPY(&copy->this_ptr, &copy->this_ptr, 0);
@@ -987,7 +968,7 @@ static void php_parallel_copy_zval_persistent(
 
 zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent) {
     if (persistent) {
-        function =      	
+        function =
             php_parallel_cache_function(function);
 
         php_parallel_dependencies_store(function);

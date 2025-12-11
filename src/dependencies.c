@@ -182,45 +182,75 @@ void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
 
     ZEND_HASH_FOREACH_STR_KEY_PTR(dependencies, key, dependency) {
         if (!zend_hash_exists(EG(function_table), key)) {
-            zend_op_array *used =
-                (zend_op_array*)
-                    php_parallel_copy_function(dependency, 0);
+            zend_op_array *used;
 
-            zend_hash_add_ptr(EG(function_table), key, used);
+            php_parallel_dependencies_load(dependency);
 
-            ZEND_MAP_PTR_NEW(used->run_time_cache);
-
-            zend_hash_add_empty_element(&PDG(used), key);
-        }
-    } ZEND_HASH_FOREACH_END();
-} /* }}} */
-
-static void php_parallel_dependencies_dtor(zval *zv) { /* {{{ */
-    zend_hash_destroy(Z_PTR_P(zv));
-    pefree(Z_PTR_P(zv), 1);
-} /* }}} */
-
-PHP_RINIT_FUNCTION(PARALLEL_DEPENDENCIES)
-{
-    zend_hash_init(&PDG(activated), 32, NULL, NULL, 0);
-    zend_hash_init(&PDG(used), 32, NULL, NULL, 0);
-
-    return SUCCESS;
-}
-
-PHP_RSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES)
-{
-    zend_string *key;
-
-    zend_hash_destroy(&PDG(activated));
-    ZEND_HASH_FOREACH_STR_KEY(&PDG(used), key) {
-        zend_hash_del(EG(function_table), key);
-    } ZEND_HASH_FOREACH_END();
-    zend_hash_destroy(&PDG(used));
-
-    return SUCCESS;
-}
-
+                        used = (zend_op_array*) emalloc(sizeof(zend_op_array));
+                        memcpy(used, dependency, sizeof(zend_op_array));
+                        used->fn_flags &= ~ZEND_ACC_IMMUTABLE;
+                        
+                        if (used->static_variables) {
+                            used->static_variables = php_parallel_copy_hash_ctor(used->static_variables, 0);
+                        }
+            
+            #if PHP_VERSION_ID >= 80200
+                        ZEND_MAP_PTR_INIT(used->static_variables_ptr, used->static_variables);
+            #else
+                        ZEND_MAP_PTR_INIT(used->static_variables_ptr, &used->static_variables);
+            #endif
+            
+                        php_parallel_copy_init_run_time_cache(used);
+            
+                        zend_hash_add_ptr(EG(function_table), key, used);
+            
+                        zend_hash_add_empty_element(&PDG(used), key);
+                    }
+                } ZEND_HASH_FOREACH_END();
+            } /* }}} */
+            
+            static void php_parallel_dependencies_dtor(zval *zv) { /* {{{ */
+                zend_hash_destroy(Z_PTR_P(zv));
+                pefree(Z_PTR_P(zv), 1);
+            } /* }}} */
+            
+            PHP_RINIT_FUNCTION(PARALLEL_DEPENDENCIES)
+            {
+                zend_hash_init(&PDG(activated), 32, NULL, NULL, 0);
+                zend_hash_init(&PDG(used), 32, NULL, NULL, 0);
+            
+                return SUCCESS;
+            }
+            
+            PHP_RSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES)
+            {
+                zend_string *key;
+            
+                zend_hash_destroy(&PDG(activated));
+                ZEND_HASH_FOREACH_STR_KEY(&PDG(used), key) {
+                    zend_function *f = zend_hash_find_ptr(EG(function_table), key);
+            
+                    if (f && f->type == ZEND_USER_FUNCTION) {
+                        f->op_array.opcodes = NULL;
+                        f->op_array.literals = NULL;
+                        f->op_array.vars = NULL;
+                        f->op_array.arg_info = NULL;
+                        f->op_array.try_catch_array = NULL;
+                        f->op_array.live_range = NULL;
+            #if PHP_VERSION_ID >= 80000
+                        f->op_array.attributes = NULL;
+            #endif
+            #if PHP_VERSION_ID >= 80100
+                        f->op_array.dynamic_func_defs = NULL;
+            #endif
+                    }
+            
+                    zend_hash_del(EG(function_table), key);
+                } ZEND_HASH_FOREACH_END();
+                zend_hash_destroy(&PDG(used));
+            
+                return SUCCESS;
+            }
 PHP_MINIT_FUNCTION(PARALLEL_DEPENDENCIES)
 {
     php_parallel_mutex_init(&PDM(mutex), 1);

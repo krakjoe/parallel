@@ -83,6 +83,28 @@ typedef struct _php_parallel_copy_context_t {
 php_parallel_copy_context_t* php_parallel_copy_context_start(
     php_parallel_copy_direction_t direction,
     php_parallel_copy_context_t **previous);
+
+static zend_always_inline void php_parallel_copy_init_run_time_cache(zend_op_array *function) {
+    void *rtc;
+
+    function->fn_flags |= ZEND_ACC_HEAP_RT_CACHE;
+#if PHP_VERSION_ID >= 80200
+    rtc = emalloc(function->cache_size);
+
+    ZEND_MAP_PTR_INIT(function->run_time_cache, rtc);
+#else
+    rtc = emalloc(sizeof(void*) + function->cache_size);
+
+    ZEND_MAP_PTR_INIT(function->run_time_cache, rtc);
+
+    rtc = (char*)rtc + sizeof(void*);
+
+    ZEND_MAP_PTR_SET(function->run_time_cache, rtc);
+#endif
+
+    memset(rtc, 0, function->cache_size);
+}
+
 void* php_parallel_copy_context_find(php_parallel_copy_context_t *context, void *address);
 void php_parallel_copy_context_insert(php_parallel_copy_context_t *context, void *address, void *assigned);
 void php_parallel_copy_context_end(
