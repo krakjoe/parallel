@@ -48,10 +48,10 @@ static zend_always_inline php_parallel_future_t* php_parallel_future_construct(z
 zend_object* php_parallel_future_create(zend_class_entry *);
 void         php_parallel_future_destroy(zend_object *);
 
-zend_bool    php_parallel_future_lock(php_parallel_future_t *future);
-zend_bool    php_parallel_future_readable(php_parallel_future_t *future);
+bool    php_parallel_future_lock(php_parallel_future_t *future);
+bool    php_parallel_future_readable(php_parallel_future_t *future);
 void         php_parallel_future_value(php_parallel_future_t *future, zval *value);
-zend_bool    php_parallel_future_unlock(php_parallel_future_t *future);
+bool    php_parallel_future_unlock(php_parallel_future_t *future);
 
 PHP_MINIT_FUNCTION(PARALLEL_FUTURE);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_FUTURE);

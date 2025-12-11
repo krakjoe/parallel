@@ -266,7 +266,7 @@ PHP_METHOD(Parallel_Sync, notify)
 {
     php_parallel_sync_object_t *object =
         php_parallel_sync_object_from(getThis());
-    zend_bool all = 0;
+    bool all = 0;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
         Z_PARAM_OPTIONAL

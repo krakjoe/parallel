@@ -46,7 +46,7 @@ static zend_object* php_parallel_events_create(zend_class_entry *type) {
     return &events->std;
 }
 
-static zend_always_inline zend_bool php_parallel_events_add(php_parallel_events_t *events, zend_string *name, zval *object, zend_string **key) {
+static zend_always_inline bool php_parallel_events_add(php_parallel_events_t *events, zend_string *name, zval *object, zend_string **key) {
     if(instanceof_function(Z_OBJCE_P(object), php_parallel_channel_ce)) {
         php_parallel_channel_t *channel =
             (php_parallel_channel_t*)
@@ -68,7 +68,7 @@ static zend_always_inline zend_bool php_parallel_events_add(php_parallel_events_
     return 1;
 }
 
-static zend_always_inline zend_bool php_parallel_events_remove(php_parallel_events_t *events, zend_string *name) {
+static zend_always_inline bool php_parallel_events_remove(php_parallel_events_t *events, zend_string *name) {
     return zend_hash_del(&events->targets, name) == SUCCESS;
 }
 
@@ -207,7 +207,7 @@ ZEND_END_ARG_INFO()
 PHP_METHOD(Parallel_Events, setBlocking)
 {
     php_parallel_events_t *events = php_parallel_events_from(getThis());
-    zend_bool blocking;
+    bool blocking;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_BOOL(blocking)

@@ -67,9 +67,9 @@ typedef union _php_parallel_platform_align_test {
     ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, 0, 0) \
     ZEND_PARSE_PARAMETERS_END()
 
-static zend_always_inline zend_bool php_parallel_mutex_init(pthread_mutex_t *mutex, zend_bool recursive) {
+static zend_always_inline bool php_parallel_mutex_init(pthread_mutex_t *mutex, bool recursive) {
     if (recursive) {
-        zend_bool result = 0;
+        bool result = 0;
         pthread_mutexattr_t attributes;
 
         pthread_mutexattr_init(&attributes);
@@ -93,7 +93,7 @@ static zend_always_inline void php_parallel_mutex_destroy(pthread_mutex_t *mutex
     pthread_mutex_destroy(mutex);
 }
 
-static zend_always_inline zend_bool php_parallel_cond_init(pthread_cond_t *cond) {
+static zend_always_inline bool php_parallel_cond_init(pthread_cond_t *cond) {
     return (pthread_cond_init(cond, NULL) == SUCCESS);
 }
 

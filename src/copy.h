@@ -46,7 +46,7 @@ typedef struct _zend_closure_t {
     zif_handler       orig_internal_handler;
 } zend_closure_t;
 
-static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) {
+static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, bool persistent) {
     void *destination = (void*) pemalloc(PARALLEL_PLATFORM_ALIGNED(size), persistent);
 
     memcpy(destination, source, size);
@@ -54,17 +54,17 @@ static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size,
     return destination;
 }
 
-zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent);
+zend_function* php_parallel_copy_function(const zend_function *function, bool persistent);
 
 zend_string*   php_parallel_copy_string_interned(zend_string *source);
-zend_string*   php_parallel_copy_string(zend_string *source, zend_bool persistent);
+zend_string*   php_parallel_copy_string(zend_string *source, bool persistent);
 
-HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent);
-void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent);
+HashTable *php_parallel_copy_hash_ctor(HashTable *source, bool persistent);
+void php_parallel_copy_hash_dtor(HashTable *table, bool persistent);
 
 HashTable *php_parallel_copy_hash_persistent(HashTable *source, zend_string* (*)(zend_string*), void* (*)(void *, zend_long));
 
-void           php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent);
+void           php_parallel_copy_zval_ctor(zval *dest, zval *source, bool persistent);
 void           php_parallel_copy_zval_dtor(zval *zv);
 
 zend_class_entry* php_parallel_copy_scope(zend_class_entry *);

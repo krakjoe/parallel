@@ -120,7 +120,7 @@ static zend_always_inline void php_parallel_link_cond_destroy(php_parallel_link_
     pthread_cond_destroy(&condition->w);
 }
 
-php_parallel_link_t* php_parallel_link_init(zend_string *name, zend_bool buffered, zend_long capacity) {
+php_parallel_link_t* php_parallel_link_init(zend_string *name, bool buffered, zend_long capacity) {
     php_parallel_link_t *link = pecalloc(1, sizeof(php_parallel_link_t), 1);
 
     if (php_parallel_link_mutex_init(&link->m) != SUCCESS) {
@@ -171,7 +171,7 @@ php_parallel_link_t* php_parallel_link_copy(php_parallel_link_t *link) {
     return link;
 }
 
-static zend_always_inline zend_bool php_parallel_link_send_unbuffered(php_parallel_link_t *link, zval *value) {
+static zend_always_inline bool php_parallel_link_send_unbuffered(php_parallel_link_t *link, zval *value) {
     pthread_mutex_lock(&link->m.w);
     pthread_mutex_lock(&link->m.m);
 
@@ -206,7 +206,7 @@ static zend_always_inline zend_bool php_parallel_link_send_unbuffered(php_parall
     return 1;
 }
 
-static zend_always_inline zend_bool php_parallel_link_send_buffered(php_parallel_link_t *link, zval *value) {
+static zend_always_inline bool php_parallel_link_send_buffered(php_parallel_link_t *link, zval *value) {
     zval sent;
 
     pthread_mutex_lock(&link->m.m);
@@ -236,7 +236,7 @@ static zend_always_inline zend_bool php_parallel_link_send_buffered(php_parallel
     return 1;
 }
 
-zend_bool php_parallel_link_send(php_parallel_link_t *link, zval *value) {
+bool php_parallel_link_send(php_parallel_link_t *link, zval *value) {
     if (link->type == PHP_PARALLEL_LINK_UNBUFFERED) {
         return php_parallel_link_send_unbuffered(link, value);
     } else {
@@ -244,7 +244,7 @@ zend_bool php_parallel_link_send(php_parallel_link_t *link, zval *value) {
     }
 }
 
-static zend_always_inline zend_bool php_parallel_link_recv_unbuffered(php_parallel_link_t *link, zval *value) {
+static zend_always_inline bool php_parallel_link_recv_unbuffered(php_parallel_link_t *link, zval *value) {
     pthread_mutex_lock(&link->m.r);
     pthread_mutex_lock(&link->m.m);
 
@@ -278,7 +278,7 @@ static zend_always_inline int php_parallel_link_queue_delete(void *lhs, void *rh
     return lhs == rhs;
 }
 
-static zend_always_inline zend_bool php_parallel_link_recv_buffered(php_parallel_link_t *link, zval *value) {
+static zend_always_inline bool php_parallel_link_recv_buffered(php_parallel_link_t *link, zval *value) {
     zval *head;
 
     pthread_mutex_lock(&link->m.m);
@@ -310,7 +310,7 @@ static zend_always_inline zend_bool php_parallel_link_recv_buffered(php_parallel
     return 1;
 }
 
-zend_bool php_parallel_link_recv(php_parallel_link_t *link, zval *value) {
+bool php_parallel_link_recv(php_parallel_link_t *link, zval *value) {
     if (link->type == PHP_PARALLEL_LINK_UNBUFFERED) {
         return php_parallel_link_recv_unbuffered(link, value);
     } else {
@@ -318,7 +318,7 @@ zend_bool php_parallel_link_recv(php_parallel_link_t *link, zval *value) {
     }
 }
 
-zend_bool php_parallel_link_close(php_parallel_link_t *link) {
+bool php_parallel_link_close(php_parallel_link_t *link) {
     pthread_mutex_lock(&link->m.m);
 
     if (link->s.c) {
@@ -334,7 +334,7 @@ zend_bool php_parallel_link_close(php_parallel_link_t *link) {
     return 1;
 }
 
-zend_bool php_parallel_link_closed(php_parallel_link_t *link) {
+bool php_parallel_link_closed(php_parallel_link_t *link) {
     return link->s.c;
 }
 
@@ -342,11 +342,11 @@ zend_string* php_parallel_link_name(php_parallel_link_t *link) {
     return link->name;
 }
 
-zend_bool php_parallel_link_lock(php_parallel_link_t *link) {
+bool php_parallel_link_lock(php_parallel_link_t *link) {
     return pthread_mutex_lock(&link->m.m) == SUCCESS;
 }
 
-zend_bool php_parallel_link_writable(php_parallel_link_t *link) {
+bool php_parallel_link_writable(php_parallel_link_t *link) {
     switch (link->type) {
         case PHP_PARALLEL_LINK_UNBUFFERED:
             return link->s.r > 0;
@@ -358,7 +358,7 @@ zend_bool php_parallel_link_writable(php_parallel_link_t *link) {
     return 0;
 }
 
-zend_bool php_parallel_link_readable(php_parallel_link_t *link) {
+bool php_parallel_link_readable(php_parallel_link_t *link) {
     switch (link->type) {
         case PHP_PARALLEL_LINK_UNBUFFERED:
             return link->s.w > 0;
@@ -411,7 +411,7 @@ void php_parallel_link_debug(php_parallel_link_t *link, HashTable *debug) {
     }
 }
 
-zend_bool php_parallel_link_unlock(php_parallel_link_t *link) {
+bool php_parallel_link_unlock(php_parallel_link_t *link) {
     return pthread_mutex_unlock(&link->m.m) == SUCCESS;
 }
 

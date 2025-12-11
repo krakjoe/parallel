@@ -35,17 +35,17 @@ TSRM_TLS struct {
 
 typedef struct _php_parallel_check_task_t {
     zend_function *function;
-    zend_bool      returns;
+    bool      returns;
 } php_parallel_check_task_t;
 
 typedef struct _php_parallel_check_function_t {
     zend_function *function;
     zend_uchar     instruction;
-    zend_bool      valid;
+    bool      valid;
 } php_parallel_check_function_t;
 
 typedef struct _php_parallel_check_type_t {
-    zend_bool valid;
+    bool valid;
 } php_parallel_check_type_t;
 
 typedef enum {
@@ -80,7 +80,7 @@ static zend_always_inline const char* php_parallel_check_opcode_name(zend_uchar 
     }
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /* {{{ */
+static zend_always_inline bool php_parallel_check_type(zend_type type) { /* {{{ */
     zend_string      *name;
     zend_type        *single;
     zend_class_entry *class;
@@ -153,7 +153,7 @@ static zend_always_inline zend_bool php_parallel_check_type(zend_type type) { /*
     return check.valid;
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_function *function) { /* {{{ */
+static zend_always_inline bool php_parallel_check_arginfo(const zend_function *function) { /* {{{ */
     zend_arg_info *it, *end;
     int argc = 1;
 
@@ -212,7 +212,7 @@ static zend_always_inline zend_bool php_parallel_check_arginfo(const zend_functi
     return 1;
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_check_statics(const zend_function *function, zend_string **errn, zval **errz) { /* {{{ */
+static zend_always_inline bool php_parallel_check_statics(const zend_function *function, zend_string **errn, zval **errz) { /* {{{ */
     HashTable *statics;
     zval *value, *error;
     zend_string *name;
@@ -241,7 +241,7 @@ static zend_always_inline zend_bool php_parallel_check_statics(const zend_functi
     return 1;
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_check_argv(zval *args, uint32_t *argc, zval **error) { /* {{{ */
+static zend_always_inline bool php_parallel_check_argv(zval *args, uint32_t *argc, zval **error) { /* {{{ */
     zval *arg;
 
     if (*argc == 0) {
@@ -259,7 +259,7 @@ static zend_always_inline zend_bool php_parallel_check_argv(zval *args, uint32_t
     return 1;
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_check_use(zend_execute_data *execute_data, const zend_function *function, zend_op *bind) { /* {{{ */
+static zend_always_inline bool php_parallel_check_use(zend_execute_data *execute_data, const zend_function *function, zend_op *bind) { /* {{{ */
     zend_op *opline, *end;
 
     if (EX(func)->type != ZEND_USER_FUNCTION) {
@@ -283,7 +283,7 @@ static zend_always_inline zend_bool php_parallel_check_use(zend_execute_data *ex
     return 0;
 } /* }}} */
 
-zend_bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_data *execute_data, const zend_function * function, zval *argv, zend_bool *returns) { /* {{{ */
+bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_data *execute_data, const zend_function * function, zval *argv, bool *returns) { /* {{{ */
     php_parallel_check_task_t check, *checked;
     zend_op *it, *end;
 
@@ -436,7 +436,7 @@ zend_bool php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_
     return 1;
 } /* }}} */
 
-zend_bool php_parallel_check_function(const zend_function *function, zend_function **errf, zend_uchar *erro) { /* {{{ */
+bool php_parallel_check_function(const zend_function *function, zend_function **errf, zend_uchar *erro) { /* {{{ */
     php_parallel_check_function_t check, *checked;
     zend_op *it, *end;
 
@@ -499,7 +499,7 @@ _php_parallel_checked_function_return:
     return check.valid;
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_check_closure(zend_closure_t *closure) { /* {{{ */
+static zend_always_inline bool php_parallel_check_closure(zend_closure_t *closure) { /* {{{ */
     return php_parallel_check_statics(&closure->func, NULL, NULL) &&
            php_parallel_check_function(&closure->func, NULL, NULL);
 } /* }}} */
@@ -660,7 +660,7 @@ static php_parallel_check_class_result_t php_parallel_check_class(zend_class_ent
     return php_parallel_check_class_inline(ce);
 }
 
-static zend_always_inline zend_bool php_parallel_check_object(zend_object *object, zval **error) { /* {{{ */
+static zend_always_inline bool php_parallel_check_object(zend_object *object, zval **error) { /* {{{ */
     if (instanceof_function(object->ce, php_parallel_channel_ce) ||
         instanceof_function(object->ce, php_parallel_sync_ce)) {
         return 1;
@@ -724,7 +724,7 @@ static zend_always_inline zend_bool php_parallel_check_object(zend_object *objec
     return 1;
 } /* }}} */
 
-static zend_always_inline zend_bool php_parallel_check_resource(zval *zv) { /* {{{ */
+static zend_always_inline bool php_parallel_check_resource(zval *zv) { /* {{{ */
     zend_resource *resource = Z_RES_P(zv);
 
     if (resource->type == php_file_le_stream() ||
@@ -735,7 +735,7 @@ static zend_always_inline zend_bool php_parallel_check_resource(zval *zv) { /* {
     return 0;
 } /* }}} */
 
-zend_bool php_parallel_check_zval(zval *zv, zval **error) { /* {{{ */
+bool php_parallel_check_zval(zval *zv, zval **error) { /* {{{ */
     switch (Z_TYPE_P(zv)) {
         case IS_OBJECT:
             if (PARALLEL_ZVAL_CHECK_CLOSURE(zv)) {

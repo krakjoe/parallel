@@ -25,11 +25,11 @@ zend_object_handlers php_parallel_future_handlers;
 
 zend_string *php_parallel_future_string_runtime;
 
-zend_bool php_parallel_future_lock(php_parallel_future_t *future) {
+bool php_parallel_future_lock(php_parallel_future_t *future) {
     return php_parallel_monitor_lock(future->monitor);
 }
 
-zend_bool php_parallel_future_readable(php_parallel_future_t *future) {
+bool php_parallel_future_readable(php_parallel_future_t *future) {
     return php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY);
 }
 
@@ -70,7 +70,7 @@ void php_parallel_future_value(php_parallel_future_t *future, zval *return_value
     php_parallel_monitor_unlock(future->monitor);
 }
 
-zend_bool php_parallel_future_unlock(php_parallel_future_t *future) {
+bool php_parallel_future_unlock(php_parallel_future_t *future) {
     return php_parallel_monitor_unlock(future->monitor);
 }
 

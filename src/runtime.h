@@ -19,7 +19,7 @@
 #define HAVE_PARALLEL_RUNTIME_H
 
 #if PHP_VERSION_ID < 80200
-# define zend_atomic_bool zend_bool
+# define zend_atomic_bool bool
 # define zend_atomic_bool_store(dest, value) (*(dest) = value)
 #endif
 

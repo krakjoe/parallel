@@ -123,7 +123,7 @@ static zend_always_inline void php_parallel_cache_type(zend_type *type) { /* {{{
 
 
 /* {{{ */
-static zend_op_array* php_parallel_cache_create(const zend_function *source, zend_bool statics) {
+static zend_op_array* php_parallel_cache_create(const zend_function *source, bool statics) {
     zend_op_array *cached = php_parallel_cache_copy_mem((void*) source, sizeof(zend_op_array));
 
     cached->fn_flags |= ZEND_ACC_IMMUTABLE;
@@ -333,7 +333,7 @@ _php_parallel_cached_function_return:
 } /* }}} */
 
 /* {{{ */
-static zend_always_inline zend_function* php_parallel_cache_function_ex(const zend_function *source, zend_bool statics) {
+static zend_always_inline zend_function* php_parallel_cache_function_ex(const zend_function *source, bool statics) {
     zend_op_array *cached;
     
     pthread_mutex_lock(&PCG(mutex));

@@ -153,7 +153,7 @@ zval* php_parallel_events_input_find(zval *zv, zend_string *target) {
     return zend_hash_find(&input->table, target);
 }
 
-zend_bool php_parallel_events_input_exists(zval *zv, zend_string *target) {
+bool php_parallel_events_input_exists(zval *zv, zend_string *target) {
     php_parallel_events_input_t *input;
 
     if (Z_TYPE_P(zv) != IS_OBJECT) {
@@ -165,7 +165,7 @@ zend_bool php_parallel_events_input_exists(zval *zv, zend_string *target) {
     return zend_hash_exists(&input->table, target);
 }
 
-zend_bool php_parallel_events_input_remove(zval *zv, zend_string *target) {
+bool php_parallel_events_input_remove(zval *zv, zend_string *target) {
     php_parallel_events_input_t *input;
 
     if (Z_TYPE_P(zv) != IS_OBJECT) {
