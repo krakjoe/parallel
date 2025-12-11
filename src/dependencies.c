@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_DEPENDENCIES
 
 #include "parallel.h"
+#include "zend_extensions.h"
 
 static struct {
     pthread_mutex_t mutex;
@@ -72,7 +73,7 @@ static void php_parallel_dependencies_load_globals(const zend_function *function
 #if PHP_VERSION_ID >= 80100
     if (function->op_array.dynamic_func_defs) {
     	uint32_t it = 0, end = function->op_array.num_dynamic_func_defs;
-    	
+
     	while (it < end) {
     	    php_parallel_dependencies_load_globals(
     	    	(zend_function*) function->op_array.dynamic_func_defs[it]);
@@ -86,7 +87,6 @@ static void php_parallel_dependencies_load_globals(const zend_function *function
 
 
 void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
-#if PHP_VERSION_ID < 80100
     HashTable dependencies;
 
     pthread_mutex_lock(&PDM(mutex));
@@ -102,6 +102,7 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
                 *end = opline + function->op_array.last;
 
         while (opline < end) {
+#if PHP_VERSION_ID < 80100
             if (opline->opcode == ZEND_DECLARE_LAMBDA_FUNCTION) {
                 zend_string   *key;
                 zend_function *dependency;
@@ -121,6 +122,34 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
 
                 php_parallel_dependencies_store(dependency);
             }
+#endif
+            if (opline->opcode == ZEND_INIT_FCALL ||
+                opline->opcode == ZEND_INIT_FCALL_BY_NAME ||
+                opline->opcode == ZEND_INIT_NS_FCALL_BY_NAME) {
+                if (opline->op2_type == IS_CONST) {
+                    zval *name = RT_CONSTANT(opline, opline->op2);
+
+                    if (Z_TYPE_P(name) == IS_STRING) {
+                        zend_function *dependency =
+                            zend_hash_find_ptr(EG(function_table), Z_STR_P(name));
+
+                        if (dependency && dependency->type == ZEND_USER_FUNCTION) {
+                            dependency = php_parallel_copy_function(dependency, 1);
+
+                            if (dependencies.nNumUsed == 0) {
+                                zend_hash_init(&dependencies, 8, NULL, NULL, 1);
+                            }
+
+                            if (!zend_hash_exists(&dependencies, Z_STR_P(name))) {
+                                zend_hash_add_ptr(
+                                    &dependencies,
+                                    php_parallel_copy_string_interned(Z_STR_P(name)),
+                                    dependency);
+                            }
+                        }
+                    }
+                }
+            }
             opline++;
         }
     }
@@ -131,19 +160,15 @@ void php_parallel_dependencies_store(const zend_function *function) { /* {{{ */
         &dependencies, sizeof(HashTable));
 
     pthread_mutex_unlock(&PDM(mutex));
-#endif
 } /* }}} */
 
 void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
-#if PHP_VERSION_ID < 80100
     HashTable *dependencies;
     zend_string *key;
     zend_function *dependency;
-#endif
 
     php_parallel_dependencies_load_globals(function);
 
-#if PHP_VERSION_ID < 80100
     pthread_mutex_lock(&PDM(mutex));
     dependencies = zend_hash_index_find_ptr(
         &PDM(table), (zend_ulong) function->op_array.opcodes);
@@ -168,7 +193,6 @@ void php_parallel_dependencies_load(const zend_function *function) { /* {{{ */
             zend_hash_add_empty_element(&PDG(used), key);
         }
     } ZEND_HASH_FOREACH_END();
-#endif
 } /* }}} */
 
 static void php_parallel_dependencies_dtor(zval *zv) { /* {{{ */
