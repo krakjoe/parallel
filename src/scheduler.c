@@ -684,7 +684,7 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
     }
 }
 
-PARALLEL_API zend_bool php_parallel_is_parallel_worker_thread(void) {
+PARALLEL_API bool php_parallel_is_parallel_worker_thread(void) {
     return php_parallel_scheduler_context != NULL;
 }
 
