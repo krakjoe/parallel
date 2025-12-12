@@ -31,7 +31,7 @@ php_parallel_channels_t php_parallel_channels = {NULL, 0};
 zend_class_entry *php_parallel_channel_ce;
 zend_object_handlers php_parallel_channel_handlers;
 
-static zend_always_inline void php_parallel_channels_make_ex(php_parallel_channel_t *channel, zend_string *name, zend_bool buffered, zend_long capacity) {
+static zend_always_inline void php_parallel_channels_make_ex(php_parallel_channel_t *channel, zend_string *name, bool buffered, zend_long capacity) {
     channel->link = php_parallel_link_init(name, buffered, capacity);
 
     zend_hash_add_ptr(
@@ -40,7 +40,7 @@ static zend_always_inline void php_parallel_channels_make_ex(php_parallel_channe
         php_parallel_link_copy(channel->link));
 }
 
-static zend_always_inline void php_parallel_channels_make(zval *return_value, zend_string *name, zend_bool buffered, zend_long capacity) {
+static zend_always_inline void php_parallel_channels_make(zval *return_value, zend_string *name, bool buffered, zend_long capacity) {
     object_init_ex(return_value, php_parallel_channel_ce);
 
     php_parallel_channels_make_ex(
@@ -96,7 +96,7 @@ PHP_METHOD(Parallel_Channel, __construct)
 {
     php_parallel_channel_t *channel = php_parallel_channel_from(getThis());
     zend_long capacity = -1;
-    zend_bool buffered = 0;
+    bool buffered = 0;
     zend_string *name = NULL;
 
     if (ZEND_NUM_ARGS()) {
@@ -134,7 +134,7 @@ ZEND_END_ARG_INFO()
 PHP_METHOD(Parallel_Channel, make)
 {
     zend_string *name = NULL;
-    zend_bool    buffered = 0;
+    bool    buffered = 0;
     zend_long    capacity = -1;
 
     if (ZEND_NUM_ARGS() == 1) {

@@ -184,8 +184,8 @@ static zend_always_inline bool php_parallel_scheduler_empty(php_parallel_runtime
     return !zend_llist_count(&runtime->schedule);
 }
 
-zend_bool php_parallel_scheduler_busy(php_parallel_runtime_t *runtime) {
-    zend_bool busy = 1;
+bool php_parallel_scheduler_busy(php_parallel_runtime_t *runtime) {
+    bool busy = 1;
 
     php_parallel_monitor_lock(runtime->monitor);
     if (php_parallel_scheduler_empty(runtime)) {
@@ -271,7 +271,7 @@ static void php_parallel_scheduler_clean(zend_function *function) {
 #endif
 }
 
-static zend_always_inline zend_bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parallel_schedule_el_t *el) {
+static zend_always_inline bool php_parallel_scheduler_pop(php_parallel_runtime_t *runtime, php_parallel_schedule_el_t *el) {
     php_parallel_schedule_el_t *head;
     zend_class_entry *scope = NULL;
     zend_function    *function = NULL;
@@ -591,7 +591,7 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime) {
 void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure, zval *argv, zval *return_value) {
     zend_execute_data      *caller = EG(current_execute_data)->prev_execute_data;
     const zend_function    *function = zend_get_closure_method_def(Z_OBJ_P(closure));
-    zend_bool               returns = 0;
+    bool               returns = 0;
     php_parallel_future_t  *future = NULL;
 
     php_parallel_monitor_lock(runtime->monitor);
@@ -611,7 +611,7 @@ void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure,
     php_parallel_monitor_unlock(runtime->monitor);
 }
 
-void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill) {
+void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, bool kill) {
     php_parallel_monitor_lock(runtime->monitor);
 
     if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
@@ -639,7 +639,7 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, zend_bool kill
     pthread_join(runtime->thread, NULL);
 }
 
-zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
+bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
     size_t in, out = 0;
 
     php_parallel_monitor_lock(future->runtime->monitor);
@@ -656,7 +656,7 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
     php_parallel_monitor_unlock(future->runtime->monitor);
 
     if (in == out) {
-        zend_bool cancelled = 0;
+        bool cancelled = 0;
 
         php_parallel_monitor_lock(future->monitor);
 

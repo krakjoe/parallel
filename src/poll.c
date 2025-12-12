@@ -87,7 +87,7 @@ static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_
     php_parallel_events_poll_free(poll);
 }
 
-static zend_always_inline zend_bool php_parallel_events_poll_timeout(php_parallel_events_poll_t *poll, php_parallel_events_t *events) {
+static zend_always_inline bool php_parallel_events_poll_timeout(php_parallel_events_poll_t *poll, php_parallel_events_t *events) {
     struct timeval now;
 
     if (events->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
@@ -103,7 +103,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_timeout(php_paralle
     return 0;
 }
 
-static zend_always_inline zend_bool php_parallel_events_poll_random(php_parallel_events_t *events, zend_string **name, zend_object **object) {
+static zend_always_inline bool php_parallel_events_poll_random(php_parallel_events_t *events, zend_string **name, zend_object **object) {
     uint32_t  size = events->targets.nNumUsed;
     zend_long random =
         php_mt_rand_range(0, (zend_long) size - 1);
@@ -124,7 +124,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_random(php_parallel
     return 0;
 }
 
-static zend_always_inline zend_bool php_parallel_events_poll_begin_link(
+static zend_always_inline bool php_parallel_events_poll_begin_link(
                                         php_parallel_events_t *events,
                                         php_parallel_events_state_t *state,
                                         zend_string *name,
@@ -156,7 +156,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_begin_link(
     return 0;
 }
 
-static zend_always_inline zend_bool php_parallel_events_poll_begin_future(
+static zend_always_inline bool php_parallel_events_poll_begin_future(
                             php_parallel_events_t *events,
                             php_parallel_events_state_t *state,
                             zend_string *name,
@@ -180,7 +180,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_begin_future(
     return 0;
 }
 
-static zend_always_inline zend_bool php_parallel_events_poll_begin(php_parallel_events_t *events, php_parallel_events_state_t *state) {
+static zend_always_inline bool php_parallel_events_poll_begin(php_parallel_events_t *events, php_parallel_events_state_t *state) {
     zend_string *name;
     zend_object *object;
 
@@ -199,7 +199,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_begin(php_parallel_
     return 0;
 }
 
-static zend_always_inline zend_bool php_parallel_events_poll_link(
+static zend_always_inline bool php_parallel_events_poll_link(
                             php_parallel_events_t *events,
                             php_parallel_events_state_t *state,
                             zval *retval) {
@@ -258,7 +258,7 @@ static zend_always_inline zend_bool php_parallel_events_poll_link(
     return 0;
 }
 
-static zend_always_inline zend_bool php_parallel_events_poll_future(
+static zend_always_inline bool php_parallel_events_poll_future(
                             php_parallel_events_t *events,
                             php_parallel_events_state_t *state,
                             zval *retval) {

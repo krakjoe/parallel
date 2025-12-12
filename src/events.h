@@ -22,7 +22,7 @@ typedef struct _php_parallel_events_t {
     zval        input;
     HashTable   targets;
     zend_long   timeout;
-    zend_bool   blocking;
+    bool   blocking;
     zval        blocker;
     zend_object std;
 } php_parallel_events_t;
@@ -35,9 +35,9 @@ typedef enum {
 typedef struct _php_parallel_events_state_t {
     php_parallel_events_type_t type;
     zend_string *name;
-    zend_bool readable;
-    zend_bool writable;
-    zend_bool closed;
+    bool readable;
+    bool writable;
+    bool closed;
     zend_object *object;
 } php_parallel_events_state_t;
 

@@ -18,9 +18,9 @@
 #ifndef HAVE_PARALLEL_CHECK_H
 #define HAVE_PARALLEL_CHECK_H
 
-zend_bool      php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_data *execute_data, const zend_function * function, zval *argv, zend_bool *returns);
-zend_bool      php_parallel_check_zval(zval *zv, zval **error);
-zend_bool      php_parallel_check_function(const zend_function *function, zend_function **errf, zend_uchar *erro);
+bool      php_parallel_check_task(php_parallel_runtime_t *runtime, zend_execute_data *execute_data, const zend_function * function, zval *argv, bool *returns);
+bool      php_parallel_check_zval(zval *zv, zval **error);
+bool      php_parallel_check_function(const zend_function *function, zend_function **errf, zend_uchar *erro);
 
 #define PARALLEL_ZVAL_CHECK php_parallel_check_zval
 #define PARALLEL_ZVAL_CHECK_CLOSURES php_parallel_check_zval_closures
@@ -28,7 +28,7 @@ zend_bool      php_parallel_check_function(const zend_function *function, zend_f
 #define PARALLEL_ZVAL_CHECK_CLOSURE(zv) \
     (Z_TYPE_P(zv) == IS_OBJECT && Z_OBJCE_P(zv) == zend_ce_closure)
 
-static zend_always_inline zend_bool php_parallel_check_zval_closures(zval *zv) { /* {{{ */
+static zend_always_inline bool php_parallel_check_zval_closures(zval *zv) { /* {{{ */
     if (PARALLEL_ZVAL_CHECK_CLOSURE(zv)) {
         return 1;
     }

@@ -75,7 +75,7 @@ const zend_object_iterator_funcs php_parallel_events_loop_functions = {
     .get_current_key    = NULL,
 };
 
-static zend_always_inline zend_bool php_parallel_events_loop_check(zval *zv) {
+static zend_always_inline bool php_parallel_events_loop_check(zval *zv) {
     php_parallel_events_t *events = php_parallel_events_from(zv);
 
     if (events->blocking) {
