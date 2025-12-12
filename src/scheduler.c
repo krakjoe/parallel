@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_SCHEDULER
 
 #include "parallel.h"
+#include "../php_parallel.h"
 #include "zend_types.h"
 
 TSRM_TLS php_parallel_runtime_t* php_parallel_scheduler_context = NULL;
@@ -179,7 +180,7 @@ static zend_always_inline void php_parallel_scheduler_add(
     }
 }
 
-static zend_always_inline zend_bool php_parallel_scheduler_empty(php_parallel_runtime_t *runtime) {
+static zend_always_inline bool php_parallel_scheduler_empty(php_parallel_runtime_t *runtime) {
     return !zend_llist_count(&runtime->schedule);
 }
 
@@ -681,6 +682,10 @@ zend_bool php_parallel_scheduler_cancel(php_parallel_future_t *future) {
 
         return 1;
     }
+}
+
+PARALLEL_API bool php_parallel_is_parallel_worker_thread(void) {
+    return php_parallel_scheduler_context != NULL;
 }
 
 static void php_parallel_scheduler_interrupt(zend_execute_data *execute_data) {
