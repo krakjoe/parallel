@@ -104,6 +104,30 @@ static zend_always_inline void php_parallel_exceptions_write(zend_object *except
     EG(fake_scope) = scope;
 }
 
+zend_object* php_parallel_exception_object(zend_class_entry *ce, const char *message, zend_long code, zend_string *file, zend_long line) {
+    zend_object *exception = zend_objects_new(ce);
+
+    object_properties_init(exception, ce);
+
+    if (message) {
+        zend_update_property_string(ce, exception, "message", sizeof("message")-1, message);
+    }
+
+    if (code) {
+        zend_update_property_long(ce, exception, "code", sizeof("code")-1, code);
+    }
+
+    if (file) {
+        zend_update_property_str(ce, exception, "file", sizeof("file")-1, file);
+    }
+
+    if (line) {
+        zend_update_property_long(ce, exception, "line", sizeof("line")-1, line);
+    }
+
+    return exception;
+}
+
 void php_parallel_exceptions_destroy(php_parallel_exception_t *ex) {
     PARALLEL_ZVAL_DTOR(&ex->class);
     PARALLEL_ZVAL_DTOR(&ex->file);

@@ -28,7 +28,7 @@ typedef struct _php_parallel_runtime_t {
     php_parallel_monitor_t          *monitor;
     zend_string                     *bootstrap;
     struct {
-        zend_atomic_bool                   *interrupt;
+        zend_atomic_bool            *interrupt;
     } child;
     struct {
         void                        *server;
@@ -36,6 +36,10 @@ typedef struct _php_parallel_runtime_t {
         char                       **argv;
     } parent;
     zend_llist                       schedule;
+    zend_bool                        crashed;
+    zend_string                     *missing;
+    zend_string                     *file;
+    uint32_t                         line;
     zend_object                      std;
 } php_parallel_runtime_t;
 

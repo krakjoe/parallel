@@ -84,6 +84,7 @@ extern zend_class_entry* php_parallel_events_event_error_ce;
 
 typedef struct _php_parallel_exception_t php_parallel_exception_t;
 
+zend_object* php_parallel_exception_object(zend_class_entry *ce, const char *message, zend_long code, zend_string *file, zend_long line);
 void         php_parallel_exceptions_save(zval *saved, zend_object *exception);
 zend_object* php_parallel_exceptions_restore(zval *exception);
 void         php_parallel_exceptions_destroy(php_parallel_exception_t *ex);
