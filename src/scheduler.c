@@ -69,7 +69,7 @@ LONG WINAPI php_parallel_veh_handler(PEXCEPTION_POINTERS exceptionInfo) {
 struct sigaction php_parallel_old_sigsegv_action;
 
 static void php_parallel_sigsegv_handler(int sig, siginfo_t *info, void *context) {
-	// Only handle this SIGSEGV if this is a parallel thread
+    // Only handle this SIGSEGV if this is a parallel thread
     if (php_parallel_scheduler_context) {
         php_parallel_scheduler_context->crashed = 1;
 
@@ -193,6 +193,9 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(p
 
 static zend_always_inline void php_parallel_scheduler_exit(php_parallel_runtime_t *runtime) {
     php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_DONE);
+    // PHP_PARALLEL_CLOSED prevents the thread holding the \parallel\Runtime
+    // object from scheduling new tasks on this finished thread
+    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED);
 
     php_request_shutdown(NULL);
 
@@ -311,13 +314,13 @@ static void php_parallel_scheduler_pull(zend_function *function) {
 
 #if PHP_VERSION_ID >= 80100
     if (function->op_array.num_dynamic_func_defs) {
-    	uint32_t it = 0;
+        uint32_t it = 0;
 
-    	while (it < function->op_array.num_dynamic_func_defs) {
-    	    php_parallel_scheduler_pull(
+        while (it < function->op_array.num_dynamic_func_defs) {
+            php_parallel_scheduler_pull(
                (zend_function*) function->op_array.dynamic_func_defs[it]);
             it++;
-    	}
+        }
     }
 #endif
 }
@@ -337,14 +340,14 @@ static void php_parallel_scheduler_clean(zend_function *function) {
 
 #if PHP_VERSION_ID >= 80100
     if (function->op_array.num_dynamic_func_defs) {
-    	uint32_t it = 0;
+        uint32_t it = 0;
 
-    	while (it < function->op_array.num_dynamic_func_defs) {
-    	    php_parallel_scheduler_clean(
+        while (it < function->op_array.num_dynamic_func_defs) {
+            php_parallel_scheduler_clean(
               (zend_function*) function->op_array.dynamic_func_defs[it]);
           pefree(function->op_array.dynamic_func_defs[it], 1);
           it++;
-    	}
+        }
         /* Free the dynamic_func_defs array itself */
         pefree(function->op_array.dynamic_func_defs, 1);
         function->op_array.dynamic_func_defs = NULL;
@@ -444,8 +447,8 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
             }
         } zend_catch {
             if (runtime->crashed) {
+                zend_object *exception = NULL;
                 if (future) {
-                    zend_object *exception = NULL;
                     char *message = NULL;
 
                     zend_clear_exception();
@@ -464,16 +467,23 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
                             "illegal instruction (segmentation fault) in task", 0, runtime->file, runtime->line);
                     }
 
+                    php_parallel_monitor_lock(future->monitor);
                     if (exception) {
                         php_parallel_exceptions_save(frame->return_value, exception);
-                        php_parallel_monitor_set(future->monitor, PHP_PARALLEL_ERROR);
                         OBJ_RELEASE(exception);
                     }
+                    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_ERROR);
+                    php_parallel_monitor_unlock(future->monitor);
                 }
-                runtime->crashed = 0;
-                runtime->missing = NULL;
-                runtime->file = NULL;
-                runtime->line = 0;
+
+                // This runtime crashed, as such we can not give any guarantees
+                // anymore and it is best to shut down the thread as gracefuly
+                // as possible. By setting the `runtime->monitor` to
+                // `PHP_PARALLEL_KILLED` we make sure that this thread goes
+                // through shutdown and calls `pthread_ext()`
+                php_parallel_monitor_lock(runtime->monitor);
+                php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_KILLED);
+                php_parallel_monitor_unlock(runtime->monitor);
             } else if (future) {
                 php_parallel_monitor_lock(future->monitor);
                 if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_CANCELLED)) {

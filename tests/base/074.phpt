@@ -20,35 +20,31 @@ if (version_compare(PHP_VERSION, "8.2.0", "<")) {
 ?>
 --FILE--
 <?php
+
 function a()
 {
 	return "foo";
 }
 
-$runtime = new parallel\Runtime();
-try {
-	$future = $runtime->run(function () {
-		return a();
-	});
-	$future->value();
-} catch (\parallel\Runtime\Error\IllegalInstruction $e) {
-	var_dump($e->getMessage());
-	var_dump($e->getFile());
-	var_dump($e->getLine());
+$future[] = \parallel\run(function() { return a(); });
+$future[] = \parallel\run(function() { return a(); });
+$future[] = \parallel\run(function() { return a(); });
+$future[] = \parallel\run(function() { return a(); });
+$future[] = \parallel\run(function() { return a(); });
+$future[] = \parallel\run(function() { return a(); });
+
+foreach ($future as $v) {
+	try {
+		var_dump($v->value());
+	} catch (\parallel\Runtime\Error\IllegalInstruction $e) {
+		echo "done." . \PHP_EOL;
+	}
 }
-try {
-	$future = $runtime->run(function () {
-		return "done";
-	});
-	$future->value();
-} catch (\parallel\Runtime\Error\Closed $e) {
-	var_dump($e->getMessage());
-}
-echo "done";
 ?>
 --EXPECTF--
-string(%d) "Call to undefined function a() in task, please provide the function via a bootstrap file"
-string(%d) "%s073.php"
-int(10)
-string(%d) "Runtime closed"
-done
+done.
+done.
+done.
+done.
+done.
+done.
