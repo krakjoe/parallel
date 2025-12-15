@@ -193,9 +193,6 @@ static zend_always_inline php_parallel_runtime_t* php_parallel_scheduler_setup(p
 
 static zend_always_inline void php_parallel_scheduler_exit(php_parallel_runtime_t *runtime) {
     php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_DONE);
-    // PHP_PARALLEL_CLOSED prevents the thread holding the \parallel\Runtime
-    // object from scheduling new tasks on this finished thread
-    php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED);
 
     php_request_shutdown(NULL);
 

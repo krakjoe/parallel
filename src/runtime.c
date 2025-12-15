@@ -29,8 +29,7 @@ php_parallel_runtime_t* php_parallel_runtime_construct(zend_string *bootstrap) {
 
     object_init_ex(&rt, php_parallel_runtime_ce);
 
-    runtime = 
-        php_parallel_runtime_from(&rt);
+    runtime = php_parallel_runtime_from(&rt);
 
     php_parallel_scheduler_start(runtime, bootstrap);
 
@@ -76,7 +75,8 @@ PHP_METHOD(Parallel_Runtime, run)
         Z_PARAM_ARRAY(argv)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED)) {
+    if (php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_CLOSED) ||
+        php_parallel_monitor_check(runtime->monitor, PHP_PARALLEL_DONE)) {
         php_parallel_exception_ex(
             php_parallel_runtime_error_closed_ce,
             "Runtime closed");
