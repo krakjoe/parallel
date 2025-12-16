@@ -106,7 +106,7 @@ static zend_always_inline void php_parallel_cache_type(zend_type *type) { /* {{{
         if (ZEND_TYPE_USES_ARENA(*type)) {
             ZEND_TYPE_FULL_MASK(*type) &= ~_ZEND_TYPE_ARENA_BIT;
         }
- 
+
         ZEND_TYPE_SET_PTR(*type, list);
     }
 
@@ -211,6 +211,13 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
                 *end     = opline + cached->last;
 
         while (opline < end) {
+            if (opline->opcode == ZEND_INIT_FCALL) {
+                opline->opcode = ZEND_INIT_DYNAMIC_CALL;
+                opline->op1_type = IS_UNUSED;
+                opline->op1.var = 0;
+                zend_vm_set_opcode_handler_ex(opline, 0, 0, 0);
+            }
+
             if (opline->op1_type == IS_CONST) {
 #if ZEND_USE_ABS_CONST_ADDR
                 opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)cached->literals - (char*)source->op_array.literals));
@@ -330,12 +337,12 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
 
 _php_parallel_cached_function_return:
     return cached;
-} /* }}} */
+}
 
 /* {{{ */
 static zend_always_inline zend_function* php_parallel_cache_function_ex(const zend_function *source, bool statics) {
     zend_op_array *cached;
-    
+
     pthread_mutex_lock(&PCG(mutex));
 
     if ((cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) source->op_array.opcodes))) {
@@ -346,7 +353,7 @@ static zend_always_inline zend_function* php_parallel_cache_function_ex(const ze
 
     zend_hash_index_add_ptr(
         &PCG(table),
-        (zend_ulong) source->op_array.opcodes, 
+        (zend_ulong) source->op_array.opcodes,
         cached);
 
 _php_parallel_cached_function_return:
