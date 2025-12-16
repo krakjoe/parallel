@@ -272,7 +272,7 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
                 opline->opcode = ZEND_INIT_FCALL_BY_NAME;
                 opline->op1_type = IS_UNUSED;
                 opline->op1.var = 0;
-                zend_vm_set_opcode_handler_ex(opline, 0, 0, 0);
+                ZEND_VM_SET_OPCODE_HANDLER(opline);
             }
 
             /* Remap IS_CONST operands to their new locations in the expanded literal table

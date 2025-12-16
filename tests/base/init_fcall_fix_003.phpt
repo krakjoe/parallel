@@ -20,7 +20,7 @@ $runtime->run(function(){
 		// and fail gracefully because it doesn't exist in the thread.
 		$s .= dummy_func();
 		$s .= dummy_func();
-		return $s();
+		return $s;
     } catch (Error $e) {
         echo "Caught: " . $e->getMessage();
     }
