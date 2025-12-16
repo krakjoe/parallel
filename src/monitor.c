@@ -20,103 +20,102 @@
 
 #include "parallel.h"
 
-php_parallel_monitor_t* php_parallel_monitor_create(void) {
-    php_parallel_monitor_t *monitor =
-        (php_parallel_monitor_t*)
-            calloc(1, sizeof(php_parallel_monitor_t));
+php_parallel_monitor_t *php_parallel_monitor_create(void)
+{
+	php_parallel_monitor_t *monitor = (php_parallel_monitor_t *)calloc(1, sizeof(php_parallel_monitor_t));
 
-    php_parallel_mutex_init(&monitor->mutex, 1);
-    php_parallel_cond_init(&monitor->condition);
+	php_parallel_mutex_init(&monitor->mutex, 1);
+	php_parallel_cond_init(&monitor->condition);
 
-    return monitor;
+	return monitor;
 }
 
-int php_parallel_monitor_lock(php_parallel_monitor_t *monitor) {
-    return pthread_mutex_lock(&monitor->mutex);
+int     php_parallel_monitor_lock(php_parallel_monitor_t *monitor) { return pthread_mutex_lock(&monitor->mutex); }
+
+int32_t php_parallel_monitor_check(php_parallel_monitor_t *monitor, int32_t state)
+{
+	return (monitor->state & (state));
 }
 
-int32_t php_parallel_monitor_check(php_parallel_monitor_t *monitor, int32_t state) {
-    return (monitor->state & (state));
+int     php_parallel_monitor_unlock(php_parallel_monitor_t *monitor) { return pthread_mutex_unlock(&monitor->mutex); }
+
+int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state)
+{
+	int32_t changed = FAILURE;
+	int     rc = SUCCESS;
+
+	if (pthread_mutex_lock(&monitor->mutex) != SUCCESS) {
+		return FAILURE;
+	}
+
+	while (!(changed = (monitor->state & state))) {
+
+		if ((rc = pthread_cond_wait(&monitor->condition, &monitor->mutex)) != SUCCESS) {
+			pthread_mutex_unlock(&monitor->mutex);
+
+			return FAILURE;
+		}
+	}
+
+	monitor->state ^= changed;
+
+	if (pthread_mutex_unlock(&monitor->mutex) != SUCCESS) {
+		return FAILURE;
+	}
+
+	return changed;
 }
 
-int php_parallel_monitor_unlock(php_parallel_monitor_t *monitor) {
-    return pthread_mutex_unlock(&monitor->mutex);
+int32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, int32_t state)
+{
+	int32_t changed = FAILURE;
+	int     rc = SUCCESS;
+
+	while (!(changed = (monitor->state & state))) {
+		if ((rc = pthread_cond_wait(&monitor->condition, &monitor->mutex)) != SUCCESS) {
+			return FAILURE;
+		}
+	}
+
+	monitor->state ^= changed;
+
+	return changed;
 }
 
-int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state) {
-    int32_t changed = FAILURE;
-    int      rc      = SUCCESS;
+void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state)
+{
+	pthread_mutex_lock(&monitor->mutex);
 
-    if (pthread_mutex_lock(&monitor->mutex) != SUCCESS) {
-        return FAILURE;
-    }
+	monitor->state |= state;
 
-    while (!(changed = (monitor->state & state))) {
+	pthread_cond_signal(&monitor->condition);
 
-        if ((rc = pthread_cond_wait(
-                &monitor->condition, &monitor->mutex)) != SUCCESS) {
-            pthread_mutex_unlock(&monitor->mutex);
-
-            return FAILURE;
-        }
-    }
-
-    monitor->state ^= changed;
-
-    if (pthread_mutex_unlock(&monitor->mutex) != SUCCESS) {
-        return FAILURE;
-    }
-
-    return changed;
+	pthread_mutex_unlock(&monitor->mutex);
 }
 
-int32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, int32_t state) {
-    int32_t changed = FAILURE;
-    int      rc      = SUCCESS;
+void php_parallel_monitor_add(php_parallel_monitor_t *monitor, int32_t state)
+{
+	pthread_mutex_lock(&monitor->mutex);
 
-    while (!(changed = (monitor->state & state))) {
-        if ((rc = pthread_cond_wait(
-                &monitor->condition, &monitor->mutex)) != SUCCESS) {
-            return FAILURE;
-        }
-    }
+	monitor->state |= state;
 
-    monitor->state ^= changed;
-
-    return changed;
+	pthread_mutex_unlock(&monitor->mutex);
 }
 
-void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state) {
-    pthread_mutex_lock(&monitor->mutex);
+void php_parallel_monitor_remove(php_parallel_monitor_t *monitor, int32_t state)
+{
+	pthread_mutex_lock(&monitor->mutex);
 
-    monitor->state |= state;
+	monitor->state &= ~state;
 
-    pthread_cond_signal(
-        &monitor->condition);
-
-    pthread_mutex_unlock(&monitor->mutex);
+	pthread_mutex_unlock(&monitor->mutex);
 }
 
-void php_parallel_monitor_add(php_parallel_monitor_t *monitor, int32_t state) {
-    pthread_mutex_lock(&monitor->mutex);
+void php_parallel_monitor_destroy(php_parallel_monitor_t *monitor)
+{
+	php_parallel_mutex_destroy(&monitor->mutex);
+	php_parallel_cond_destroy(&monitor->condition);
 
-    monitor->state |= state;
-
-    pthread_mutex_unlock(&monitor->mutex);
-}
-
-void php_parallel_monitor_remove(php_parallel_monitor_t *monitor, int32_t state) {
-    pthread_mutex_lock(&monitor->mutex);
-
-    monitor->state &= ~state;
-
-    pthread_mutex_unlock(&monitor->mutex);
-}
-
-void php_parallel_monitor_destroy(php_parallel_monitor_t *monitor) {
-    php_parallel_mutex_destroy(&monitor->mutex);
-    php_parallel_cond_destroy(&monitor->condition);
-
-    free(monitor);
+	free(monitor);
 }
 #endif

@@ -19,6 +19,7 @@
 #ifndef PHP_PARALLEL_H
 # define PHP_PARALLEL_H
 
+#include "php.h"
 extern zend_module_entry parallel_module_entry;
 # define phpext_parallel_ptr &parallel_module_entry
 

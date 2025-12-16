@@ -1,0 +1,28 @@
+name: Clang-Format Check
+
+on:
+  pull_request: null
+  push:
+    branches:
+      - master
+      - develop
+      - release
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install clang-format
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format
+
+    - name: Run clang-format
+      run: |
+        # Find all C files and run clang-format check
+        # -dry-run outputs violations without changing files
+        # -Werror makes warnings (violations) exit with non-zero status
+        find src -name '*.c' -o -name '*.h' | xargs clang-format -style=file --dry-run --Werror

@@ -18,23 +18,25 @@
 #ifndef HAVE_PARALLEL_LINK_H
 #define HAVE_PARALLEL_LINK_H
 
+#include "php.h"
+
 typedef struct _php_parallel_link_t php_parallel_link_t;
 
-php_parallel_link_t* php_parallel_link_init(zend_string *name, bool buffered, zend_long capacity);
-zend_string*         php_parallel_link_name(php_parallel_link_t *link);
-php_parallel_link_t* php_parallel_link_copy(php_parallel_link_t *link);
-bool            php_parallel_link_send(php_parallel_link_t *link, zval *value);
-bool            php_parallel_link_recv(php_parallel_link_t *link, zval *value);
-bool            php_parallel_link_close(php_parallel_link_t *link);
-bool            php_parallel_link_closed(php_parallel_link_t *link);
-void                 php_parallel_link_destroy(php_parallel_link_t *link);
+php_parallel_link_t                *php_parallel_link_init(zend_string *name, bool buffered, zend_long capacity);
+zend_string                        *php_parallel_link_name(php_parallel_link_t *link);
+php_parallel_link_t                *php_parallel_link_copy(php_parallel_link_t *link);
+bool                                php_parallel_link_send(php_parallel_link_t *link, zval *value);
+bool                                php_parallel_link_recv(php_parallel_link_t *link, zval *value);
+bool                                php_parallel_link_close(php_parallel_link_t *link);
+bool                                php_parallel_link_closed(php_parallel_link_t *link);
+void                                php_parallel_link_destroy(php_parallel_link_t *link);
 
-bool            php_parallel_link_lock(php_parallel_link_t *link);
-bool            php_parallel_link_writable(php_parallel_link_t *link);
-bool            php_parallel_link_readable(php_parallel_link_t *link);
-bool            php_parallel_link_unlock(php_parallel_link_t *link);
+bool                                php_parallel_link_lock(php_parallel_link_t *link);
+bool                                php_parallel_link_writable(php_parallel_link_t *link);
+bool                                php_parallel_link_readable(php_parallel_link_t *link);
+bool                                php_parallel_link_unlock(php_parallel_link_t *link);
 
-void                 php_parallel_link_debug(php_parallel_link_t *link, HashTable *debug);
+void                                php_parallel_link_debug(php_parallel_link_t *link, HashTable *debug);
 
 PHP_MINIT_FUNCTION(PARALLEL_LINK);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_LINK);
