@@ -106,7 +106,7 @@ static zend_always_inline void php_parallel_cache_type(zend_type *type) { /* {{{
         if (ZEND_TYPE_USES_ARENA(*type)) {
             ZEND_TYPE_FULL_MASK(*type) &= ~_ZEND_TYPE_ARENA_BIT;
         }
- 
+
         ZEND_TYPE_SET_PTR(*type, list);
     }
 
@@ -144,13 +144,13 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
 #if PHP_VERSION_ID >= 80100
     if (cached->num_dynamic_func_defs) {
     	uint32_t it = 0;
-    	
+
     	cached->dynamic_func_defs = php_parallel_cache_copy_mem(
     	                                cached->dynamic_func_defs,
     	                                sizeof(zend_op_array*) * cached->num_dynamic_func_defs);
-    	
+
     	while (it < cached->num_dynamic_func_defs) {
-    	    cached->dynamic_func_defs[it] = 
+    	    cached->dynamic_func_defs[it] =
                 (zend_op_array*) php_parallel_cache_create(
     	            (zend_function*) cached->dynamic_func_defs[it], statics);
             it++;
@@ -158,6 +158,10 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
     }
 #endif
 
+    // This path is taken when OPcache is enabled and active, and the `source`
+    // zend_function's opcodes are already handled and stored in OPcache's
+    // Shared Memory (SHM). OPcache sets `op_array->refcount`to `NULL` for such
+    // persistent `op_array`'s.
     if (!cached->refcount) {
         goto _php_parallel_cached_function_return;
     }
@@ -291,7 +295,7 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
                 info->name =
                     php_parallel_copy_string_interned(it->name);
             }
-            
+
             php_parallel_cache_type(&info->type);
 
             info++;
@@ -335,7 +339,7 @@ _php_parallel_cached_function_return:
 /* {{{ */
 static zend_always_inline zend_function* php_parallel_cache_function_ex(const zend_function *source, bool statics) {
     zend_op_array *cached;
-    
+
     pthread_mutex_lock(&PCG(mutex));
 
     if ((cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) source->op_array.opcodes))) {
@@ -346,7 +350,7 @@ static zend_always_inline zend_function* php_parallel_cache_function_ex(const ze
 
     zend_hash_index_add_ptr(
         &PCG(table),
-        (zend_ulong) source->op_array.opcodes, 
+        (zend_ulong) source->op_array.opcodes,
         cached);
 
 _php_parallel_cached_function_return:
