@@ -18,6 +18,8 @@
 #ifndef HAVE_PARALLEL_EVENTS_LOOP_H
 #define HAVE_PARALLEL_EVENTS_LOOP_H
 
+#include "php.h"
+
 zend_object_iterator *php_parallel_events_loop_create(zend_class_entry *type, zval *events, int by_ref);
 
 #endif

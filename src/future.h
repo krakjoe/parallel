@@ -20,6 +20,7 @@
 
 #include "monitor.h"
 #include "php.h"
+#include "runtime.h"
 
 extern zend_class_entry *php_parallel_future_ce;
 

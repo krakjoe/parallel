@@ -18,6 +18,8 @@
 #ifndef HAVE_PARALLEL_LINK_H
 #define HAVE_PARALLEL_LINK_H
 
+#include "php.h"
+
 typedef struct _php_parallel_link_t php_parallel_link_t;
 
 php_parallel_link_t                *php_parallel_link_init(zend_string *name, bool buffered, zend_long capacity);
