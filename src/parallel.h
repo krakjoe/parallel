@@ -21,6 +21,7 @@
 #include "monitor.h"
 #include "php.h"
 #include "pthread.h"
+#include "stdint.h"
 
 #include "channel.h"
 #include "event.h"

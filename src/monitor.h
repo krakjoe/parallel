@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_MONITOR_H
 
 #include <pthread.h>
+#include <stdint.h>
 
 typedef struct _php_parallel_monitor_t {
 	pthread_mutex_t  mutex;
