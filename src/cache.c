@@ -106,7 +106,7 @@ static zend_always_inline void php_parallel_cache_type(zend_type *type) { /* {{{
         if (ZEND_TYPE_USES_ARENA(*type)) {
             ZEND_TYPE_FULL_MASK(*type) &= ~_ZEND_TYPE_ARENA_BIT;
         }
- 
+
         ZEND_TYPE_SET_PTR(*type, list);
     }
 
@@ -125,6 +125,9 @@ static zend_always_inline void php_parallel_cache_type(zend_type *type) { /* {{{
 /* {{{ */
 static zend_op_array* php_parallel_cache_create(const zend_function *source, bool statics) {
     zend_op_array *cached = php_parallel_cache_copy_mem((void*) source, sizeof(zend_op_array));
+    uint32_t *literal_map = NULL;
+    uint32_t *offset_map = NULL;
+    uint32_t new_last_literal = cached->last_literal;
 
     cached->fn_flags |= ZEND_ACC_IMMUTABLE;
 
@@ -144,13 +147,13 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
 #if PHP_VERSION_ID >= 80100
     if (cached->num_dynamic_func_defs) {
     	uint32_t it = 0;
-    	
+
     	cached->dynamic_func_defs = php_parallel_cache_copy_mem(
     	                                cached->dynamic_func_defs,
     	                                sizeof(zend_op_array*) * cached->num_dynamic_func_defs);
-    	
+
     	while (it < cached->num_dynamic_func_defs) {
-    	    cached->dynamic_func_defs[it] = 
+    	    cached->dynamic_func_defs[it] =
                 (zend_op_array*) php_parallel_cache_create(
     	            (zend_function*) cached->dynamic_func_defs[it], statics);
             it++;
@@ -165,15 +168,51 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
     cached->refcount  = NULL;
 
     if (cached->last_literal) {
-        zval     *literal = cached->literals,
-                 *end     = literal + cached->last_literal;
-        zval     *slot    = php_parallel_cache_copy_mem(
-                                    cached->literals,
-                                        sizeof(zval) * cached->last_literal);
+        zend_op *src_opline = source->op_array.opcodes;
+        zend_op *src_end    = src_opline + source->op_array.last;
+
+        // A map to keep track of which literals are referenced by the
+        // `ZEND_INIT_FCALL` opcodes we found so that we can expand those later
+        literal_map = emalloc(sizeof(uint32_t) * cached->last_literal);
+        memset(literal_map, 0, sizeof(uint32_t) * cached->last_literal);
+
+        // Search for `ZEND_INIT_FCALL` opcodes and remember the indexes for the
+        // literals, as we are rewriting them later to `ZEND_INIT_FCALL_BY_NAME`
+        // which requires a second, lower cased literal just in the next literal
+        // slot.
+        while (src_opline < src_end) {
+            if (src_opline->opcode == ZEND_INIT_FCALL && src_opline->op2_type == IS_CONST) {
+                uint32_t idx;
+#if ZEND_USE_ABS_CONST_ADDR
+                idx = (zval*)src_opline->op2.zv - source->op_array.literals;
+#else
+                idx = ((zval*)((char*)src_opline + src_opline->op2.constant) - source->op_array.literals);
+#endif
+                if (idx < cached->last_literal) {
+                    if (literal_map[idx] == 0) {
+                        literal_map[idx] = 1;
+                        new_last_literal++;
+                    }
+                }
+            }
+            src_opline++;
+        }
+    }
+
+    if (new_last_literal) {
+        zval     *literal = source->op_array.literals;
+        zval     *slot    = php_parallel_cache_alloc(sizeof(zval) * new_last_literal);
+        uint32_t  idx     = 0;
+
+        offset_map = emalloc(sizeof(uint32_t) * cached->last_literal);
 
         cached->literals = slot;
 
-        while (literal < end) {
+        for (uint32_t i = 0; i < cached->last_literal; i++) {
+            /* Record the mapping from old literal index (i) to new literal index (idx)
+               so we can update opcode operands later. */
+            offset_map[i] = idx;
+
             if (Z_TYPE_P(literal) == IS_ARRAY) {
                 ZVAL_ARR(slot,
                     php_parallel_copy_hash_persistent(
@@ -183,12 +222,27 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
             } else if (Z_TYPE_P(literal) == IS_STRING) {
                 ZVAL_STR(slot,
                     php_parallel_copy_string_interned(Z_STR_P(literal)));
+            } else {
+                *slot = *literal;
             }
 
-	        Z_TYPE_FLAGS_P(slot) &= ~(IS_TYPE_REFCOUNTED|IS_TYPE_COLLECTABLE);
+            Z_TYPE_FLAGS_P(slot) &= ~(IS_TYPE_REFCOUNTED|IS_TYPE_COLLECTABLE);
+
+            /* If this literal was used by INIT_FCALL, insert its lowercased version next. */
+            if (literal_map[i]) {
+                zend_string *lower = zend_string_tolower(Z_STR_P(slot));
+                slot++;
+                idx++;
+                ZVAL_STR(slot, php_parallel_copy_string_interned(lower));
+                zend_string_release(lower);
+                Z_TYPE_FLAGS_P(slot) &= ~(IS_TYPE_REFCOUNTED|IS_TYPE_COLLECTABLE);
+            }
+
             literal++;
             slot++;
+            idx++;
         }
+        cached->last_literal = new_last_literal;
     }
 
     if (cached->last_var) {
@@ -211,15 +265,27 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
                 *end     = opline + cached->last;
 
         while (opline < end) {
+            /* Replace ZEND_INIT_FCALL with ZEND_INIT_FCALL_BY_NAME.
+               We must clear op1_type (IS_UNUSED) and op1.var (0) to invalidate the
+               original thread's cache slot. */
+            if (opline->opcode == ZEND_INIT_FCALL) {
+                opline->opcode = ZEND_INIT_FCALL_BY_NAME;
+                opline->op1_type = IS_UNUSED;
+                opline->op1.var = 0;
+                ZEND_VM_SET_OPCODE_HANDLER(opline);
+            }
+
+            /* Remap IS_CONST operands to their new locations in the expanded literal table
+               using the offset_map we built earlier. */
             if (opline->op1_type == IS_CONST) {
+                uint32_t idx;
+                zend_op *src_opline = source->op_array.opcodes + (opline - opcodes);
 #if ZEND_USE_ABS_CONST_ADDR
-                opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)cached->literals - (char*)source->op_array.literals));
+                idx = (zval*)src_opline->op1.zv - source->op_array.literals;
+                opline->op1.zv = &cached->literals[offset_map[idx]];
 #else
-                opline->op1.constant =
-                    (char*)(cached->literals +
-                            ((zval*)((char*)(source->op_array.opcodes + (opline - opcodes)) +
-                            (int32_t)opline->op1.constant) - source->op_array.literals)) -
-                            (char*)opline;
+                idx = ((zval*)((char*)src_opline + src_opline->op1.constant) - source->op_array.literals);
+                opline->op1.constant = (char*)&cached->literals[offset_map[idx]] - (char*)opline;
 #endif
                 if (opline->opcode == ZEND_SEND_VAL
                  || opline->opcode == ZEND_SEND_VAL_EX
@@ -228,14 +294,14 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
                 }
             }
             if (opline->op2_type == IS_CONST) {
+                uint32_t idx;
+                zend_op *src_opline = source->op_array.opcodes + (opline - opcodes);
 #if ZEND_USE_ABS_CONST_ADDR
-                opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)cached->literals - (char*)source->op_array.literals));
+                idx = (zval*)src_opline->op2.zv - source->op_array.literals;
+                opline->op2.zv = &cached->literals[offset_map[idx]];
 #else
-                opline->op2.constant =
-                    (char*)(cached->literals +
-                            ((zval*)((char*)(source->op_array.opcodes + (opline - opcodes)) +
-                            (int32_t)opline->op2.constant) - source->op_array.literals)) -
-                            (char*)opline;
+                idx = ((zval*)((char*)src_opline + src_opline->op2.constant) - source->op_array.literals);
+                opline->op2.constant = (char*)&cached->literals[offset_map[idx]] - (char*)opline;
 #endif
             }
 #if ZEND_USE_ABS_JMP_ADDR
@@ -272,6 +338,14 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
         cached->opcodes = opcodes;
     }
 
+    if (literal_map) {
+		efree(literal_map);
+	}
+
+    if (offset_map) {
+		efree(offset_map);
+	}
+
     if (cached->arg_info) {
         zend_arg_info *it    = cached->arg_info,
                       *end   = it + cached->num_args,
@@ -291,7 +365,7 @@ static zend_op_array* php_parallel_cache_create(const zend_function *source, boo
                 info->name =
                     php_parallel_copy_string_interned(it->name);
             }
-            
+
             php_parallel_cache_type(&info->type);
 
             info++;
@@ -335,7 +409,7 @@ _php_parallel_cached_function_return:
 /* {{{ */
 static zend_always_inline zend_function* php_parallel_cache_function_ex(const zend_function *source, bool statics) {
     zend_op_array *cached;
-    
+
     pthread_mutex_lock(&PCG(mutex));
 
     if ((cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong) source->op_array.opcodes))) {
@@ -346,7 +420,7 @@ static zend_always_inline zend_function* php_parallel_cache_function_ex(const ze
 
     zend_hash_index_add_ptr(
         &PCG(table),
-        (zend_ulong) source->op_array.opcodes, 
+        (zend_ulong) source->op_array.opcodes,
         cached);
 
 _php_parallel_cached_function_return:

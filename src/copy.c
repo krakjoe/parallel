@@ -987,7 +987,7 @@ static void php_parallel_copy_zval_persistent(
 
 zend_function* php_parallel_copy_function(const zend_function *function, bool persistent) {
     if (persistent) {
-        function =      	
+        function =
             php_parallel_cache_function(function);
 
         php_parallel_dependencies_store(function);
