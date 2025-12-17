@@ -19,39 +19,37 @@
 #define HAVE_PARALLEL_RUNTIME_H
 
 #if PHP_VERSION_ID < 80200
-#define zend_atomic_bool bool
-#define zend_atomic_bool_store(dest, value) (*(dest) = value)
+# define zend_atomic_bool bool
+# define zend_atomic_bool_store(dest, value) (*(dest) = value)
 #endif
 
 typedef struct _php_parallel_runtime_t {
-	pthread_t               thread;
-	php_parallel_monitor_t *monitor;
-	zend_string            *bootstrap;
-	struct {
-		zend_atomic_bool *interrupt;
-	} child;
-	struct {
-		void  *server;
-		int    argc;
-		char **argv;
-	} parent;
-	zend_llist  schedule;
-	zend_object std;
+    pthread_t                        thread;
+    php_parallel_monitor_t          *monitor;
+    zend_string                     *bootstrap;
+    struct {
+        zend_atomic_bool                   *interrupt;
+    } child;
+    struct {
+        void                        *server;
+        int                          argc;
+        char                       **argv;
+    } parent;
+    zend_llist                       schedule;
+    zend_object                      std;
 } php_parallel_runtime_t;
 
-static zend_always_inline php_parallel_runtime_t *php_parallel_runtime_fetch(zend_object *o)
-{
-	return (php_parallel_runtime_t *)(((char *)o) - XtOffsetOf(php_parallel_runtime_t, std));
+static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_fetch(zend_object *o) {
+    return (php_parallel_runtime_t*) (((char*) o) - XtOffsetOf(php_parallel_runtime_t, std));
 }
 
-static zend_always_inline php_parallel_runtime_t *php_parallel_runtime_from(zval *z)
-{
-	return php_parallel_runtime_fetch(Z_OBJ_P(z));
+static zend_always_inline php_parallel_runtime_t* php_parallel_runtime_from(zval *z) {
+    return php_parallel_runtime_fetch(Z_OBJ_P(z));
 }
 
-extern zend_class_entry *php_parallel_runtime_ce;
+extern zend_class_entry* php_parallel_runtime_ce;
 
-php_parallel_runtime_t  *php_parallel_runtime_construct(zend_string *bootstrap);
+php_parallel_runtime_t* php_parallel_runtime_construct(zend_string *bootstrap);
 
 PHP_MINIT_FUNCTION(PARALLEL_RUNTIME);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_RUNTIME);

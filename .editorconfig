@@ -1,27 +1,16 @@
-# https://editorconfig.org/
-
 root = true
 
 [*]
+charset = utf-8
+indent_style = tab
+insert_final_newline = true
 trim_trailing_whitespace = true
-insert_final_newline     = true
-end_of_line              = lf
-charset                  = utf-8
-tab_width                = 4
-indent_size              = 4
-indent_style             = tab
+indent_size = 4
 
-[*.{dtd,html,inc,php,phpt,rng,wsdl,xml,xsd,xsl}]
-indent_style             = space
+[*.php]
+block_comment_start = /*
+block_comment = *
+block_comment_end = */
 
-[*.{ac,m4,sh,yml}]
-indent_size              = 2
-indent_style             = space
-
-[*.md]
-indent_style             = space
-max_line_length          = 80
-
-[COMMIT_EDITMSG]
-indent_style             = space
-max_line_length          = 80
+[{*Makefile,.gitmodules}]
+indent_style = tab

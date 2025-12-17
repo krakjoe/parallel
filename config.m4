@@ -69,6 +69,4 @@ if test "$PHP_PARALLEL" != "no"; then
   if test "$PHP_PARALLEL_GCOV" != "no"; then
     PHP_SUBST(EXTRA_CFLAGS)
   fi
-
-  PHP_ADD_MAKEFILE_FRAGMENT
 fi

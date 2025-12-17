@@ -21,29 +21,27 @@
 extern zend_class_entry *php_parallel_sync_ce;
 
 typedef struct _php_parallel_sync_t {
-	pthread_mutex_t mutex;
-	pthread_cond_t  condition;
-	zval            value;
-	uint32_t        refcount;
+    pthread_mutex_t mutex;
+    pthread_cond_t  condition;
+    zval            value;
+    uint32_t        refcount;
 } php_parallel_sync_t;
 
 typedef struct _php_parallel_sync_object_t {
-	php_parallel_sync_t *sync;
-	zend_object          std;
+    php_parallel_sync_t *sync;
+    zend_object std;
 } php_parallel_sync_object_t;
 
-static zend_always_inline php_parallel_sync_object_t *php_parallel_sync_object_fetch(zend_object *o)
-{
-	return (php_parallel_sync_object_t *)(((char *)o) - XtOffsetOf(php_parallel_sync_object_t, std));
+static zend_always_inline php_parallel_sync_object_t* php_parallel_sync_object_fetch(zend_object *o) {
+    return (php_parallel_sync_object_t*) (((char*) o) - XtOffsetOf(php_parallel_sync_object_t, std));
 }
 
-static zend_always_inline php_parallel_sync_object_t *php_parallel_sync_object_from(zval *z)
-{
-	return php_parallel_sync_object_fetch(Z_OBJ_P(z));
+static zend_always_inline php_parallel_sync_object_t* php_parallel_sync_object_from(zval *z) {
+    return php_parallel_sync_object_fetch(Z_OBJ_P(z));
 }
 
-php_parallel_sync_t *php_parallel_sync_copy(php_parallel_sync_t *sync);
-void                 php_parallel_sync_release(php_parallel_sync_t *sync);
+php_parallel_sync_t*   php_parallel_sync_copy(php_parallel_sync_t *sync);
+void                   php_parallel_sync_release(php_parallel_sync_t *sync);
 
 PHP_MINIT_FUNCTION(PARALLEL_SYNC);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_SYNC);
