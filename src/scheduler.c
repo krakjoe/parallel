@@ -22,10 +22,91 @@
 #include "../php_parallel.h"
 #include "zend_types.h"
 
+#ifdef _WIN32
+# include <windows.h>
+#else
+# include <signal.h>
+#endif
+
 TSRM_TLS php_parallel_runtime_t* php_parallel_scheduler_context = NULL;
 TSRM_TLS php_parallel_future_t* php_parallel_scheduler_future = NULL;
 
 void (*zend_interrupt_handler)(zend_execute_data*) = NULL;
+
+#ifdef _WIN32
+void *php_parallel_veh_handle = NULL;
+
+LONG WINAPI php_parallel_veh_handler(PEXCEPTION_POINTERS exceptionInfo) {
+    if (exceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+        if (php_parallel_scheduler_context) {
+            php_parallel_scheduler_context->crashed = 1;
+
+            if (EG(current_execute_data)) {
+                if (EG(current_execute_data)->opline) {
+                    const zend_op *opline = EG(current_execute_data)->opline;
+
+                    php_parallel_scheduler_context->line = opline->lineno;
+                    if (opline->opcode == ZEND_INIT_FCALL) {
+                        zval *name = RT_CONSTANT(opline, opline->op2);
+
+                        if (Z_TYPE_P(name) == IS_STRING) {
+                            if (!zend_hash_exists(EG(function_table), Z_STR_P(name))) {
+                                php_parallel_scheduler_context->missing = Z_STR_P(name);
+                            }
+                        }
+                    }
+                }
+                if (EG(current_execute_data)->func && EG(current_execute_data)->func->op_array.filename) {
+                    php_parallel_scheduler_context->file = EG(current_execute_data)->func->op_array.filename;
+                }
+            }
+            zend_bailout();
+        }
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#else
+struct sigaction php_parallel_old_sigsegv_action;
+
+static void php_parallel_sigsegv_handler(int sig, siginfo_t *info, void *context) {
+    // Only handle this SIGSEGV if this is a parallel thread
+    if (php_parallel_scheduler_context) {
+        php_parallel_scheduler_context->crashed = 1;
+
+        if (EG(current_execute_data)) {
+            if (EG(current_execute_data)->opline) {
+                const zend_op *opline = EG(current_execute_data)->opline;
+
+                php_parallel_scheduler_context->line = opline->lineno;
+                if (opline->opcode == ZEND_INIT_FCALL) {
+                    zval *name = RT_CONSTANT(opline, opline->op2);
+
+                    if (Z_TYPE_P(name) == IS_STRING) {
+                        if (!zend_hash_exists(EG(function_table), Z_STR_P(name))) {
+                            php_parallel_scheduler_context->missing = Z_STR_P(name);
+                        }
+                    }
+                }
+            }
+            if (EG(current_execute_data)->func && EG(current_execute_data)->func->op_array.filename) {
+                php_parallel_scheduler_context->file = EG(current_execute_data)->func->op_array.filename;
+            }
+        }
+        zend_bailout();
+    }
+
+    if (php_parallel_old_sigsegv_action.sa_flags & SA_SIGINFO) {
+        php_parallel_old_sigsegv_action.sa_sigaction(sig, info, context);
+    } else if (php_parallel_old_sigsegv_action.sa_handler == SIG_DFL) {
+        signal(sig, SIG_DFL);
+        raise(sig);
+    } else if (php_parallel_old_sigsegv_action.sa_handler == SIG_IGN) {
+        // ignore
+    } else {
+        php_parallel_old_sigsegv_action.sa_handler(sig);
+    }
+}
+#endif
 
 static zend_always_inline int php_parallel_scheduler_list_delete(void *lhs, void *rhs) {
     return lhs == rhs;
@@ -230,13 +311,13 @@ static void php_parallel_scheduler_pull(zend_function *function) {
 
 #if PHP_VERSION_ID >= 80100
     if (function->op_array.num_dynamic_func_defs) {
-    	uint32_t it = 0;
+        uint32_t it = 0;
 
-    	while (it < function->op_array.num_dynamic_func_defs) {
-    	    php_parallel_scheduler_pull(
+        while (it < function->op_array.num_dynamic_func_defs) {
+            php_parallel_scheduler_pull(
                (zend_function*) function->op_array.dynamic_func_defs[it]);
             it++;
-    	}
+        }
     }
 #endif
 }
@@ -256,14 +337,14 @@ static void php_parallel_scheduler_clean(zend_function *function) {
 
 #if PHP_VERSION_ID >= 80100
     if (function->op_array.num_dynamic_func_defs) {
-    	uint32_t it = 0;
+        uint32_t it = 0;
 
-    	while (it < function->op_array.num_dynamic_func_defs) {
-    	    php_parallel_scheduler_clean(
+        while (it < function->op_array.num_dynamic_func_defs) {
+            php_parallel_scheduler_clean(
               (zend_function*) function->op_array.dynamic_func_defs[it]);
           pefree(function->op_array.dynamic_func_defs[it], 1);
           it++;
-    	}
+        }
         /* Free the dynamic_func_defs array itself */
         pefree(function->op_array.dynamic_func_defs, 1);
         function->op_array.dynamic_func_defs = NULL;
@@ -342,6 +423,11 @@ static zend_always_inline bool php_parallel_scheduler_pop(php_parallel_runtime_t
 static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame) {
     php_parallel_future_t *future = php_parallel_scheduler_future;
 
+    runtime->crashed = 0;
+    runtime->missing = NULL;
+    runtime->file = NULL;
+    runtime->line = 0;
+
     zend_first_try {
         zend_try {
             zend_execute_ex(frame);
@@ -357,7 +443,45 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
                 }
             }
         } zend_catch {
-            if (future) {
+            if (runtime->crashed) {
+                zend_object *exception = NULL;
+                if (future) {
+                    char *message = NULL;
+
+                    zend_clear_exception();
+
+                    if (runtime->missing) {
+                        spprintf(&message, 0,
+                            "Call to undefined function %s() in task, please provide the function via a bootstrap file",
+                            ZSTR_VAL(runtime->missing));
+                        exception = php_parallel_exception_object(
+                            php_parallel_runtime_error_illegal_instruction_ce,
+                            message, 0, runtime->file, runtime->line);
+                        efree(message);
+                    } else {
+                        exception = php_parallel_exception_object(
+                            php_parallel_runtime_error_illegal_instruction_ce,
+                            "illegal instruction (segmentation fault) in task", 0, runtime->file, runtime->line);
+                    }
+
+                    php_parallel_monitor_lock(future->monitor);
+                    if (exception) {
+                        php_parallel_exceptions_save(frame->return_value, exception);
+                        OBJ_RELEASE(exception);
+                    }
+                    php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY|PHP_PARALLEL_ERROR);
+                    php_parallel_monitor_unlock(future->monitor);
+                }
+
+                // This runtime crashed, as such we can not give any guarantees
+                // anymore and it is best to shut down the thread as gracefuly
+                // as possible. By setting the `runtime->monitor` to
+                // `PHP_PARALLEL_KILLED` we make sure that this thread goes
+                // through shutdown and calls `pthread_ext()`
+                php_parallel_monitor_lock(runtime->monitor);
+                php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_DONE|PHP_PARALLEL_KILLED);
+                php_parallel_monitor_unlock(runtime->monitor);
+            } else if (future) {
                 php_parallel_monitor_lock(future->monitor);
                 if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_CANCELLED)) {
                     php_parallel_monitor_set(future->monitor, PHP_PARALLEL_KILLED);
@@ -366,7 +490,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
             }
         } zend_end_try();
 
-         if (frame->return_value  && !Z_ISUNDEF_P(frame->return_value)) {
+        if (frame->return_value  && !Z_ISUNDEF_P(frame->return_value)) {
             zval garbage = *frame->return_value;
 
             if (Z_OPT_REFCOUNTED(garbage)) {
@@ -722,6 +846,18 @@ PHP_MINIT_FUNCTION(PARALLEL_SCHEDULER)
     zend_interrupt_handler = zend_interrupt_function;
     zend_interrupt_function = php_parallel_scheduler_interrupt;
 
+#ifdef _WIN32
+    php_parallel_veh_handle = AddVectoredExceptionHandler(1, php_parallel_veh_handler);
+#else
+    struct sigaction sa;
+
+    memset(&sa, 0, sizeof(struct sigaction));
+    sa.sa_sigaction = php_parallel_sigsegv_handler;
+    sa.sa_flags = SA_SIGINFO;
+
+    sigaction(SIGSEGV, &sa, &php_parallel_old_sigsegv_action);
+#endif
+
     PHP_MINIT(PARALLEL_RUNTIME)(INIT_FUNC_ARGS_PASSTHRU);
 
     return SUCCESS;
@@ -729,6 +865,14 @@ PHP_MINIT_FUNCTION(PARALLEL_SCHEDULER)
 
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_SCHEDULER)
 {
+#ifdef _WIN32
+    if (php_parallel_veh_handle) {
+        RemoveVectoredExceptionHandler(php_parallel_veh_handle);
+    }
+#else
+    sigaction(SIGSEGV, &php_parallel_old_sigsegv_action, NULL);
+#endif
+
     zend_interrupt_function = zend_interrupt_handler;
 
     PHP_MSHUTDOWN(PARALLEL_RUNTIME)(INIT_FUNC_ARGS_PASSTHRU);
