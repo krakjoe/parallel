@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Get the extension matrix
         id: extension-matrix
-        uses: php/php-windows-builder/extension-matrix@v1
+        uses: php/php-windows-builder/extension-matrix@c89baa7d20ae73f2a022556132c3d6f4b56a89b8 #v1.5.1
         with:
           php-version-list: '8.0, 8.1, 8.2, 8.3, 8.4, 8.5'
           arch-list: 'x64, x86'
@@ -38,7 +38,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build the extension
-        uses: php/php-windows-builder/extension@v1
+        uses: php/php-windows-builder/extension@c89baa7d20ae73f2a022556132c3d6f4b56a89b8 #v1.5.1
         with:
           php-version: ${{ matrix.php-version }}
           arch: ${{ matrix.arch }}
@@ -54,7 +54,7 @@ jobs:
     if: ${{ github.event_name == 'release' }}
     steps:
       - name: Upload artifact to the release
-        uses: php/php-windows-builder/release@v1
+        uses: php/php-windows-builder/release@c89baa7d20ae73f2a022556132c3d6f4b56a89b8 #v1.5.1
         with:
           release: ${{ github.event.release.tag_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
