@@ -1,6 +1,7 @@
 name: Windows
-
 on:
+  release:
+    types: [published]
   pull_request: null
   push:
     branches:
@@ -10,63 +11,50 @@ on:
   schedule:
     - cron: "30 4 * * *"
 
+permissions:
+  contents: write
+
 jobs:
-  build:
-    defaults:
-      run:
-        shell: cmd
-    strategy:
-      matrix:
-          version: ["8.0", "8.1", "8.2", "8.3", "8.4"]
-          arch: [x64]
-          ts: [ts]
-    if: success() || failure()
-    runs-on: windows-2022
-    name: Windows, PHP v${{matrix.version}}
+  get-extension-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.extension-matrix.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup PHP
-        id: setup-php
-        uses: php/setup-php-sdk@v0.11
+      - name: Get the extension matrix
+        id: extension-matrix
+        uses: php/php-windows-builder/extension-matrix@c89baa7d20ae73f2a022556132c3d6f4b56a89b8 #v1.5.1
         with:
-          version: ${{matrix.version}}
-          arch: ${{matrix.arch}}
-          ts: ${{matrix.ts}}
-          cache: true
-      - name: Fetch dependencies
-        run: |
-          curl -LO https://downloads.php.net/~windows/pecl/deps/pthreads-3.0.0-vs16-${{matrix.arch}}.zip
-          7z x pthreads-3.0.0-vs16-${{matrix.arch}}.zip -o..\deps
-      - name: Enable Developer Command Prompt
-        uses: ilammy/msvc-dev-cmd@v1
+          php-version-list: '8.0, 8.1, 8.2, 8.3, 8.4, 8.5'
+          arch-list: 'x64, x86'
+          ts-list: 'ts'
+  build:
+    needs: get-extension-matrix
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix: ${{fromJson(needs.get-extension-matrix.outputs.matrix)}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build the extension
+        uses: php/php-windows-builder/extension@c89baa7d20ae73f2a022556132c3d6f4b56a89b8 #v1.5.1
         with:
-          arch: ${{matrix.arch}}
-          toolset: ${{steps.setup-php.outputs.toolset}}
-      - name: phpize
-        run: phpize
-      - name: configure
-        run: configure --with-parallel --enable-debug-pack --with-prefix=${{steps.setup-php.outputs.prefix}}
-      - name: make
-        run: nmake
-      - name: test
-        run: nmake test TESTS="--show-diff tests"
-      - name: package
-        run: |
-          md win-install
-          copy LICENSE win-install
-          copy README.md win-install
-          if exist x64 (
-            if exist x64\Release (set prefix=x64\Release) else set prefix=x64\Release_TS
-          ) else (
-            if exist Release (set prefix=Release) else set prefix=Release_TS
-          )
-          copy %prefix%\php_parallel.dll win-install
-          copy %prefix%\php_parallel.pdb win-install
-          copy ..\deps\COPYING win-install\COPYING.PTHREADS
-          copy ..\deps\bin\* win-install
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+          php-version: ${{ matrix.php-version }}
+          arch: ${{ matrix.arch }}
+          ts: ${{ matrix.ts }}
+          args: --with-parallel
+          libs: pthreads
+          run-tests: true
+          test-runner-args: -d opcache.jit=0 --show-diff -g FAIL,XFAIL,BORK,WARN,LEAK,XLEAK,SKIP
+          test-opcache-mode: both
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ github.event_name == 'release' }}
+    steps:
+      - name: Upload artifact to the release
+        uses: php/php-windows-builder/release@c89baa7d20ae73f2a022556132c3d6f4b56a89b8 #v1.5.1
         with:
-          name: parallel-${{matrix.version}}
-          path: win-install
+          release: ${{ github.event.release.tag_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
