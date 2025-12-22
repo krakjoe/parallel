@@ -18,11 +18,11 @@
 #ifndef HAVE_PARALLEL_EVENTS_INPUT_H
 #define HAVE_PARALLEL_EVENTS_INPUT_H
 
-extern zend_class_entry* php_parallel_events_input_ce;
+extern zend_class_entry *php_parallel_events_input_ce;
 
-zend_bool php_parallel_events_input_exists(zval *zv, zend_string *target);
-zval*     php_parallel_events_input_find(zval *input, zend_string *target);
-zend_bool php_parallel_events_input_remove(zval *input, zend_string *target);
+bool                     php_parallel_events_input_exists(zval *zv, zend_string *target);
+zval                    *php_parallel_events_input_find(zval *input, zend_string *target);
+bool                     php_parallel_events_input_remove(zval *input, zend_string *target);
 
 PHP_MINIT_FUNCTION(PARALLEL_EVENTS_INPUT);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS_INPUT);

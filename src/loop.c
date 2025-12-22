@@ -22,91 +22,88 @@
 #include "poll.h"
 
 typedef struct _php_parallel_events_loop_t {
-    zend_object_iterator it;
-    zval events;
-    zval event;
+	zend_object_iterator it;
+	zval                 events;
+	zval                 event;
 } php_parallel_events_loop_t;
 
-static void php_parallel_events_loop_destroy(zend_object_iterator *zo) {
-    php_parallel_events_loop_t *loop =
-        (php_parallel_events_loop_t*) zo;
+static void php_parallel_events_loop_destroy(zend_object_iterator *zo)
+{
+	php_parallel_events_loop_t *loop = (php_parallel_events_loop_t *)zo;
 
-    if (!Z_ISUNDEF(loop->event)) {
-        zval_ptr_dtor(&loop->event);
-    }
+	if (!Z_ISUNDEF(loop->event)) {
+		zval_ptr_dtor(&loop->event);
+	}
 
-    zval_ptr_dtor(&loop->events);
+	zval_ptr_dtor(&loop->events);
 }
 
-static int php_parallel_events_loop_valid(zend_object_iterator *zo) {
-    php_parallel_events_loop_t *loop =
-        (php_parallel_events_loop_t*) zo;
+static int php_parallel_events_loop_valid(zend_object_iterator *zo)
+{
+	php_parallel_events_loop_t *loop = (php_parallel_events_loop_t *)zo;
 
-    return Z_TYPE(loop->event) == IS_OBJECT ? SUCCESS : FAILURE;
+	return Z_TYPE(loop->event) == IS_OBJECT ? SUCCESS : FAILURE;
 }
 
-static void php_parallel_events_loop_poll(zend_object_iterator *zo) {
-    php_parallel_events_loop_t *loop =
-        (php_parallel_events_loop_t*) zo;
-    php_parallel_events_t *events =
-        php_parallel_events_from(&loop->events);
+static void php_parallel_events_loop_poll(zend_object_iterator *zo)
+{
+	php_parallel_events_loop_t *loop = (php_parallel_events_loop_t *)zo;
+	php_parallel_events_t      *events = php_parallel_events_from(&loop->events);
 
-    if (Z_TYPE(loop->event) == IS_OBJECT) {
-        zval_ptr_dtor(&loop->event);
-    }
+	if (Z_TYPE(loop->event) == IS_OBJECT) {
+		zval_ptr_dtor(&loop->event);
+	}
 
-    php_parallel_events_poll(events, &loop->event);
+	php_parallel_events_poll(events, &loop->event);
 }
 
-static zval* php_parallel_events_loop_current(zend_object_iterator *zo) {
-    php_parallel_events_loop_t *loop =
-        (php_parallel_events_loop_t*) zo;
+static zval *php_parallel_events_loop_current(zend_object_iterator *zo)
+{
+	php_parallel_events_loop_t *loop = (php_parallel_events_loop_t *)zo;
 
-    return &loop->event;
+	return &loop->event;
 }
 
 const zend_object_iterator_funcs php_parallel_events_loop_functions = {
-    .dtor               = php_parallel_events_loop_destroy,
-    .valid              = php_parallel_events_loop_valid,
-    .move_forward       = php_parallel_events_loop_poll,
-    .get_current_data   = php_parallel_events_loop_current,
-    .rewind             = php_parallel_events_loop_poll,
+    .dtor = php_parallel_events_loop_destroy,
+    .valid = php_parallel_events_loop_valid,
+    .move_forward = php_parallel_events_loop_poll,
+    .get_current_data = php_parallel_events_loop_current,
+    .rewind = php_parallel_events_loop_poll,
     .invalidate_current = NULL,
-    .get_current_key    = NULL,
+    .get_current_key = NULL,
 };
 
-static zend_always_inline zend_bool php_parallel_events_loop_check(zval *zv) {
-    php_parallel_events_t *events = php_parallel_events_from(zv);
+static zend_always_inline bool php_parallel_events_loop_check(zval *zv)
+{
+	php_parallel_events_t *events = php_parallel_events_from(zv);
 
-    if (events->blocking) {
-        return 1;
-    }
+	if (events->blocking) {
+		return 1;
+	}
 
-    return 0;
+	return 0;
 }
 
-zend_object_iterator* php_parallel_events_loop_create(zend_class_entry *type, zval *events, int by_ref) {
-    php_parallel_events_loop_t *loop;
+zend_object_iterator *php_parallel_events_loop_create(zend_class_entry *type, zval *events, int by_ref)
+{
+	php_parallel_events_loop_t *loop;
 
-    if (!php_parallel_events_loop_check(events)) {
-        php_parallel_exception_ex(
-            php_parallel_events_error_ce,
-            "cannot create iterator for non-blocking event loop");
-        return NULL;
-    }
+	if (!php_parallel_events_loop_check(events)) {
+		php_parallel_exception_ex(php_parallel_events_error_ce, "cannot create iterator for non-blocking event loop");
+		return NULL;
+	}
 
-    loop =
-        (php_parallel_events_loop_t*)
-            ecalloc(1, sizeof(php_parallel_events_loop_t));
+	loop = (php_parallel_events_loop_t *)ecalloc(1, sizeof(php_parallel_events_loop_t));
 
-    zend_iterator_init(&loop->it);
+	zend_iterator_init(&loop->it);
 
-    loop->it.funcs = &php_parallel_events_loop_functions;
+	loop->it.funcs = &php_parallel_events_loop_functions;
 
-    ZVAL_COPY(&loop->events, events);
+	ZVAL_COPY(&loop->events, events);
 
-    ZVAL_UNDEF(&loop->event);
+	ZVAL_UNDEF(&loop->event);
 
-    return &loop->it;
+	return &loop->it;
 }
 #endif

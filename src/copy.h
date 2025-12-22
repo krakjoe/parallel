@@ -18,76 +18,76 @@
 #ifndef HAVE_PARALLEL_COPY_H
 #define HAVE_PARALLEL_COPY_H
 
-#define GC_SET_PERSISTENT_TYPE(ref, type) \
-    (GC_TYPE_INFO(ref) = type | (GC_PERSISTENT << GC_FLAGS_SHIFT))
+#define GC_SET_PERSISTENT_TYPE(ref, type) (GC_TYPE_INFO(ref) = type | (GC_PERSISTENT << GC_FLAGS_SHIFT))
 
 #define PARALLEL_ZVAL_COPY php_parallel_copy_zval_ctor
 #define PARALLEL_ZVAL_DTOR php_parallel_copy_zval_dtor
 
 #if PHP_VERSION_ID >= 80100
-# define PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, key, destination) do { \
-	*key = NULL; \
-	*destination = (zend_function*) function->op_array.dynamic_func_defs[opline->op2.num]; \
-} while(0)
+#define PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, key, destination)                                           \
+	do {                                                                                                               \
+		*key = NULL;                                                                                                   \
+		*destination = (zend_function *)function->op_array.dynamic_func_defs[opline->op2.num];                         \
+	} while (0)
 #else
-# define PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, key, destination) do { \
-     zval *_tmp; \
-     *key = Z_STR_P(RT_CONSTANT(opline, opline->op1)); \
-     _tmp  = zend_hash_find_ex(EG(function_table), *key, 1); \
-    *destination = Z_FUNC_P(_tmp); \
-  } while(0)
+#define PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, key, destination)                                           \
+	do {                                                                                                               \
+		zval *_tmp;                                                                                                    \
+		*key = Z_STR_P(RT_CONSTANT(opline, opline->op1));                                                              \
+		_tmp = zend_hash_find_ex(EG(function_table), *key, 1);                                                         \
+		*destination = Z_FUNC_P(_tmp);                                                                                 \
+	} while (0)
 #endif
 
 typedef struct _zend_closure_t {
-    zend_object       std;
-    zend_function     func;
-    zval              this_ptr;
-    zend_class_entry *called_scope;
-    zif_handler       orig_internal_handler;
+	zend_object       std;
+	zend_function     func;
+	zval              this_ptr;
+	zend_class_entry *called_scope;
+	zif_handler       orig_internal_handler;
 } zend_closure_t;
 
-static zend_always_inline void* php_parallel_copy_mem(void *source, size_t size, zend_bool persistent) {
-    void *destination = (void*) pemalloc(PARALLEL_PLATFORM_ALIGNED(size), persistent);
+static zend_always_inline void *php_parallel_copy_mem(void *source, size_t size, bool persistent)
+{
+	void *destination = (void *)pemalloc(PARALLEL_PLATFORM_ALIGNED(size), persistent);
 
-    memcpy(destination, source, size);
+	memcpy(destination, source, size);
 
-    return destination;
+	return destination;
 }
 
-zend_function* php_parallel_copy_function(const zend_function *function, zend_bool persistent);
+zend_function    *php_parallel_copy_function(const zend_function *function, bool persistent);
 
-zend_string*   php_parallel_copy_string_interned(zend_string *source);
-zend_string*   php_parallel_copy_string(zend_string *source, zend_bool persistent);
+zend_string      *php_parallel_copy_string_interned(zend_string *source);
+zend_string      *php_parallel_copy_string(zend_string *source, bool persistent);
 
-HashTable *php_parallel_copy_hash_ctor(HashTable *source, zend_bool persistent);
-void php_parallel_copy_hash_dtor(HashTable *table, zend_bool persistent);
+HashTable        *php_parallel_copy_hash_ctor(HashTable *source, bool persistent);
+void              php_parallel_copy_hash_dtor(HashTable *table, bool persistent);
 
-HashTable *php_parallel_copy_hash_persistent(HashTable *source, zend_string* (*)(zend_string*), void* (*)(void *, zend_long));
+HashTable        *php_parallel_copy_hash_persistent(HashTable *source, zend_string *(*)(zend_string *),
+                                                    void *(*)(void *, zend_long));
 
-void           php_parallel_copy_zval_ctor(zval *dest, zval *source, zend_bool persistent);
-void           php_parallel_copy_zval_dtor(zval *zv);
+void              php_parallel_copy_zval_ctor(zval *dest, zval *source, bool persistent);
+void              php_parallel_copy_zval_dtor(zval *zv);
 
-zend_class_entry* php_parallel_copy_scope(zend_class_entry *);
+zend_class_entry *php_parallel_copy_scope(zend_class_entry *);
 
 typedef enum _php_parallel_copy_direction_t {
-    PHP_PARALLEL_COPY_DIRECTION_PERSISTENT,
-    PHP_PARALLEL_COPY_DIRECTION_THREAD,
+	PHP_PARALLEL_COPY_DIRECTION_PERSISTENT,
+	PHP_PARALLEL_COPY_DIRECTION_THREAD,
 } php_parallel_copy_direction_t;
 
 typedef struct _php_parallel_copy_context_t {
-    php_parallel_copy_direction_t direction;
-    HashTable                     copied;
-    uint32_t                      refcount;
+	php_parallel_copy_direction_t direction;
+	HashTable                     copied;
+	uint32_t                      refcount;
 } php_parallel_copy_context_t;
 
-php_parallel_copy_context_t* php_parallel_copy_context_start(
-    php_parallel_copy_direction_t direction,
-    php_parallel_copy_context_t **previous);
-void* php_parallel_copy_context_find(php_parallel_copy_context_t *context, void *address);
+php_parallel_copy_context_t *php_parallel_copy_context_start(php_parallel_copy_direction_t direction,
+                                                             php_parallel_copy_context_t **previous);
+void                        *php_parallel_copy_context_find(php_parallel_copy_context_t *context, void *address);
 void php_parallel_copy_context_insert(php_parallel_copy_context_t *context, void *address, void *assigned);
-void php_parallel_copy_context_end(
-    php_parallel_copy_context_t *context,
-    php_parallel_copy_context_t *previous);
+void php_parallel_copy_context_end(php_parallel_copy_context_t *context, php_parallel_copy_context_t *previous);
 
 PHP_RINIT_FUNCTION(PARALLEL_COPY);
 PHP_RSHUTDOWN_FUNCTION(PARALLEL_COPY);

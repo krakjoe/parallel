@@ -21,24 +21,19 @@
 #include "events.h"
 
 typedef enum {
-    PHP_PARALLEL_EVENTS_EVENT_READ = 1,
-    PHP_PARALLEL_EVENTS_EVENT_WRITE,
-    PHP_PARALLEL_EVENTS_EVENT_CLOSE,
-    PHP_PARALLEL_EVENTS_EVENT_ERROR,
-    PHP_PARALLEL_EVENTS_EVENT_CANCEL,
-    PHP_PARALLEL_EVENTS_EVENT_KILL
+	PHP_PARALLEL_EVENTS_EVENT_READ = 1,
+	PHP_PARALLEL_EVENTS_EVENT_WRITE,
+	PHP_PARALLEL_EVENTS_EVENT_CLOSE,
+	PHP_PARALLEL_EVENTS_EVENT_ERROR,
+	PHP_PARALLEL_EVENTS_EVENT_CANCEL,
+	PHP_PARALLEL_EVENTS_EVENT_KILL
 } php_parallel_events_event_type_t;
 
 PHP_MINIT_FUNCTION(PARALLEL_EVENTS_EVENT);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS_EVENT);
 
-void php_parallel_events_event_construct(
-        php_parallel_events_t *events,
-        php_parallel_events_event_type_t type,
-        zend_string *source,
-        zend_object *object,
-        zval *value,
-        zval *return_value);
+void         php_parallel_events_event_construct(php_parallel_events_t *events, php_parallel_events_event_type_t type,
+                                                 zend_string *source, zend_object *object, zval *value, zval *return_value);
 
-zend_string* php_parallel_events_event_source_local(zend_string *source);
+zend_string *php_parallel_events_event_source_local(zend_string *source);
 #endif

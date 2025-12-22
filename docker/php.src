@@ -2,9 +2,17 @@
 
 case $1 in
     dist)
-        wget https://www.php.net/distributions/php-$2.$3.$4$5.tar.gz \
-            -O /opt/src/php-$2.$3.$4$5.tar.gz
-        tar -C /opt/src -xf opt/src/php-$2.$3.$4$5.tar.gz
+        if [[ $5 == RC* ]]; then
+            # RC releases may be hosted at different locations (e.g., downloads.php.net/~edorian/)
+            wget https://downloads.php.net/~edorian/php-$2.$3.$4$5.tar.gz \
+                -O /opt/src/php-$2.$3.$4$5.tar.gz
+            tar -C /opt/src -xf /opt/src/php-$2.$3.$4$5.tar.gz
+        else
+            # Stable releases are in the distributions folder
+            wget https://www.php.net/distributions/php-$2.$3.$4$5.tar.gz \
+                -O /opt/src/php-$2.$3.$4$5.tar.gz
+            tar -C /opt/src -xf /opt/src/php-$2.$3.$4$5.tar.gz
+        fi
         ln -s /opt/src/php-$2.$3.$4$5 /opt/src/php-src
     ;;
     git)

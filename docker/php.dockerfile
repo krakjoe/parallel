@@ -20,7 +20,8 @@ RUN mkdir -p /opt/src
 RUN mkdir -p /opt/bin
 RUN mkdir -p /opt/etc
 
-ADD docker/php.src /opt/bin
+ADD --chmod=755 docker/php.src /opt/bin
+ADD --chmod=755 docker/php.opcache.sh /opt/bin
 
 RUN /opt/bin/php.src $PHP_SRC_TYPE $PHP_VERSION_MAJOR $PHP_VERSION_MINOR $PHP_VERSION_PATCH $PHP_VERSION_RC
 
@@ -50,7 +51,7 @@ RUN mkdir -p /opt/etc/php.d
 
 ENV PATH=/opt/bin:$PATH
 
-RUN echo "zend_extension=opcache.so" > /opt/etc/php.d/opcache.ini
+RUN /opt/bin/php.opcache.sh $PHP_VERSION_MAJOR $PHP_VERSION_MINOR
 
 RUN php -v
 
