@@ -387,13 +387,29 @@ static zend_always_inline zend_function *php_parallel_cache_function_ex(const ze
 
 	pthread_mutex_lock(&PCG(mutex));
 
+#if PHP_VERSION_ID >= 80400
+	/* Using the zend_function->op_array.function_name as a key only works in PHP >= 8.4 because on older versions all
+	 * closures would have just the name `{closure}` */
+	zend_string *cache_key;
+	cache_key = source->op_array.function_name;
+	if ((cached = zend_hash_find_ptr(&PCG(table), cache_key))) {
+		goto _php_parallel_cached_function_return;
+	}
+#else
 	if ((cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong)source->op_array.opcodes))) {
 		goto _php_parallel_cached_function_return;
 	}
+#endif
 
 	cached = php_parallel_cache_create(source, statics);
 
+#if PHP_VERSION_ID >= 80400
+	/* Store in cache using the same key type we used for lookup */
+	zend_string *persistent_key = php_parallel_copy_string_interned(cache_key);
+	zend_hash_add_ptr(&PCG(table), persistent_key, cached);
+#else
 	zend_hash_index_add_ptr(&PCG(table), (zend_ulong)source->op_array.opcodes, cached);
+#endif
 
 _php_parallel_cached_function_return:
 	pthread_mutex_unlock(&PCG(mutex));
