@@ -43,6 +43,7 @@ zend_class_entry *php_parallel_copy_object_unavailable_ce;
 static void           php_parallel_copy_zval_persistent(zval *dest, zval *source,
                                                         zend_string *(*php_parallel_copy_string_func)(zend_string *),
                                                         void *(*php_parallel_copy_memory_func)(void *source, zend_long size));
+static void          *php_parallel_copy_mem_persistent(void *source, zend_long size);
 
 static const uint32_t php_parallel_copy_uninitialized_bucket[-HT_MIN_MASK] = {HT_INVALID_IDX, HT_INVALID_IDX};
 
@@ -183,9 +184,18 @@ php_parallel_copy_hash_persistent_inline(HashTable *source,
 		php_parallel_copy_context_insert(context, source, ht);
 	}
 
-	// see https://github.com/krakjoe/parallel/issues/306#issuecomment-2414687880
-	// TODO: needs fixing
-	GC_SET_REFCOUNT(ht, 2);
+	/*
+	 * Set refcount to 2 to force the VM to separate (copy) the array on write.
+	 * Since IS_TYPE_REFCOUNTED is cleared for these in the cache, the refcount
+	 * will not be incremented/decremented by the VM, avoiding races.
+	 *
+	 * However, for closure instances (pemalloc), we use standard refcounting (1).
+	 */
+	if (php_parallel_copy_memory_func == php_parallel_copy_mem_persistent) {
+		GC_SET_REFCOUNT(ht, 1);
+	} else {
+		GC_SET_REFCOUNT(ht, 2);
+	}
 	GC_SET_PERSISTENT_TYPE(ht, GC_ARRAY);
 	GC_ADD_FLAGS(ht, IS_ARRAY_IMMUTABLE);
 
@@ -355,9 +365,7 @@ HashTable *php_parallel_copy_hash_persistent(HashTable *source,
 
 void php_parallel_copy_hash_dtor(HashTable *table, bool persistent)
 {
-	// see https://github.com/krakjoe/parallel/issues/306#issuecomment-2414687880
-	// TODO: needs fixing
-	if (GC_DELREF(table) == (persistent ? 1 : 0)) {
+	if (GC_DELREF(table) == 0) {
 		if (!persistent) {
 			GC_REMOVE_FROM_BUFFER(table);
 			GC_TYPE_INFO(table) =
