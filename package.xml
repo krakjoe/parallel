@@ -22,25 +22,18 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2025-12-22</date>
+ <date>2025-12-29</date>
  <version>
-  <release>1.2.9</release>
-  <api>1.2.0</api>
+   <release>1.2.10</release>
+   <api>1.2.0</api>
  </version>
  <stability>
-  <release>stable</release>
-  <api>stable</api>
+   <release>stable</release>
+   <api>stable</api>
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Add PHP 8.5 to CI #349
-- Add a reference to argc and argv to child threads #351
-- Add function to expose parallel worker threads #352
-- Refactor: Replace deprecated Zend types with standard C99 types #353
-- Handle calling functions from global scope #355
-- Convert ZEND_INIT_FCALL to ZEND_INIT_FCALL_BY_NAME #356
-- Add clang formatting rules #361
-- Switch Windows CI to `php-windows-builder` #362
+- Fix pecl package #365 (thanks Remi)
  </notes>
  <contents>
   <dir name="/">
@@ -170,9 +163,11 @@
       <file name="bootstrap.inc" role="test"/>
       <file name="068.phpt" role="test"/>
       <file name="069.phpt" role="test"/>
+      <file name="069-bootstrap.inc" role="test"/>
       <file name="070.phpt" role="test"/>
       <file name="071.phpt" role="test"/>
       <file name="072.phpt" role="test"/>
+      <file name="072-bootstrap.php" role="test"/>
       <file name="init_fcall_fix_001.phpt" role="test"/>
       <file name="init_fcall_fix_002.phpt" role="test"/>
       <file name="init_fcall_fix_003.phpt" role="test"/>
@@ -283,6 +278,28 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+ <release>
+   <date>2025-12-22</date>
+   <version>
+    <release>1.2.9</release>
+    <api>1.2.0</api>
+   </version>
+   <stability>
+    <release>stable</release>
+    <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Add PHP 8.5 to CI #349
+- Add a reference to argc and argv to child threads #351
+- Add function to expose parallel worker threads #352
+- Refactor: Replace deprecated Zend types with standard C99 types #353
+- Handle calling functions from global scope #355
+- Convert ZEND_INIT_FCALL to ZEND_INIT_FCALL_BY_NAME #356
+- Add clang formatting rules #361
+- Switch Windows CI to `php-windows-builder` #362
+   </notes>
+ </release>
  <release>
    <date>2025-07-24</date>
    <version>
