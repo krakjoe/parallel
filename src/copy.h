@@ -56,26 +56,48 @@ static zend_always_inline void *php_parallel_copy_mem(void *source, size_t size,
 	return destination;
 }
 
-zend_function    *php_parallel_copy_function(const zend_function *function, bool persistent);
+zend_function *php_parallel_copy_function(const zend_function *function, bool persistent);
 
-zend_string      *php_parallel_copy_string_interned(zend_string *source);
-zend_string      *php_parallel_copy_string(zend_string *source, bool persistent);
-
-HashTable        *php_parallel_copy_hash_ctor(HashTable *source, bool persistent);
-void              php_parallel_copy_hash_dtor(HashTable *table, bool persistent);
-
-HashTable        *php_parallel_copy_hash_persistent(HashTable *source, zend_string *(*)(zend_string *),
-                                                    void *(*)(void *, zend_long));
-
-void              php_parallel_copy_zval_ctor(zval *dest, zval *source, bool persistent);
-void              php_parallel_copy_zval_dtor(zval *zv);
-
-zend_class_entry *php_parallel_copy_scope(zend_class_entry *);
+zend_string   *php_parallel_copy_string_interned(zend_string *source);
+zend_string   *php_parallel_copy_string(zend_string *source, bool persistent);
 
 typedef enum _php_parallel_copy_direction_t {
 	PHP_PARALLEL_COPY_DIRECTION_PERSISTENT,
 	PHP_PARALLEL_COPY_DIRECTION_THREAD,
 } php_parallel_copy_direction_t;
+
+typedef enum _php_parallel_copy_storage_t {
+	/*
+	 * Array is stored in the global cache pool.
+	 * - Shared across ALL threads (read-only from their perspective)
+	 * - Never individually freed (pool freed at module shutdown)
+	 * - Requires refcount > 1 to force copy-on-write when threads modify
+	 *
+	 * Since IS_TYPE_REFCOUNTED is cleared on cached zvals, the VM won't
+	 * touch the refcount. We set refcount=2 so separation checks see
+	 * refcount > 1 and trigger copy-on-write.
+	 */
+	PHP_PARALLEL_COPY_STORAGE_CACHE_POOL,
+
+	/*
+	 * Array is stored in per-instance persistent memory (pemalloc).
+	 * - Private to a specific closure instance
+	 * - Freed via destructor with standard refcount semantics
+	 * - Uses refcount=1 for proper lifetime management
+	 */
+	PHP_PARALLEL_COPY_STORAGE_PERSISTENT,
+} php_parallel_copy_storage_t;
+
+HashTable        *php_parallel_copy_hash_ctor(HashTable *source, bool persistent);
+void              php_parallel_copy_hash_dtor(HashTable *table, bool persistent);
+
+HashTable        *php_parallel_copy_hash_persistent(HashTable *source, zend_string *(*)(zend_string *),
+                                                    void *(*)(void *, zend_long), php_parallel_copy_storage_t storage);
+
+void              php_parallel_copy_zval_ctor(zval *dest, zval *source, bool persistent);
+void              php_parallel_copy_zval_dtor(zval *zv);
+
+zend_class_entry *php_parallel_copy_scope(zend_class_entry *);
 
 typedef struct _php_parallel_copy_context_t {
 	php_parallel_copy_direction_t direction;
