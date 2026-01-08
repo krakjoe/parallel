@@ -38,5 +38,3 @@ var_dump($future->value());
 --EXPECT--
 int(55)
 int(55)
---XFAIL--
-REASON: no cyclic reference collector implemented yet

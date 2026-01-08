@@ -193,6 +193,14 @@ static zend_always_inline void php_parallel_scheduler_exit(php_parallel_runtime_
 {
 	php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_DONE);
 
+	/*
+	 * Force cycle collection before shutdown to clean up self-referential
+	 * closures created inside the thread (e.g., recursive closures using
+	 * `use (&$self)`). These create cycles that won't be freed by normal
+	 * refcount decrement.
+	 */
+	gc_collect_cycles();
+
 	php_request_shutdown(NULL);
 
 	ts_free_thread();

@@ -80,7 +80,8 @@ static zend_always_inline HashTable *php_parallel_cache_statics(HashTable *stati
 		return cached;
 	}
 
-	cached = php_parallel_copy_hash_persistent(statics, php_parallel_copy_string_interned, php_parallel_cache_copy_mem);
+	cached = php_parallel_copy_hash_persistent(statics, php_parallel_copy_string_interned, php_parallel_cache_copy_mem,
+	                                           PHP_PARALLEL_COPY_STORAGE_CACHE_POOL);
 
 	return zend_hash_index_update_ptr(&PCG(table), (zend_ulong)statics, cached);
 } /* }}} */
@@ -207,7 +208,8 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source, boo
 
 			if (Z_TYPE_P(literal) == IS_ARRAY) {
 				ZVAL_ARR(slot, php_parallel_copy_hash_persistent(Z_ARRVAL_P(literal), php_parallel_copy_string_interned,
-				                                                 php_parallel_cache_copy_mem));
+				                                                 php_parallel_cache_copy_mem,
+				                                                 PHP_PARALLEL_COPY_STORAGE_CACHE_POOL));
 			} else if (Z_TYPE_P(literal) == IS_STRING) {
 				ZVAL_STR(slot, php_parallel_copy_string_interned(Z_STR_P(literal)));
 			} else {
