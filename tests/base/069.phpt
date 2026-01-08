@@ -16,7 +16,7 @@ $foo = new Foo;
 $foo->foo = $foo;
 
 \parallel\run(function(Foo $foo){
-        var_dump($foo);	
+        var_dump($foo);
     }, [$foo]);
 ?>
 --EXPECT--
@@ -24,5 +24,3 @@ object(Foo)#2 (1) {
   ["foo"]=>
   *RECURSION*
 }
---XLEAK--
-REASON: no cyclic reference collector implemented yet
