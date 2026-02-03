@@ -66,7 +66,7 @@ static zend_always_inline php_parallel_events_poll_t *php_parallel_events_poll_i
 
 static zend_always_inline void php_parallel_events_poll_free(php_parallel_events_poll_t *poll) { pefree(poll, 1); }
 
-static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_poll_t *poll)
+static zend_always_inline void php_parallel_events_poll_unlock(php_parallel_events_poll_t *poll)
 {
 	if (poll->state.type == PHP_PARALLEL_EVENTS_LINK) {
 		php_parallel_channel_t *channel = php_parallel_channel_fetch(poll->state.object);
@@ -77,7 +77,11 @@ static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_
 
 		php_parallel_future_unlock(future);
 	}
+}
 
+static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_poll_t *poll)
+{
+	php_parallel_events_poll_unlock(poll);
 	php_parallel_events_poll_free(poll);
 }
 
@@ -313,7 +317,8 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval)
 			}
 		}
 
-		php_parallel_events_poll_end(poll);
+		/* Unlock but don't free - we're continuing the loop */
+		php_parallel_events_poll_unlock(poll);
 	} while (1);
 
 	php_parallel_events_poll_end(poll);
