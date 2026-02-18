@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2025-12-29</date>
+ <date>2026-02-18</date>
  <version>
-   <release>1.2.10</release>
+   <release>1.2.11</release>
    <api>1.2.0</api>
  </version>
  <stability>
@@ -33,7 +33,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix pecl package #365 (thanks Remi)
+- Fix potential use-after-free in events poll loop #368
+- Fix array literal corruption in threads with explicit storage types #366
+- Fix cache key collision #363 (fixes #309 for PHP >= 8.4)
  </notes>
  <contents>
   <dir name="/">
@@ -278,6 +280,21 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+ <release>
+   <date>2025-12-29</date>
+   <version>
+    <release>1.2.10</release>
+    <api>1.2.0</api>
+   </version>
+   <stability>
+     <release>stable</release>
+     <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix pecl package #365 (thanks Remi)
+   </notes>
+ </release>
  <release>
    <date>2025-12-22</date>
    <version>
