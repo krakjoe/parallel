@@ -42,7 +42,9 @@ zend_class_entry *php_parallel_copy_object_unavailable_ce;
 
 static void           php_parallel_copy_zval_persistent(zval *dest, zval *source,
                                                         zend_string *(*php_parallel_copy_string_func)(zend_string *),
-                                                        void *(*php_parallel_copy_memory_func)(void *source, zend_long size));
+                                                        void *(*php_parallel_copy_memory_func)(void *source, zend_long size),
+                                                        php_parallel_copy_storage_t storage);
+static void          *php_parallel_copy_mem_persistent(void *source, zend_long size);
 
 static const uint32_t php_parallel_copy_uninitialized_bucket[-HT_MIN_MASK] = {HT_INVALID_IDX, HT_INVALID_IDX};
 
@@ -162,10 +164,9 @@ static zend_always_inline zend_long php_parallel_copy_resource_ctor(zend_resourc
 	return -1;
 }
 
-static zend_always_inline HashTable *
-php_parallel_copy_hash_persistent_inline(HashTable *source,
-                                         zend_string *(*php_parallel_copy_string_func)(zend_string *),
-                                         void *(*php_parallel_copy_memory_func)(void *source, zend_long size))
+static zend_always_inline HashTable *php_parallel_copy_hash_persistent_inline(
+    HashTable *source, zend_string *(*php_parallel_copy_string_func)(zend_string *),
+    void *(*php_parallel_copy_memory_func)(void *source, zend_long size), php_parallel_copy_storage_t storage)
 {
 	HashTable                   *ht;
 	uint32_t                     idx;
@@ -183,9 +184,27 @@ php_parallel_copy_hash_persistent_inline(HashTable *source,
 		php_parallel_copy_context_insert(context, source, ht);
 	}
 
-	// see https://github.com/krakjoe/parallel/issues/306#issuecomment-2414687880
-	// TODO: needs fixing
-	GC_SET_REFCOUNT(ht, 2);
+	switch (storage) {
+	case PHP_PARALLEL_COPY_STORAGE_CACHE_POOL:
+		/*
+		 * Cache pool arrays are shared across all threads. Since
+		 * IS_TYPE_REFCOUNTED is cleared on cached zvals, the VM won't
+		 * manage the refcount. We set refcount=2 so that when the VM
+		 * checks "should I separate this array?", it sees refcount > 1
+		 * and triggers copy-on-write, preventing corruption of shared data.
+		 */
+		GC_SET_REFCOUNT(ht, 2);
+		break;
+
+	case PHP_PARALLEL_COPY_STORAGE_PERSISTENT:
+		/*
+		 * Per-instance persistent arrays (e.g., closure static variables)
+		 * are private and freed via destructor. Use standard refcount=1
+		 * for proper lifetime management.
+		 */
+		GC_SET_REFCOUNT(ht, 1);
+		break;
+	}
 	GC_SET_PERSISTENT_TYPE(ht, GC_ARRAY);
 	GC_ADD_FLAGS(ht, IS_ARRAY_IMMUTABLE);
 
@@ -214,7 +233,8 @@ php_parallel_copy_hash_persistent_inline(HashTable *source,
 				continue;
 
 			if (Z_OPT_REFCOUNTED_P(zv)) {
-				php_parallel_copy_zval_persistent(zv, zv, php_parallel_copy_string_func, php_parallel_copy_memory_func);
+				php_parallel_copy_zval_persistent(zv, zv, php_parallel_copy_string_func, php_parallel_copy_memory_func,
+				                                  storage);
 			}
 		}
 		ht->nNextFreeElement = ht->nNumUsed;
@@ -242,7 +262,7 @@ php_parallel_copy_hash_persistent_inline(HashTable *source,
 
 		if (Z_OPT_REFCOUNTED(p->val)) {
 			php_parallel_copy_zval_persistent(&p->val, &p->val, php_parallel_copy_string_func,
-			                                  php_parallel_copy_memory_func);
+			                                  php_parallel_copy_memory_func, storage);
 		}
 	}
 	php_parallel_copy_context_end(context, restore);
@@ -340,24 +360,24 @@ HashTable *php_parallel_copy_hash_ctor(HashTable *source, bool persistent)
 {
 	if (persistent) {
 		return php_parallel_copy_hash_persistent_inline(source, php_parallel_copy_string_persistent,
-		                                                php_parallel_copy_mem_persistent);
+		                                                php_parallel_copy_mem_persistent,
+		                                                PHP_PARALLEL_COPY_STORAGE_PERSISTENT);
 	}
 	return php_parallel_copy_hash_thread(source);
 }
 
 HashTable *php_parallel_copy_hash_persistent(HashTable *source,
                                              zend_string *(*php_parallel_copy_string_func)(zend_string *),
-                                             void *(*php_parallel_copy_memory_func)(void *source, zend_long size))
+                                             void *(*php_parallel_copy_memory_func)(void *source, zend_long size),
+                                             php_parallel_copy_storage_t storage)
 {
 	return php_parallel_copy_hash_persistent_inline(source, php_parallel_copy_string_func,
-	                                                php_parallel_copy_memory_func);
+	                                                php_parallel_copy_memory_func, storage);
 }
 
 void php_parallel_copy_hash_dtor(HashTable *table, bool persistent)
 {
-	// see https://github.com/krakjoe/parallel/issues/306#issuecomment-2414687880
-	// TODO: needs fixing
-	if (GC_DELREF(table) == (persistent ? 1 : 0)) {
+	if (GC_DELREF(table) == 0) {
 		if (!persistent) {
 			GC_REMOVE_FROM_BUFFER(table);
 			GC_TYPE_INFO(table) =
@@ -932,11 +952,12 @@ void php_parallel_copy_zval_dtor(zval *zv)
 
 static void php_parallel_copy_zval_persistent(zval *dest, zval *source,
                                               zend_string *(*php_parallel_copy_string_func)(zend_string *),
-                                              void *(*php_parallel_copy_memory_func)(void *source, zend_long size))
+                                              void *(*php_parallel_copy_memory_func)(void *source, zend_long size),
+                                              php_parallel_copy_storage_t storage)
 {
 	if (Z_TYPE_P(source) == IS_ARRAY) {
 		ZVAL_ARR(dest, php_parallel_copy_hash_persistent(Z_ARRVAL_P(source), php_parallel_copy_string_func,
-		                                                 php_parallel_copy_memory_func));
+		                                                 php_parallel_copy_memory_func, storage));
 	} else if (Z_TYPE_P(source) == IS_REFERENCE) {
 		ZVAL_REF(dest, php_parallel_copy_reference_persistent(Z_REF_P(source)));
 	} else if (Z_TYPE_P(source) == IS_STRING) {
