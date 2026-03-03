@@ -22,7 +22,10 @@
 
 static struct {
 	pthread_mutex_t mutex;
-	HashTable       table;
+	HashTable       functions;
+#if PHP_VERSION_ID < 80200
+	HashTable statics;
+#endif
 	struct {
 		size_t size;
 		size_t used;
@@ -35,6 +38,23 @@ static struct {
 #define PCM(e) PCG(memory).e
 
 #define PARALLEL_CACHE_CHUNK PARALLEL_PLATFORM_ALIGNED((1024 * 1024) * 8)
+#define PARALLEL_CACHE_FILE_HASH_OFFSET 1469598103934665603ULL
+#define PARALLEL_CACHE_FILE_HASH_PRIME 1099511628211ULL
+
+#if PHP_VERSION_ID < 80200
+#define PARALLEL_CACHE_STATICS_PARAM , bool statics
+#define PARALLEL_CACHE_STATICS_ARG(value) , value
+#else
+#define PARALLEL_CACHE_STATICS_PARAM
+#define PARALLEL_CACHE_STATICS_ARG(value)
+#endif
+
+typedef struct _php_parallel_cache_entry_t {
+	zend_op_array *function;
+#if PHP_VERSION_ID >= 80400
+	uint64_t source;
+#endif
+} php_parallel_cache_entry_t;
 
 /* {{{ */
 static zend_always_inline void *php_parallel_cache_alloc(size_t size)
@@ -72,9 +92,42 @@ static zend_always_inline void *php_parallel_cache_copy_mem(void *source, zend_l
 	return destination;
 } /* }}} */
 
+#if PHP_VERSION_ID >= 80400
+static zend_always_inline uint64_t php_parallel_cache_file_hash(const zend_op_array *source)
+{ /* {{{ */
+	FILE    *file;
+	uint64_t hash = PARALLEL_CACHE_FILE_HASH_OFFSET;
+	char     buffer[4096];
+	size_t   read;
+
+	if (!source->filename) {
+		return 0;
+	}
+
+	file = VCWD_FOPEN(ZSTR_VAL(source->filename), "rb");
+	if (!file) {
+		return 0;
+	}
+
+	while ((read = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+		char *it = buffer, *end = buffer + read;
+
+		while (it < end) {
+			hash ^= (unsigned char)*it++;
+			hash *= PARALLEL_CACHE_FILE_HASH_PRIME;
+		}
+	}
+
+	fclose(file);
+
+	return hash;
+} /* }}} */
+#endif
+
+#if PHP_VERSION_ID < 80200
 static zend_always_inline HashTable *php_parallel_cache_statics(HashTable *statics)
 { /* {{{ */
-	HashTable *cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong)statics);
+	HashTable *cached = zend_hash_index_find_ptr(&PCG(statics), (zend_ulong)statics);
 
 	if (cached) {
 		return cached;
@@ -83,8 +136,9 @@ static zend_always_inline HashTable *php_parallel_cache_statics(HashTable *stati
 	cached = php_parallel_copy_hash_persistent(statics, php_parallel_copy_string_interned, php_parallel_cache_copy_mem,
 	                                           PHP_PARALLEL_COPY_STORAGE_CACHE_POOL);
 
-	return zend_hash_index_update_ptr(&PCG(table), (zend_ulong)statics, cached);
+	return zend_hash_index_update_ptr(&PCG(statics), (zend_ulong)statics, cached);
 } /* }}} */
+#endif
 
 static zend_always_inline void php_parallel_cache_type(zend_type *type)
 { /* {{{ */
@@ -118,7 +172,7 @@ static zend_always_inline void php_parallel_cache_type(zend_type *type)
 } /* }}} */
 
 /* {{{ */
-static zend_op_array *php_parallel_cache_create(const zend_function *source, bool statics)
+static zend_op_array *php_parallel_cache_create(const zend_function *source PARALLEL_CACHE_STATICS_PARAM)
 {
 	zend_op_array *cached = php_parallel_cache_copy_mem((void *)source, sizeof(zend_op_array));
 	uint32_t      *literal_map = NULL;
@@ -127,9 +181,11 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source, boo
 
 	cached->fn_flags |= ZEND_ACC_IMMUTABLE;
 
+#if PHP_VERSION_ID < 80200
 	if (statics && cached->static_variables) {
 		cached->static_variables = php_parallel_cache_statics(cached->static_variables);
 	}
+#endif
 
 #if PHP_VERSION_ID >= 80200
 	ZEND_MAP_PTR_INIT(cached->static_variables_ptr, cached->static_variables);
@@ -147,8 +203,8 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source, boo
 		    cached->dynamic_func_defs, sizeof(zend_op_array *) * cached->num_dynamic_func_defs);
 
 		while (it < cached->num_dynamic_func_defs) {
-			cached->dynamic_func_defs[it] =
-			    (zend_op_array *)php_parallel_cache_create((zend_function *)cached->dynamic_func_defs[it], statics);
+			cached->dynamic_func_defs[it] = (zend_op_array *)php_parallel_cache_create(
+			    (zend_function *)cached->dynamic_func_defs[it] PARALLEL_CACHE_STATICS_ARG(statics));
 			it++;
 		}
 	}
@@ -383,35 +439,40 @@ _php_parallel_cached_function_return:
 } /* }}} */
 
 /* {{{ */
-static zend_always_inline zend_function *php_parallel_cache_function_ex(const zend_function *source, bool statics)
+static zend_always_inline zend_function *
+php_parallel_cache_function_ex(const zend_function *source PARALLEL_CACHE_STATICS_PARAM)
 {
-	zend_op_array *cached;
+	php_parallel_cache_entry_t *entry;
+	zend_op_array              *cached;
+#if PHP_VERSION_ID >= 80400
+	uint64_t source_hash = php_parallel_cache_file_hash(&source->op_array);
+#endif
 
 	pthread_mutex_lock(&PCG(mutex));
 
+	if ((entry = zend_hash_index_find_ptr(&PCG(functions), (zend_ulong)source->op_array.opcodes))) {
 #if PHP_VERSION_ID >= 80400
-	/* Using the zend_function->op_array.function_name as a key only works in PHP >= 8.4 because on older versions all
-	 * closures would have just the name `{closure}` */
-	zend_string *cache_key;
-	cache_key = source->op_array.function_name;
-	if ((cached = zend_hash_find_ptr(&PCG(table), cache_key))) {
+		if (!zend_string_equals(entry->function->function_name, source->op_array.function_name) ||
+		    entry->source != source_hash) {
+			goto _php_parallel_cached_function_create;
+		}
+#endif
+		cached = entry->function;
 		goto _php_parallel_cached_function_return;
 	}
-#else
-	if ((cached = zend_hash_index_find_ptr(&PCG(table), (zend_ulong)source->op_array.opcodes))) {
-		goto _php_parallel_cached_function_return;
-	}
-#endif
-
-	cached = php_parallel_cache_create(source, statics);
 
 #if PHP_VERSION_ID >= 80400
-	/* Store in cache using the same key type we used for lookup */
-	zend_string *persistent_key = php_parallel_copy_string_interned(cache_key);
-	zend_hash_add_ptr(&PCG(table), persistent_key, cached);
-#else
-	zend_hash_index_add_ptr(&PCG(table), (zend_ulong)source->op_array.opcodes, cached);
+_php_parallel_cached_function_create:
 #endif
+	entry = php_parallel_cache_alloc(sizeof(php_parallel_cache_entry_t));
+
+	cached = php_parallel_cache_create(source PARALLEL_CACHE_STATICS_ARG(statics));
+	entry->function = cached;
+#if PHP_VERSION_ID >= 80400
+	entry->source = source_hash;
+#endif
+
+	zend_hash_index_update_ptr(&PCG(functions), (zend_ulong)source->op_array.opcodes, entry);
 
 _php_parallel_cached_function_return:
 	pthread_mutex_unlock(&PCG(mutex));
@@ -423,7 +484,7 @@ zend_function *php_parallel_cache_closure(const zend_function *source, zend_func
 { /* {{{ */
 	zend_op_array *cache;
 
-	cache = (zend_op_array *)php_parallel_cache_function_ex((zend_function *)source, 0);
+	cache = (zend_op_array *)php_parallel_cache_function_ex((zend_function *)source PARALLEL_CACHE_STATICS_ARG(0));
 
 	if (!closure) {
 		closure = php_parallel_copy_mem(cache, sizeof(zend_op_array), 1);
@@ -464,15 +525,20 @@ zend_function *php_parallel_cache_closure(const zend_function *source, zend_func
 	return closure;
 } /* }}} */
 
+#if PHP_VERSION_ID < 80200
 zend_function *php_parallel_cache_function(const zend_function *source)
 { /* {{{ */
 	return php_parallel_cache_function_ex(source, 1);
 } /* }}} */
+#endif
 
 /* {{{ */
 PHP_MINIT_FUNCTION(PARALLEL_CACHE)
 {
-	zend_hash_init(&PCG(table), 32, NULL, NULL, 1);
+	zend_hash_init(&PCG(functions), 32, NULL, NULL, 1);
+#if PHP_VERSION_ID < 80200
+	zend_hash_init(&PCG(statics), 32, NULL, NULL, 1);
+#endif
 
 	PCM(size) = PARALLEL_CACHE_CHUNK;
 	PCM(mem) = PCM(block) = malloc(PCM(size));
@@ -486,7 +552,10 @@ PHP_MINIT_FUNCTION(PARALLEL_CACHE)
 
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_CACHE)
 {
-	zend_hash_destroy(&PCG(table));
+	zend_hash_destroy(&PCG(functions));
+#if PHP_VERSION_ID < 80200
+	zend_hash_destroy(&PCG(statics));
+#endif
 
 	if (PCM(mem))
 		free(PCM(mem));
