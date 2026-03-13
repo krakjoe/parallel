@@ -743,6 +743,14 @@ static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_
 		dest->handlers = zend_get_std_object_handlers();
 	}
 
+	/*
+	 * Store default_properties_count in dest->handle so the dtor can free
+	 * properties_table entries without dereferencing dest->ce, which may
+	 * become a dangling pointer after the source thread exits (e.g. when
+	 * this object is part of a persistently copied exception trace).
+	 */
+	dest->handle = source->ce->default_properties_count;
+
 	if (ce->default_properties_count) {
 		zval *property = source->properties_table, *slot = dest->properties_table,
 		     *end = property + source->ce->default_properties_count;
@@ -847,19 +855,34 @@ static zend_always_inline void php_parallel_copy_object_dtor(zend_object *source
 		return;
 	}
 
-	if (instanceof_function(source->ce, php_parallel_sync_ce)) {
-		php_parallel_copy_sync_dtor(source, persistent);
-		return;
-	}
-
 	if (!persistent) {
+		if (instanceof_function(source->ce, php_parallel_sync_ce)) {
+			php_parallel_copy_sync_dtor(source, persistent);
+			return;
+		}
+
 		OBJ_RELEASE(source);
 		return;
 	}
 
+	/*
+	 * For persistent copies, source->ce may be a dangling pointer if the
+	 * source thread has exited (e.g. objects in exception traces). Use
+	 * exact pointer comparison instead of instanceof_function() which
+	 * would dereference the potentially-dangling CE.
+	 */
+	if (source->ce == php_parallel_sync_ce) {
+		php_parallel_copy_sync_dtor(source, persistent);
+		return;
+	}
+
 	if (GC_DELREF(source) == 0) {
-		if (source->ce->default_properties_count) {
-			zval *property = source->properties_table, *end = property + source->ce->default_properties_count;
+		/*
+		 * source->handle stores default_properties_count, saved at
+		 * persistent copy time to avoid dereferencing source->ce here.
+		 */
+		if (source->handle) {
+			zval *property = source->properties_table, *end = property + source->handle;
 
 			while (property < end) {
 				PARALLEL_ZVAL_DTOR(property);
