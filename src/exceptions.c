@@ -165,6 +165,37 @@ void php_parallel_exceptions_save(zval *saved, zend_object *exception)
 	PARALLEL_ZVAL_COPY(&ex->line, line, 1);
 	PARALLEL_ZVAL_COPY(&ex->message, message, 1);
 	PARALLEL_ZVAL_COPY(&ex->code, code, 1);
+
+	/* Sanitize objects in trace args before persistent copy.
+	   Objects hold ce pointers to thread-local class entries which become
+	   dangling once the thread shuts down, causing use-after-free when the
+	   exception is destroyed in another thread. Replace objects with their
+	   class name string to preserve debug info safely. */
+	if (Z_TYPE_P(trace) == IS_ARRAY) {
+		zval *frame;
+		ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(trace), frame)
+		{
+			if (Z_TYPE_P(frame) == IS_ARRAY) {
+				zval *args = zend_hash_str_find(Z_ARRVAL_P(frame), "args", sizeof("args") - 1);
+				if (args && Z_TYPE_P(args) == IS_ARRAY) {
+					zval *arg;
+					ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(args), arg)
+					{
+						if (Z_TYPE_P(arg) == IS_OBJECT) {
+							zend_string *name = Z_OBJCE_P(arg)->name;
+							zend_string *repr = zend_string_concat3("Object(", sizeof("Object(") - 1, ZSTR_VAL(name),
+							                                        ZSTR_LEN(name), ")", sizeof(")") - 1);
+							zval_ptr_dtor(arg);
+							ZVAL_STR(arg, repr);
+						}
+					}
+					ZEND_HASH_FOREACH_END();
+				}
+			}
+		}
+		ZEND_HASH_FOREACH_END();
+	}
+
 	PARALLEL_ZVAL_COPY(&ex->trace, trace, 1);
 	PARALLEL_ZVAL_COPY(&ex->previous, &previous, 1);
 
