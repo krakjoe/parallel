@@ -26,7 +26,7 @@
 extern zend_module_entry parallel_module_entry;
 # define phpext_parallel_ptr &parallel_module_entry
 
-# define PHP_PARALLEL_VERSION "1.2.11"
+# define PHP_PARALLEL_VERSION "1.2.12"
 
 # if !defined(ZTS)
 # error Only ZTS build are supported
