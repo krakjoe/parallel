@@ -17,7 +17,7 @@ pecl install parallel
 **From PIE**
 
 ```bash
-pie install parallel
+pie install pecl/parallel
 ```
 
 **Binary distributions**
