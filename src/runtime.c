@@ -146,7 +146,7 @@ PHP_MINIT_FUNCTION(PARALLEL_RUNTIME)
 
 	memcpy(&php_parallel_runtime_handlers, php_parallel_standard_handlers(), sizeof(zend_object_handlers));
 
-	php_parallel_runtime_handlers.offset = XtOffsetOf(php_parallel_runtime_t, std);
+	php_parallel_runtime_handlers.offset = offsetof(php_parallel_runtime_t, std);
 	php_parallel_runtime_handlers.free_obj = php_parallel_runtime_destroy;
 
 	INIT_NS_CLASS_ENTRY(ce, "parallel", "Runtime", php_parallel_runtime_methods);

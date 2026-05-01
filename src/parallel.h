@@ -62,7 +62,7 @@ typedef union _php_parallel_platform_align_test {
 #include "dependencies.h"
 
 #define PARALLEL_PARAMETERS_NONE(r)                                                                                    \
-	ZEND_PARSE_PARAMETERS_START_EX(ZEND_PARSE_PARAMS_THROW, 0, 0)                                                      \
+	ZEND_PARSE_PARAMETERS_START(0, 0)  							                                                       \
 	ZEND_PARSE_PARAMETERS_END()
 
 static zend_always_inline bool php_parallel_mutex_init(pthread_mutex_t *mutex, bool recursive)

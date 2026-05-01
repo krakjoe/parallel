@@ -261,7 +261,7 @@ PHP_MINIT_FUNCTION(PARALLEL_FUTURE)
 
 	memcpy(&php_parallel_future_handlers, php_parallel_standard_handlers(), sizeof(zend_object_handlers));
 
-	php_parallel_future_handlers.offset = XtOffsetOf(php_parallel_future_t, std);
+	php_parallel_future_handlers.offset = offsetof(php_parallel_future_t, std);
 	php_parallel_future_handlers.free_obj = php_parallel_future_destroy;
 	php_parallel_future_handlers.get_debug_info = php_parallel_future_debug;
 

@@ -30,7 +30,7 @@ extern zend_object_handlers                       php_parallel_channel_handlers;
 
 static zend_always_inline php_parallel_channel_t *php_parallel_channel_fetch(zend_object *o)
 {
-	return (php_parallel_channel_t *)(((char *)o) - XtOffsetOf(php_parallel_channel_t, std));
+	return (php_parallel_channel_t *)(((char *)o) - offsetof(php_parallel_channel_t, std));
 }
 
 static zend_always_inline php_parallel_channel_t *php_parallel_channel_from(zval *z)

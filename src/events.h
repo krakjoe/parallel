@@ -40,7 +40,7 @@ typedef struct _php_parallel_events_state_t {
 
 static zend_always_inline php_parallel_events_t *php_parallel_events_fetch(zend_object *o)
 {
-	return (php_parallel_events_t *)(((char *)o) - XtOffsetOf(php_parallel_events_t, std));
+	return (php_parallel_events_t *)(((char *)o) - offsetof(php_parallel_events_t, std));
 }
 
 static zend_always_inline php_parallel_events_t *php_parallel_events_from(zval *z)
