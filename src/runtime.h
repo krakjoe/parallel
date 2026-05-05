@@ -45,7 +45,7 @@ typedef struct _php_parallel_runtime_t {
 
 static zend_always_inline php_parallel_runtime_t *php_parallel_runtime_fetch(zend_object *o)
 {
-	return (php_parallel_runtime_t *)(((char *)o) - XtOffsetOf(php_parallel_runtime_t, std));
+	return (php_parallel_runtime_t *)(((char *)o) - offsetof(php_parallel_runtime_t, std));
 }
 
 static zend_always_inline php_parallel_runtime_t *php_parallel_runtime_from(zval *z)

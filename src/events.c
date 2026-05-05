@@ -284,7 +284,7 @@ PHP_MINIT_FUNCTION(PARALLEL_EVENTS)
 
 	memcpy(&php_parallel_events_handlers, php_parallel_standard_handlers(), sizeof(zend_object_handlers));
 
-	php_parallel_events_handlers.offset = XtOffsetOf(php_parallel_events_t, std);
+	php_parallel_events_handlers.offset = offsetof(php_parallel_events_t, std);
 	php_parallel_events_handlers.free_obj = php_parallel_events_destroy;
 
 	INIT_NS_CLASS_ENTRY(ce, "parallel", "Events", php_parallel_events_methods);
