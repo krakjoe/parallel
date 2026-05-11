@@ -23,7 +23,9 @@
  * not, this function shall return a permanently allocated (immutable)
  * copy of the source function, with no reference count and immutable statics.
  */
+#if PHP_VERSION_ID < 80200
 zend_function *php_parallel_cache_function(const zend_function *source);
+#endif
 
 /*
  * parallel must be able to buffer closures in persistent (but not permanent)
