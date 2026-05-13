@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2026-03-18</date>
+ <date>2026-05-13</date>
  <version>
-   <release>1.2.12</release>
+   <release>1.2.13</release>
    <api>1.2.0</api>
  </version>
  <stability>
@@ -33,7 +33,8 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix use-after-free in exception trace with user objects (#372)
+- improve PHP compatibility (#376, thanks @arshidkv12)
+- fix cache key collision (#370, thanks @nono303)
  </notes>
  <contents>
   <dir name="/">
@@ -214,6 +215,7 @@
       <file name="011.inc" role="test"/>
       <file name="011.phpt" role="test"/>
       <file name="012.phpt" role="test"/>
+      <file name="013.phpt" role="test"/>
      </dir> <!-- closures -->
      <dir name="events">
       <file name="001.phpt" role="test"/>
@@ -280,6 +282,21 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+ <release>
+   <date>2026-03-18</date>
+   <version>
+     <release>1.2.12</release>
+     <api>1.2.0</api>
+   </version>
+   <stability>
+     <release>stable</release>
+     <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix use-after-free in exception trace with user objects (#372)
+   </notes>
+ </release>
  <release>
    <date>2026-02-18</date>
    <version>
