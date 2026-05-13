@@ -969,13 +969,20 @@ static void php_parallel_copy_zval_persistent(zval *dest, zval *source,
 
 zend_function *php_parallel_copy_function(const zend_function *function, bool persistent)
 {
+#if PHP_VERSION_ID < 80200
 	if (persistent) {
 		function = php_parallel_cache_function(function);
 
 		php_parallel_dependencies_store(function);
 	} else {
+#else
+	ZEND_ASSERT(!persistent);
+	(void)persistent;
+#endif
 		php_parallel_dependencies_load(function);
+#if PHP_VERSION_ID < 80200
 	}
+#endif
 
 	return (zend_function *)function;
 }
