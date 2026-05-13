@@ -34,7 +34,7 @@ typedef struct _php_parallel_sync_object_t {
 
 static zend_always_inline php_parallel_sync_object_t *php_parallel_sync_object_fetch(zend_object *o)
 {
-	return (php_parallel_sync_object_t *)(((char *)o) - XtOffsetOf(php_parallel_sync_object_t, std));
+	return (php_parallel_sync_object_t *)(((char *)o) - offsetof(php_parallel_sync_object_t, std));
 }
 
 static zend_always_inline php_parallel_sync_object_t *php_parallel_sync_object_from(zval *z)

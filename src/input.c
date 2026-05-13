@@ -30,7 +30,7 @@ typedef struct _php_parallel_events_input_t {
 
 static zend_always_inline php_parallel_events_input_t *php_parallel_events_input_fetch(zend_object *o)
 {
-	return (php_parallel_events_input_t *)(((char *)o) - XtOffsetOf(php_parallel_events_input_t, std));
+	return (php_parallel_events_input_t *)(((char *)o) - offsetof(php_parallel_events_input_t, std));
 }
 
 static zend_always_inline php_parallel_events_input_t *php_parallel_events_input_from(zval *z)
@@ -178,7 +178,7 @@ PHP_MINIT_FUNCTION(PARALLEL_EVENTS_INPUT)
 
 	memcpy(&php_parallel_events_input_handlers, php_parallel_standard_handlers(), sizeof(zend_object_handlers));
 
-	php_parallel_events_input_handlers.offset = XtOffsetOf(php_parallel_events_input_t, std);
+	php_parallel_events_input_handlers.offset = offsetof(php_parallel_events_input_t, std);
 	php_parallel_events_input_handlers.free_obj = php_parallel_events_input_destroy;
 
 	INIT_NS_CLASS_ENTRY(ce, "parallel\\Events", "Input", php_parallel_events_input_methods);
