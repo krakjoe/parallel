@@ -442,6 +442,12 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 {
 	php_parallel_future_t *future = php_parallel_scheduler_future;
 
+	/* Set once the future has been signalled READY by an error path below, so
+	 * the trailing READY signal is skipped. Signalling twice is a use-after-free
+	 * race: the first signal releases the consumer, which may free the future
+	 * (and its monitor) before the second php_parallel_monitor_set() runs. */
+	volatile bool          ready = false;
+
 	runtime->crashed = 0;
 	runtime->missing = NULL;
 	runtime->file = NULL;
@@ -462,7 +468,9 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 					} else {
 						php_parallel_exceptions_save(frame->return_value, EG(exception));
 
-						php_parallel_monitor_set(future->monitor, PHP_PARALLEL_ERROR);
+						php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY | PHP_PARALLEL_ERROR);
+
+						ready = true;
 					}
 				} else {
 					zend_throw_exception_internal(NULL);
@@ -499,6 +507,8 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 					}
 					php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY | PHP_PARALLEL_ERROR);
 					php_parallel_monitor_unlock(future->monitor);
+
+					ready = true;
 				}
 
 				// This runtime crashed, as such we can not give any guarantees
@@ -533,7 +543,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 	}
 	zend_end_try();
 
-	if (future) {
+	if (future && !ready) {
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY);
 	}
 
