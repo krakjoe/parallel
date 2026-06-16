@@ -24,6 +24,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
 #else
 #include <signal.h>
 #endif
@@ -35,6 +37,62 @@ void (*zend_interrupt_handler)(zend_execute_data *) = NULL;
 
 #ifdef _WIN32
 void       *php_parallel_veh_handle = NULL;
+
+/* DIAGNOSTIC (throwaway): dump a symbolized native backtrace + PHP location for
+ * a non-undefined-function access violation on a worker thread. Prints to
+ * stdout so it surfaces in the phpt output diff, one-shot per process. Remove
+ * once the teardown AV is understood. */
+static void php_parallel_diag_dump(PEXCEPTION_POINTERS info)
+{
+	static volatile LONG once = 0;
+	HANDLE             proc = GetCurrentProcess();
+	void              *frames[62];
+	USHORT             n, i;
+	char               symbuf[sizeof(SYMBOL_INFO) + 256];
+	SYMBOL_INFO       *sym = (SYMBOL_INFO *)symbuf;
+
+	if (InterlockedExchange(&once, 1) != 0) {
+		return;
+	}
+
+	SymSetOptions(SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS);
+	SymInitialize(proc, NULL, TRUE);
+
+	fprintf(stdout, "\n=== PARALLEL DIAG: access violation on worker thread ===\n");
+	fprintf(stdout, "fault: code=0x%08lx exc-addr=%p access-addr=%p\n",
+	        info->ExceptionRecord->ExceptionCode, info->ExceptionRecord->ExceptionAddress,
+	        (void *)info->ExceptionRecord->ExceptionInformation[1]);
+
+	if (EG(current_execute_data) && EG(current_execute_data)->func &&
+	    EG(current_execute_data)->func->op_array.filename) {
+		fprintf(stdout, "php: %s:%u\n", ZSTR_VAL(EG(current_execute_data)->func->op_array.filename),
+	            EG(current_execute_data)->opline ? EG(current_execute_data)->opline->lineno : 0);
+	}
+
+	n = CaptureStackBackTrace(0, 62, frames, NULL);
+	sym->SizeOfStruct = sizeof(SYMBOL_INFO);
+	sym->MaxNameLen = 255;
+
+	for (i = 0; i < n; i++) {
+		DWORD64         addr = (DWORD64)(uintptr_t)frames[i];
+		DWORD64         disp = 0;
+		DWORD           ldisp = 0;
+		IMAGEHLP_LINE64 line;
+		line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+
+		if (SymFromAddr(proc, addr, &disp, sym)) {
+			fprintf(stdout, "  #%02u %p %s+0x%llx", i, frames[i], sym->Name, (unsigned long long)disp);
+		} else {
+			fprintf(stdout, "  #%02u %p <no symbol>", i, frames[i]);
+		}
+		if (SymGetLineFromAddr64(proc, addr, &ldisp, &line)) {
+			fprintf(stdout, " (%s:%lu)", line.FileName, line.LineNumber);
+		}
+		fprintf(stdout, "\n");
+	}
+	fprintf(stdout, "=== END PARALLEL DIAG ===\n");
+	fflush(stdout);
+}
 
 LONG WINAPI php_parallel_veh_handler(PEXCEPTION_POINTERS exceptionInfo)
 {
@@ -61,6 +119,12 @@ LONG WINAPI php_parallel_veh_handler(PEXCEPTION_POINTERS exceptionInfo)
 					php_parallel_scheduler_context->file = EG(current_execute_data)->func->op_array.filename;
 				}
 			}
+
+			/* DIAGNOSTIC: not the undefined-function case -> dump where it faults */
+			if (!php_parallel_scheduler_context->missing) {
+				php_parallel_diag_dump(exceptionInfo);
+			}
+
 			zend_bailout();
 		}
 	}
