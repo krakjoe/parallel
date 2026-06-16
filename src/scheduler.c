@@ -69,31 +69,49 @@ LONG WINAPI php_parallel_veh_handler(PEXCEPTION_POINTERS exceptionInfo)
 #else
 struct sigaction php_parallel_old_sigsegv_action;
 
-static void      php_parallel_sigsegv_handler(int sig, siginfo_t *info, void *context)
+/* The only crash we deliberately convert into a catchable error: a parallel
+ * worker faulting on a call to a function that does not exist in the worker's
+ * function table (e.g. not provided via a bootstrap file). On success it
+ * records the diagnostics on the runtime and returns true so the caller can
+ * zend_bailout(). Every other crash is a genuine bug and must reach the
+ * previous handler, so this returns false and stashes nothing. */
+static bool      php_parallel_scheduler_recover_missing_function(void)
 {
-	// Only handle this SIGSEGV if this is a parallel thread
-	if (php_parallel_scheduler_context) {
-		php_parallel_scheduler_context->crashed = 1;
+	php_parallel_runtime_t *runtime = php_parallel_scheduler_context;
 
-		if (EG(current_execute_data)) {
-			if (EG(current_execute_data)->opline) {
-				const zend_op *opline = EG(current_execute_data)->opline;
+	if (!runtime || !EG(current_execute_data) || !EG(current_execute_data)->opline) {
+		return false;
+	}
 
-				php_parallel_scheduler_context->line = opline->lineno;
-				if (opline->opcode == ZEND_INIT_FCALL) {
-					zval *name = RT_CONSTANT(opline, opline->op2);
+	const zend_op *opline = EG(current_execute_data)->opline;
 
-					if (Z_TYPE_P(name) == IS_STRING) {
-						if (!zend_hash_exists(EG(function_table), Z_STR_P(name))) {
-							php_parallel_scheduler_context->missing = Z_STR_P(name);
-						}
-					}
-				}
-			}
-			if (EG(current_execute_data)->func && EG(current_execute_data)->func->op_array.filename) {
-				php_parallel_scheduler_context->file = EG(current_execute_data)->func->op_array.filename;
-			}
-		}
+	if (opline->opcode != ZEND_INIT_FCALL) {
+		return false;
+	}
+
+	zval *name = RT_CONSTANT(opline, opline->op2);
+
+	if (Z_TYPE_P(name) != IS_STRING || zend_hash_exists(EG(function_table), Z_STR_P(name))) {
+		return false;
+	}
+
+	runtime->crashed = 1;
+	runtime->missing = Z_STR_P(name);
+	runtime->line = opline->lineno;
+
+	if (EG(current_execute_data)->func && EG(current_execute_data)->func->op_array.filename) {
+		runtime->file = EG(current_execute_data)->func->op_array.filename;
+	}
+
+	return true;
+}
+
+static void php_parallel_sigsegv_handler(int sig, siginfo_t *info, void *context)
+{
+	// Only convert into a catchable error when a parallel worker crashed
+	// calling an undefined function. Any other crash is a genuine bug and must
+	// reach the previous handler so it produces a backtrace / core dump.
+	if (php_parallel_scheduler_recover_missing_function()) {
 		zend_bailout();
 	}
 
@@ -110,9 +128,30 @@ static void      php_parallel_sigsegv_handler(int sig, siginfo_t *info, void *co
 }
 #endif
 
-static zend_always_inline int php_parallel_scheduler_list_delete(void *lhs, void *rhs) { return lhs == rhs; }
+static zend_always_inline int  php_parallel_scheduler_list_delete(void *lhs, void *rhs) { return lhs == rhs; }
 
-static void                   php_parallel_schedule_free_function(zend_function *function)
+static zend_always_inline bool php_parallel_scheduler_exit_exception(void)
+{
+#if PHP_VERSION_ID >= 80400
+	zend_object *exception = EG(exception);
+
+	/* PHP 8.4 models exit as an internal exception that must not be copied as a task error. */
+	return exception && (zend_is_unwind_exit(exception) || zend_is_graceful_exit(exception));
+#else
+	return false;
+#endif
+}
+
+static zend_always_inline void php_parallel_scheduler_kill_future(php_parallel_future_t *future)
+{
+	php_parallel_monitor_lock(future->monitor);
+	if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_CANCELLED)) {
+		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_KILLED);
+	}
+	php_parallel_monitor_unlock(future->monitor);
+}
+
+static void php_parallel_schedule_free_function(zend_function *function)
 {
 	if (function->op_array.static_variables) {
 		php_parallel_copy_hash_dtor(function->op_array.static_variables, 1);
@@ -416,9 +455,15 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 
 			if (UNEXPECTED(EG(exception))) {
 				if (future) {
-					php_parallel_exceptions_save(frame->return_value, EG(exception));
+					if (php_parallel_scheduler_exit_exception()) {
+						zend_clear_exception();
 
-					php_parallel_monitor_set(future->monitor, PHP_PARALLEL_ERROR);
+						php_parallel_scheduler_kill_future(future);
+					} else {
+						php_parallel_exceptions_save(frame->return_value, EG(exception));
+
+						php_parallel_monitor_set(future->monitor, PHP_PARALLEL_ERROR);
+					}
 				} else {
 					zend_throw_exception_internal(NULL);
 				}
@@ -465,11 +510,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 				php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_DONE | PHP_PARALLEL_KILLED);
 				php_parallel_monitor_unlock(runtime->monitor);
 			} else if (future) {
-				php_parallel_monitor_lock(future->monitor);
-				if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_CANCELLED)) {
-					php_parallel_monitor_set(future->monitor, PHP_PARALLEL_KILLED);
-				}
-				php_parallel_monitor_unlock(future->monitor);
+				php_parallel_scheduler_kill_future(future);
 			}
 		}
 		zend_end_try();
