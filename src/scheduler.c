@@ -69,31 +69,49 @@ LONG WINAPI php_parallel_veh_handler(PEXCEPTION_POINTERS exceptionInfo)
 #else
 struct sigaction php_parallel_old_sigsegv_action;
 
-static void      php_parallel_sigsegv_handler(int sig, siginfo_t *info, void *context)
+/* The only crash we deliberately convert into a catchable error: a parallel
+ * worker faulting on a call to a function that does not exist in the worker's
+ * function table (e.g. not provided via a bootstrap file). On success it
+ * records the diagnostics on the runtime and returns true so the caller can
+ * zend_bailout(). Every other crash is a genuine bug and must reach the
+ * previous handler, so this returns false and stashes nothing. */
+static bool      php_parallel_scheduler_recover_missing_function(void)
 {
-	// Only handle this SIGSEGV if this is a parallel thread
-	if (php_parallel_scheduler_context) {
-		php_parallel_scheduler_context->crashed = 1;
+	php_parallel_runtime_t *runtime = php_parallel_scheduler_context;
 
-		if (EG(current_execute_data)) {
-			if (EG(current_execute_data)->opline) {
-				const zend_op *opline = EG(current_execute_data)->opline;
+	if (!runtime || !EG(current_execute_data) || !EG(current_execute_data)->opline) {
+		return false;
+	}
 
-				php_parallel_scheduler_context->line = opline->lineno;
-				if (opline->opcode == ZEND_INIT_FCALL) {
-					zval *name = RT_CONSTANT(opline, opline->op2);
+	const zend_op *opline = EG(current_execute_data)->opline;
 
-					if (Z_TYPE_P(name) == IS_STRING) {
-						if (!zend_hash_exists(EG(function_table), Z_STR_P(name))) {
-							php_parallel_scheduler_context->missing = Z_STR_P(name);
-						}
-					}
-				}
-			}
-			if (EG(current_execute_data)->func && EG(current_execute_data)->func->op_array.filename) {
-				php_parallel_scheduler_context->file = EG(current_execute_data)->func->op_array.filename;
-			}
-		}
+	if (opline->opcode != ZEND_INIT_FCALL) {
+		return false;
+	}
+
+	zval *name = RT_CONSTANT(opline, opline->op2);
+
+	if (Z_TYPE_P(name) != IS_STRING || zend_hash_exists(EG(function_table), Z_STR_P(name))) {
+		return false;
+	}
+
+	runtime->crashed = 1;
+	runtime->missing = Z_STR_P(name);
+	runtime->line = opline->lineno;
+
+	if (EG(current_execute_data)->func && EG(current_execute_data)->func->op_array.filename) {
+		runtime->file = EG(current_execute_data)->func->op_array.filename;
+	}
+
+	return true;
+}
+
+static void php_parallel_sigsegv_handler(int sig, siginfo_t *info, void *context)
+{
+	// Only convert into a catchable error when a parallel worker crashed
+	// calling an undefined function. Any other crash is a genuine bug and must
+	// reach the previous handler so it produces a backtrace / core dump.
+	if (php_parallel_scheduler_recover_missing_function()) {
 		zend_bailout();
 	}
 
