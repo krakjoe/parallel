@@ -8,13 +8,9 @@ Requirements
 Installation
 ============
 
-**From PECL**
-
-```bash
-pecl install parallel
-```
-
 **From PIE**
+
+Asuming you have [`pie`](https://github.com/php/pie) installed.
 
 ```bash
 pie install pecl/parallel
@@ -22,7 +18,7 @@ pie install pecl/parallel
 
 **Binary distributions**
 
-Microsoft Windows binaries are released through [PECL](https://pecl.php.net/package/parallel).
+Microsoft Windows binaries are attached to the [releases on GitHub](https://github.com/krakjoe/parallel/releases).
 
 **From sources**
 
@@ -39,3 +35,12 @@ make install
 > [!NOTE]
 > This will install the latest version from the `develop` branch and should be
 > considered unstable!
+
+**From PECL**
+
+```bash
+pecl install parallel
+```
+
+> [!NOTE]
+> PECL is deprecated, please use PIE instead.
