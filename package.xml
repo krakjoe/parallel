@@ -36,6 +36,7 @@
 - Fix use-after-free race on future->monitor in error paths #381
 - Promote PIE installer #383
 - Fix: Update coverallsapp/github-action from master to v2.3.6 #384
+- Narrow the Windows VEH to undefined-function calls only #379
  </notes>
  <contents>
   <dir name="/">
