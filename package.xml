@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2026-06-16</date>
+ <date>2026-06-21</date>
  <version>
-   <release>1.2.14</release>
+   <release>1.2.15</release>
    <api>1.2.0</api>
  </version>
  <stability>
@@ -33,8 +33,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix PHP 8.4 task exit handling #377
-- Narrow crash handler to undefined-function calls only #378
+- Fix use-after-free race on future->monitor in error paths #381
+- Promote PIE installer #383
+- Fix: Update coverallsapp/github-action from master to v2.3.6 #384
  </notes>
  <contents>
   <dir name="/">
@@ -282,6 +283,22 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+ <release>
+   <date>2026-06-16</date>
+   <version>
+     <release>1.2.14</release>
+     <api>1.2.0</api>
+   </version>
+   <stability>
+     <release>stable</release>
+     <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix PHP 8.4 task exit handling #377
+- Narrow crash handler to undefined-function calls only #378
+   </notes>
+ </release>
  <release>
    <date>2026-05-13</date>
    <version>
