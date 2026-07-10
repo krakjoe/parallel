@@ -33,6 +33,7 @@ jobs:
     needs: get-extension-matrix
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix: ${{fromJson(needs.get-extension-matrix.outputs.matrix)}}
     steps:
       - name: Checkout
@@ -46,7 +47,7 @@ jobs:
           args: --with-parallel
           libs: pthreads
           run-tests: true
-          test-runner-args: -d opcache.jit=0 --show-diff -g FAIL,XFAIL,BORK,WARN,LEAK,XLEAK,SKIP
+          test-runner-args: -q -d opcache.jit=0 --show-diff -g FAIL,XFAIL,BORK,WARN,LEAK,XLEAK,SKIP
           test-opcache-mode: both
   release:
     runs-on: ubuntu-latest
