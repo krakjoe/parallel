@@ -26,7 +26,7 @@ Microsoft Windows binaries are attached to the [releases on GitHub](https://gith
 git clone https://github.com/krakjoe/parallel.git
 cd parallel
 phpize
-./configure --enable-parallel  [ --enable-parallel-coverage ] [ --enable-parallel-dev ]
+./configure --enable-parallel [ --enable-parallel-gcov ] [ --enable-parallel-dev ]
 make
 make test
 make install
