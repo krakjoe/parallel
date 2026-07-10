@@ -63,7 +63,9 @@ jobs:
     steps:
       - name: Prepare build variables
         id: build-vars
-        run: echo "tag=ghcr.io/${{ github.repository_owner }}/php-${{ matrix.flags.name }}-${{ matrix.php.major }}.${{ matrix.php.minor }}:latest" >> $GITHUB_OUTPUT
+        run: |
+          echo "repository=ghcr.io/${{ github.repository_owner }}/php-${{ matrix.flags.name }}-${{ matrix.php.major }}.${{ matrix.php.minor }}" >> $GITHUB_OUTPUT
+          echo "version=${{ matrix.php.major }}.${{ matrix.php.minor }}.${{ matrix.php.patch }}${{ matrix.php.rc }}" >> $GITHUB_OUTPUT
 
       - name: Repository checkout
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
@@ -94,33 +96,16 @@ jobs:
             "PHP_VERSION_MINOR=${{ matrix.php.minor }}"
             "PHP_VERSION_PATCH=${{ matrix.php.patch }}"
             "PHP_VERSION_RC=${{ matrix.php.rc }}"
-          tags: ${{ steps.build-vars.outputs.tag }}
+          tags: |
+            ${{ steps.build-vars.outputs.repository }}:latest
+            ${{ steps.build-vars.outputs.repository }}:${{ steps.build-vars.outputs.version }}
           file: ./docker/php.dockerfile
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       # https://docs.docker.com/build/ci/github-actions/test-before-push/
       - name: Test Docker Image
-        run: docker run --rm ${{ steps.build-vars.outputs.tag }} php --version
+        run: docker run --rm ${{ steps.build-vars.outputs.repository }}:latest php --version
 
-      - name: Build and push Docker Image
-        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
-        with:
-          push: true
-          build-args: |
-            "UBUNTU_VERSION_MAJOR=${{ matrix.ubuntu.major }}"
-            "UBUNTU_VERSION_MINOR=${{ matrix.ubuntu.minor }}"
-            "PHP_SRC_TYPE=${{ matrix.src }}"
-            "PHP_SRC_DEBUG=${{ matrix.flags.debug }}"
-            "PHP_SRC_ASAN=${{ matrix.flags.asan }}"
-            "PHP_SRC_GCOV=${{ matrix.flags.gcov }}"
-            "PHP_VERSION_MAJOR=${{ matrix.php.major }}"
-            "PHP_VERSION_MINOR=${{ matrix.php.minor }}"
-            "PHP_VERSION_PATCH=${{ matrix.php.patch }}"
-            "PHP_VERSION_RC=${{ matrix.php.rc }}"
-          tags: |
-            ${{ steps.build-vars.outputs.tag }}
-            ghcr.io/${{ github.repository_owner }}/php-${{ matrix.flags.name }}-${{ matrix.php.major }}.${{ matrix.php.minor }}:${{ matrix.php.major }}.${{ matrix.php.minor }}.${{ matrix.php.patch }}${{ matrix.php.rc }}
-          file: ./docker/php.dockerfile
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Push Docker Image
+        run: docker push --all-tags ${{ steps.build-vars.outputs.repository }}
