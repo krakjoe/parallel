@@ -58,5 +58,4 @@ extern zend_class_entry *php_parallel_runtime_ce;
 php_parallel_runtime_t  *php_parallel_runtime_construct(zend_string *bootstrap);
 
 PHP_MINIT_FUNCTION(PARALLEL_RUNTIME);
-PHP_MSHUTDOWN_FUNCTION(PARALLEL_RUNTIME);
 #endif

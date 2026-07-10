@@ -58,5 +58,4 @@ void         php_parallel_future_value(php_parallel_future_t *future, zval *valu
 bool         php_parallel_future_unlock(php_parallel_future_t *future);
 
 PHP_MINIT_FUNCTION(PARALLEL_FUTURE);
-PHP_MSHUTDOWN_FUNCTION(PARALLEL_FUTURE);
 #endif

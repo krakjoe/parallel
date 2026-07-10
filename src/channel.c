@@ -368,8 +368,6 @@ PHP_MINIT_FUNCTION(PARALLEL_CHANNEL)
 
 	zend_hash_init(&php_parallel_channels.links, 32, NULL, php_parallel_channels_link_destroy, 1);
 
-	PHP_MINIT(PARALLEL_LINK)(INIT_FUNC_ARGS_PASSTHRU);
-
 	return SUCCESS;
 }
 
@@ -377,8 +375,6 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CHANNEL)
 {
 	php_parallel_monitor_destroy(php_parallel_channels.monitor);
 	zend_hash_destroy(&php_parallel_channels.links);
-
-	PHP_MSHUTDOWN(PARALLEL_LINK)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 }
