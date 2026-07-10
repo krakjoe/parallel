@@ -13,89 +13,47 @@ on:
 env:
   NODE_COVERALLS_DEBUG: true
 jobs:
-  auth:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
+        build: ["gcov", "release"]
+        mode:
+          - name: vanilla
+            args: ""
+          - name: opcache
+            args: -d opcache.enable_cli=1 -d opcache.jit=disable
+          - name: jit
+            args: -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
     runs-on: ubuntu-latest
-    name: Login to GitHub Container Registry
+    name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, ${{matrix.mode.name}}
     steps:
-      - uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-  vanilla:
-    strategy:
-      matrix:
-          version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
-          build: ["gcov", "release"]
-    if: success() || failure()
-    runs-on: ubuntu-latest
-    needs: auth
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
       - name: Test parallel
-        run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test
+        run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test ${{matrix.mode.args}}
       - name: Send Coverage
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@v2.3.6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
-          flag-name: vanilla-${{matrix.version}}
-          parallel: true
-  opcache:
-    strategy:
-      matrix:
-          version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
-          build: ["gcov", "release"]
-    if: success() || failure()
-    runs-on: ubuntu-latest
-    needs: auth
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, opcache
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Test parallel
-        run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
-      - name: Build Coveralls
-        if: ${{ matrix.build == 'gcov' }}
-        uses: coverallsapp/github-action@v2.3.6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ github.workspace }}/coverage.info
-          flag-name: opcache-${{matrix.version}}
-          parallel: true
-  jit:
-    strategy:
-      matrix:
-          version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
-          build: ["gcov", "release"]
-    if: success() || failure()
-    runs-on: ubuntu-latest
-    needs: auth
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, JIT
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Test parallel
-        run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
-      - name: Build Coveralls
-        if: ${{ matrix.build == 'gcov' }}
-        uses: coverallsapp/github-action@v2.3.6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ github.workspace }}/coverage.info
-          flag-name: jit-${{matrix.version}}
+          flag-name: ${{matrix.mode.name}}-${{matrix.version}}
           parallel: true
   finish:
     if: always()
     runs-on: ubuntu-latest
-    needs: [vanilla, opcache, jit]
+    needs: test
     steps:
-    - name: Finish Coveralls
-      uses: coverallsapp/github-action@v2.3.6
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        parallel-finished: true
+      - name: Finish Coveralls
+        uses: coverallsapp/github-action@v2.3.6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
