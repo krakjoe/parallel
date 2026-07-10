@@ -15,8 +15,6 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_CHANNEL
-#define HAVE_PARALLEL_CHANNEL
 
 #include "parallel.h"
 
@@ -385,4 +383,3 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CHANNEL)
 	return SUCCESS;
 }
 
-#endif

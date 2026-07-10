@@ -15,8 +15,6 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_EVENTS_INPUT
-#define HAVE_PARALLEL_EVENTS_INPUT
 
 #include "parallel.h"
 
@@ -198,4 +196,3 @@ PHP_MINIT_FUNCTION(PARALLEL_EVENTS_INPUT)
 }
 
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS_INPUT) { return SUCCESS; }
-#endif

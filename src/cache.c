@@ -15,8 +15,6 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_CACHE
-#define HAVE_PARALLEL_CACHE
 
 #include "parallel.h"
 
@@ -562,4 +560,3 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CACHE)
 
 	return SUCCESS;
 } /* }}} */
-#endif

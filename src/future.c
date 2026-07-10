@@ -15,8 +15,6 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_FUTURE
-#define HAVE_PARALLEL_FUTURE
 
 #include "parallel.h"
 
@@ -289,4 +287,3 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_FUTURE)
 
 	return SUCCESS;
 }
-#endif

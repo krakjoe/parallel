@@ -15,8 +15,6 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_EVENTS_LOOP
-#define HAVE_PARALLEL_EVENTS_LOOP
 
 #include "parallel.h"
 
@@ -105,4 +103,3 @@ zend_object_iterator *php_parallel_events_loop_create(zend_class_entry *type, zv
 
 	return &loop->it;
 }
-#endif

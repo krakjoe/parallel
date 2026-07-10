@@ -15,8 +15,6 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_DEPENDENCIES
-#define HAVE_PARALLEL_DEPENDENCIES
 
 #include "parallel.h"
 
@@ -206,4 +204,3 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_DEPENDENCIES)
 
 	return SUCCESS;
 }
-#endif

@@ -15,8 +15,6 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_MONITOR
-#define HAVE_PARALLEL_MONITOR
 
 #include "parallel.h"
 
@@ -118,4 +116,3 @@ void php_parallel_monitor_destroy(php_parallel_monitor_t *monitor)
 
 	free(monitor);
 }
-#endif

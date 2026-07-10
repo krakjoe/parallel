@@ -15,8 +15,6 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_RUNTIME
-#define HAVE_PARALLEL_RUNTIME
 
 #include "parallel.h"
 
@@ -173,4 +171,3 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_RUNTIME)
 
 	return SUCCESS;
 }
-#endif
