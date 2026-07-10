@@ -118,7 +118,7 @@ static zend_always_inline uint32_t php_parallel_atomic_delref(uint32_t *refcount
 #endif
 }
 
-extern zend_function_entry php_parallel_functions[];
+extern zend_function_entry  php_parallel_functions[];
 
 const zend_object_handlers *php_parallel_standard_handlers();
 

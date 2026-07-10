@@ -50,8 +50,8 @@ static zend_always_inline php_parallel_events_t *php_parallel_events_from(zval *
 
 extern zend_class_entry *php_parallel_events_ce;
 
-zend_object_iterator *php_parallel_events_loop_create(zend_class_entry *type, zval *events, int by_ref);
-void                  php_parallel_events_poll(php_parallel_events_t *events, zval *retval);
+zend_object_iterator    *php_parallel_events_loop_create(zend_class_entry *type, zval *events, int by_ref);
+void                     php_parallel_events_poll(php_parallel_events_t *events, zval *retval);
 
 PHP_MINIT_FUNCTION(PARALLEL_EVENTS);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS);
