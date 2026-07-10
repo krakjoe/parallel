@@ -37,7 +37,5 @@ services:
       dockerfile: docker/parallel.dockerfile
       args:
         PHP_SRC_TYPE: ${PHP_BUILD:-release}
-        PHP_SRC_ASAN: ${PHP_SRC_ASAN:-disable}
-        PHP_SRC_GCOV: ${PHP_SRC_GCOV:-disable}
         PHP_VERSION: ${PHP_VERSION:-8.5}
         PHP_IMAGE_TAG: ${PHP_IMAGE_TAG:-latest}

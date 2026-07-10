@@ -22,10 +22,9 @@ RUN mkdir -p /opt/build/parallel
 
 WORKDIR /opt/build/parallel
 
-ARG PHP_SRC_ASAN
-ARG PHP_SRC_GCOV
-
-RUN /opt/parallel/configure --enable-parallel --$PHP_SRC_ASAN-parallel-address-sanitizer --$PHP_SRC_GCOV-parallel-gcov >/dev/null
+RUN /opt/parallel/configure --enable-parallel \
+    --$(test "$PHP_SRC_TYPE" = asan && echo enable || echo disable)-parallel-address-sanitizer \
+    --$(test "$PHP_SRC_TYPE" = gcov && echo enable || echo disable)-parallel-gcov >/dev/null
 
 RUN make -j >/dev/null
 
