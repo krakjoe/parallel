@@ -24,20 +24,6 @@ zend_object_handlers php_parallel_sync_handlers;
 #define PARALLEL_SYNC_IS_SCALAR(zv)                                                                                    \
 	((Z_TYPE_P(zv) != IS_OBJECT) && (Z_TYPE_P(zv) != IS_ARRAY) && (Z_TYPE_P(zv) != IS_RESOURCE))
 
-static zend_always_inline php_parallel_sync_t *php_parallel_sync_fetch(zend_object *o)
-{
-	php_parallel_sync_object_t *object = php_parallel_sync_object_fetch(o);
-
-	return object->sync;
-}
-
-static zend_always_inline php_parallel_sync_t *php_parallel_sync_from(zval *z)
-{
-	php_parallel_sync_object_t *object = php_parallel_sync_object_from(z);
-
-	return object->sync;
-}
-
 static zend_always_inline php_parallel_sync_t *php_parallel_sync_create(zval *zv)
 {
 	php_parallel_sync_t *sync = (php_parallel_sync_t *)pecalloc(1, sizeof(php_parallel_sync_t), 1);
