@@ -9,9 +9,6 @@ jobs:
       packages: write
     strategy:
       matrix:
-        ubuntu:
-          - major: '22'
-            minor: '04'
         php:
           - major: 8
             minor: 0
@@ -37,8 +34,6 @@ jobs:
             minor: 5
             patch: 0
             rc: RC2
-        src:
-          - dist
         flags:
           - name: asan
             debug: disable
@@ -86,9 +81,7 @@ jobs:
         with:
           load: true
           build-args: |
-            "UBUNTU_VERSION_MAJOR=${{ matrix.ubuntu.major }}"
-            "UBUNTU_VERSION_MINOR=${{ matrix.ubuntu.minor }}"
-            "PHP_SRC_TYPE=${{ matrix.src }}"
+            "PHP_SRC_TYPE=dist"
             "PHP_SRC_DEBUG=${{ matrix.flags.debug }}"
             "PHP_SRC_ASAN=${{ matrix.flags.asan }}"
             "PHP_SRC_GCOV=${{ matrix.flags.gcov }}"

@@ -20,8 +20,6 @@ services:
       context: .
       dockerfile: docker/php.dockerfile
       args:
-        UBUNTU_VERSION_MAJOR: ${UBUNTU_VERSION_MAJOR:-22}
-        UBUNTU_VERSION_MINOR: ${UBUNTU_VERSION_MINOR:-04}
         PHP_SRC_TYPE: ${PHP_SOURCE:-dist}
         PHP_SRC_DEBUG: ${PHP_SRC_DEBUG:-disable}
         PHP_SRC_ASAN: ${PHP_SRC_ASAN:-disable}
