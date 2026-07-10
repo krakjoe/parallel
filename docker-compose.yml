@@ -37,5 +37,6 @@ services:
       dockerfile: docker/parallel.dockerfile
       args:
         PHP_SRC_TYPE: ${PHP_BUILD:-release}
+        PHP_BASE_TYPE: ${PHP_BASE_BUILD:-${PHP_BUILD:-release}}
         PHP_VERSION: ${PHP_VERSION:-8.5}
         PHP_IMAGE_TAG: ${PHP_IMAGE_TAG:-latest}

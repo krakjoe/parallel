@@ -1,0 +1,44 @@
+name: UBSAN
+
+on:
+  pull_request: null
+  push:
+    branches:
+      - master
+      - develop
+      - release
+  schedule:
+    - cron: "30 4 * * *"
+
+env:
+  UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
+        mode:
+          - name: vanilla
+            args: ""
+          - name: opcache
+            args: -d opcache.enable_cli=1 -d opcache.jit=disable
+          - name: jit
+            args: -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+    runs-on: ubuntu-latest
+    name: UBSAN, PHP v${{matrix.version}}, ${{matrix.mode.name}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test parallel
+        run: |
+          PHP_BUILD=ubsan PHP_BASE_BUILD=release PHP_VERSION=${{matrix.version}} docker compose run --rm -e UBSAN_OPTIONS parallel \
+            -c 'export LD_PRELOAD=$(cc -print-file-name=libubsan.so); docker/parallel.test "$@"' \
+            -- ${{matrix.mode.args}}
