@@ -36,7 +36,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Test parallel
-        run: docker compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test
+        run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test
       - name: Send Coverage
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@v2.3.6
@@ -58,7 +58,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Test parallel
-        run: docker compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
+        run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=disable
       - name: Build Coveralls
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@v2.3.6
@@ -80,7 +80,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Test parallel
-        run: docker compose run parallel-${{matrix.build}}-${{matrix.version}} docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+        run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
       - name: Build Coveralls
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@v2.3.6
