@@ -47,6 +47,7 @@ jobs:
           args: --with-parallel
           libs: pthreads
           run-tests: true
+          test-workers: 1
           test-runner-args: -q -d opcache.jit=0 --show-diff -g FAIL,XFAIL,BORK,WARN,LEAK,XLEAK,SKIP
           test-opcache-mode: both
   release:
