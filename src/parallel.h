@@ -123,6 +123,7 @@ extern zend_function_entry  php_parallel_functions[];
 const zend_object_handlers *php_parallel_standard_handlers();
 
 PHP_MINIT_FUNCTION(PARALLEL_HANDLERS);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_HANDLERS);
 
 PHP_MINIT_FUNCTION(PARALLEL_CORE);
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_CORE);

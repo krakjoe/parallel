@@ -25,4 +25,5 @@ zval                    *php_parallel_events_input_find(zval *input, zend_string
 bool                     php_parallel_events_input_remove(zval *input, zend_string *target);
 
 PHP_MINIT_FUNCTION(PARALLEL_EVENTS_INPUT);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS_INPUT);
 #endif

@@ -46,4 +46,5 @@ php_parallel_sync_t *php_parallel_sync_copy(php_parallel_sync_t *sync);
 void                 php_parallel_sync_release(php_parallel_sync_t *sync);
 
 PHP_MINIT_FUNCTION(PARALLEL_SYNC);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_SYNC);
 #endif

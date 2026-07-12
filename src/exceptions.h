@@ -90,4 +90,5 @@ zend_object *php_parallel_exceptions_restore(zval *exception);
 void         php_parallel_exceptions_destroy(php_parallel_exception_t *ex);
 
 PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS);
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_EXCEPTIONS);
 #endif
