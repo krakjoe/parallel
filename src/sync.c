@@ -21,6 +21,8 @@
 zend_class_entry    *php_parallel_sync_ce;
 zend_object_handlers php_parallel_sync_handlers;
 
+static zend_string  *php_parallel_sync_string_value;
+
 #define PARALLEL_SYNC_IS_SCALAR(zv)                                                                                    \
 	((Z_TYPE_P(zv) != IS_OBJECT) && (Z_TYPE_P(zv) != IS_ARRAY) && (Z_TYPE_P(zv) != IS_RESOURCE))
 
@@ -115,7 +117,7 @@ static HashTable *php_parallel_sync_object_debug(zend_object *o, int *temp)
 	if (!Z_ISUNDEF(object->sync->value)) {
 		PARALLEL_ZVAL_COPY(&zv, &object->sync->value, 0);
 
-		zend_hash_str_add(debug, ZEND_STRL("value"), &zv);
+		zend_hash_add(debug, php_parallel_sync_string_value, &zv);
 	}
 
 	pthread_mutex_unlock(&object->sync->mutex);
@@ -295,6 +297,8 @@ PHP_MINIT_FUNCTION(PARALLEL_SYNC)
 	php_parallel_sync_ce->serialize = zend_class_serialize_deny;
 	php_parallel_sync_ce->unserialize = zend_class_unserialize_deny;
 #endif
+
+	php_parallel_sync_string_value = zend_string_init_interned(ZEND_STRL("value"), 1);
 
 	return SUCCESS;
 }

@@ -873,5 +873,7 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_SCHEDULER)
 
 	zend_interrupt_function = zend_interrupt_handler;
 
+	PHP_MSHUTDOWN(PARALLEL_RUNTIME)(INIT_FUNC_ARGS_PASSTHRU);
+
 	return SUCCESS;
 }

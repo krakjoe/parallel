@@ -21,6 +21,8 @@
 zend_class_entry    *php_parallel_future_ce;
 zend_object_handlers php_parallel_future_handlers;
 
+zend_string         *php_parallel_future_string_runtime;
+
 bool php_parallel_future_lock(php_parallel_future_t *future) { return php_parallel_monitor_lock(future->monitor); }
 
 bool php_parallel_future_readable(php_parallel_future_t *future)
@@ -246,7 +248,7 @@ static HashTable *php_parallel_future_debug(zend_object *zo, int *temp)
 
 	ZVAL_OBJ(&zdbg, &future->runtime->std);
 
-	zend_hash_str_add(debug, ZEND_STRL("runtime"), &zdbg);
+	zend_hash_add(debug, php_parallel_future_string_runtime, &zdbg);
 
 	return debug;
 }
@@ -273,6 +275,15 @@ PHP_MINIT_FUNCTION(PARALLEL_FUTURE)
 	php_parallel_future_ce->serialize = zend_class_serialize_deny;
 	php_parallel_future_ce->unserialize = zend_class_unserialize_deny;
 #endif
+
+	php_parallel_future_string_runtime = zend_string_init_interned(ZEND_STRL("runtime"), 1);
+
+	return SUCCESS;
+}
+
+PHP_MSHUTDOWN_FUNCTION(PARALLEL_FUTURE)
+{
+	zend_string_release(php_parallel_future_string_runtime);
 
 	return SUCCESS;
 }
