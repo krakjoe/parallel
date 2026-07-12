@@ -15,6 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_SCHEDULER
+#define HAVE_PARALLEL_SCHEDULER
 
 #include "../php_parallel.h"
 #include "parallel.h"
@@ -877,3 +879,4 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_SCHEDULER)
 
 	return SUCCESS;
 }
+#endif

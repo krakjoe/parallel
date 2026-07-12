@@ -15,6 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_EXCEPTIONS
+#define HAVE_PARALLEL_EXCEPTIONS
 
 #include "parallel.h"
 
@@ -359,3 +361,4 @@ PHP_MINIT_FUNCTION(PARALLEL_EXCEPTIONS)
 }
 
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_EXCEPTIONS) { return SUCCESS; }
+#endif

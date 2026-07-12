@@ -15,6 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_EVENTS_POLL
+#define HAVE_PARALLEL_EVENTS_POLL
 
 #include "parallel.h"
 
@@ -321,3 +323,4 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval)
 
 	php_parallel_events_poll_end(poll);
 }
+#endif

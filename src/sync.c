@@ -15,6 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_SYNC
+#define HAVE_PARALLEL_SYNC
 
 #include "parallel.h"
 
@@ -304,3 +306,4 @@ PHP_MINIT_FUNCTION(PARALLEL_SYNC)
 }
 
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_SYNC) { return SUCCESS; }
+#endif

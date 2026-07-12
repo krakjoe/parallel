@@ -15,6 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_LINK
+#define HAVE_PARALLEL_LINK
 
 #include "link.h"
 #include "parallel.h"
@@ -420,3 +422,4 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_LINK)
 
 	return SUCCESS;
 }
+#endif

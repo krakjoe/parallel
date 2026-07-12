@@ -15,6 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_EVENTS
+#define HAVE_PARALLEL_EVENTS
 
 #include "parallel.h"
 
@@ -312,3 +314,4 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS)
 
 	return SUCCESS;
 }
+#endif

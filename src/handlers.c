@@ -15,6 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_HANDLERS
+#define HAVE_PARALLEL_HANDLERS
 
 #include "parallel.h"
 
@@ -72,3 +74,4 @@ PHP_MINIT_FUNCTION(PARALLEL_HANDLERS)
 }
 
 PHP_MSHUTDOWN_FUNCTION(PARALLEL_HANDLERS) { return SUCCESS; }
+#endif

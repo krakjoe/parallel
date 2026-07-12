@@ -15,6 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_CHECK
+#define HAVE_PARALLEL_CHECK
 
 #include "parallel.h"
 
@@ -784,3 +786,4 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_CHECK)
 	return SUCCESS;
 }
 /* }}} */
+#endif

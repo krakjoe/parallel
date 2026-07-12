@@ -15,6 +15,8 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PARALLEL_COPY
+#define HAVE_PARALLEL_COPY
 
 #include "parallel.h"
 
@@ -1092,3 +1094,4 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_COPY)
 
 	return SUCCESS;
 }
+#endif
