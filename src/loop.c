@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_EVENTS_LOOP
 
 #include "parallel.h"
+#include "poll.h"
 
 typedef struct _php_parallel_events_loop_t {
 	zend_object_iterator it;

@@ -15,41 +15,11 @@
   | Author: krakjoe                                                      |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PARALLEL_EVENTS_H
-#define HAVE_PARALLEL_EVENTS_H
+#ifndef HAVE_PARALLEL_EVENTS_LOOP_H
+#define HAVE_PARALLEL_EVENTS_LOOP_H
 
-typedef struct _php_parallel_events_t {
-	zval        input;
-	HashTable   targets;
-	zend_long   timeout;
-	bool        blocking;
-	zval        blocker;
-	zend_object std;
-} php_parallel_events_t;
+#include "php.h"
 
-typedef enum { PHP_PARALLEL_EVENTS_LINK = 1, PHP_PARALLEL_EVENTS_FUTURE } php_parallel_events_type_t;
+zend_object_iterator *php_parallel_events_loop_create(zend_class_entry *type, zval *events, int by_ref);
 
-typedef struct _php_parallel_events_state_t {
-	php_parallel_events_type_t type;
-	zend_string               *name;
-	bool                       readable;
-	bool                       writable;
-	bool                       closed;
-	zend_object               *object;
-} php_parallel_events_state_t;
-
-static zend_always_inline php_parallel_events_t *php_parallel_events_fetch(zend_object *o)
-{
-	return (php_parallel_events_t *)(((char *)o) - offsetof(php_parallel_events_t, std));
-}
-
-static zend_always_inline php_parallel_events_t *php_parallel_events_from(zval *z)
-{
-	return php_parallel_events_fetch(Z_OBJ_P(z));
-}
-
-extern zend_class_entry *php_parallel_events_ce;
-
-PHP_MINIT_FUNCTION(PARALLEL_EVENTS);
-PHP_MSHUTDOWN_FUNCTION(PARALLEL_EVENTS);
 #endif

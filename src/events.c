@@ -18,7 +18,9 @@
 #ifndef HAVE_PARALLEL_EVENTS
 #define HAVE_PARALLEL_EVENTS
 
+#include "loop.h"
 #include "parallel.h"
+#include "poll.h"
 
 zend_class_entry    *php_parallel_events_ce;
 zend_object_handlers php_parallel_events_handlers;
