@@ -177,6 +177,13 @@ static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_
 
 static zend_always_inline void php_parallel_events_poll_realtime(struct timespec *timeout, uint64_t remaining)
 {
+#ifdef _WIN32
+	struct timespec relative;
+
+	relative.tv_sec = remaining / PHP_PARALLEL_EVENTS_NANO_IN_SEC;
+	relative.tv_nsec = remaining % PHP_PARALLEL_EVENTS_NANO_IN_SEC;
+	pthread_win32_getabstime_np(timeout, &relative);
+#else
 	struct timeval now;
 
 	gettimeofday(&now, NULL);
@@ -188,6 +195,7 @@ static zend_always_inline void php_parallel_events_poll_realtime(struct timespec
 		timeout->tv_sec++;
 		timeout->tv_nsec -= PHP_PARALLEL_EVENTS_NANO_IN_SEC;
 	}
+#endif
 }
 
 static zend_always_inline bool php_parallel_events_poll_expired(php_parallel_events_poll_t *poll,
