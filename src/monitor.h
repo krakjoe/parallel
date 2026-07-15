@@ -21,10 +21,13 @@
 #include <pthread.h>
 #include <stdint.h>
 
+#include "notify.h"
+
 typedef struct _php_parallel_monitor_t {
-	pthread_mutex_t mutex;
-	pthread_cond_t  condition;
-	int32_t         state;
+	pthread_mutex_t       mutex;
+	pthread_cond_t        condition;
+	int32_t               state;
+	php_parallel_notify_t notify;
 } php_parallel_monitor_t;
 
 #define PHP_PARALLEL_READY (1 << 0)
@@ -48,5 +51,6 @@ int32_t                 php_parallel_monitor_wait_locked(php_parallel_monitor_t 
 void                    php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state);
 void                    php_parallel_monitor_add(php_parallel_monitor_t *monitor, int32_t state);
 void                    php_parallel_monitor_remove(php_parallel_monitor_t *monitor, int32_t state);
+int                     php_parallel_monitor_notify(php_parallel_monitor_t *monitor);
 void                    php_parallel_monitor_destroy(php_parallel_monitor_t *);
 #endif

@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_LINK
 
 #include "link.h"
+#include "notify.h"
 #include "parallel.h"
 
 #define PHP_PARALLEL_LINK_CLOSURE_BUFFER GC_IMMUTABLE
@@ -42,18 +43,24 @@ typedef struct {
 	uint32_t w;
 } php_parallel_link_state_t;
 
+typedef struct {
+	php_parallel_notify_t read;
+	php_parallel_notify_t write;
+} php_parallel_link_notify_t;
+
 typedef struct _php_parallel_link_queue_t {
 	zend_llist l;
 	zend_long  c;
 } php_parallel_link_queue_t;
 
 struct _php_parallel_link_t {
-	php_parallel_link_type_t  type;
-	zend_string              *name;
+	php_parallel_link_type_t   type;
+	zend_string               *name;
 
-	php_parallel_link_mutex_t m;
-	php_parallel_link_cond_t  c;
-	php_parallel_link_state_t s;
+	php_parallel_link_mutex_t  m;
+	php_parallel_link_cond_t   c;
+	php_parallel_link_state_t  s;
+	php_parallel_link_notify_t notify;
 
 	union {
 		php_parallel_link_queue_t q;
@@ -139,6 +146,8 @@ php_parallel_link_t *php_parallel_link_init(zend_string *name, bool buffered, ze
 	} else {
 		link->type = PHP_PARALLEL_LINK_UNBUFFERED;
 	}
+	php_parallel_notify_init(&link->notify.read);
+	php_parallel_notify_init(&link->notify.write);
 	link->name = php_parallel_copy_string_interned(name);
 	link->refcount = 1;
 
@@ -148,6 +157,8 @@ php_parallel_link_t *php_parallel_link_init(zend_string *name, bool buffered, ze
 void php_parallel_link_destroy(php_parallel_link_t *link)
 {
 	if (php_parallel_atomic_delref(&link->refcount) == 0) {
+		php_parallel_notify_destroy(&link->notify.read);
+		php_parallel_notify_destroy(&link->notify.write);
 		php_parallel_link_mutex_destroy(&link->m);
 		php_parallel_link_cond_destroy(&link->c);
 
@@ -167,6 +178,17 @@ php_parallel_link_t *php_parallel_link_copy(php_parallel_link_t *link)
 	php_parallel_atomic_addref(&link->refcount);
 
 	return link;
+}
+
+static zend_always_inline void php_parallel_link_notify_sync(php_parallel_link_t *link)
+{
+	if (link->notify.read.read != -1) {
+		php_parallel_notify_sync(&link->notify.read, link->s.c || php_parallel_link_readable(link));
+	}
+
+	if (link->notify.write.read != -1) {
+		php_parallel_notify_sync(&link->notify.write, link->s.c || php_parallel_link_writable(link));
+	}
 }
 
 static zend_always_inline bool php_parallel_link_send_unbuffered(php_parallel_link_t *link, zval *value)
@@ -189,6 +211,7 @@ static zend_always_inline bool php_parallel_link_send_unbuffered(php_parallel_li
 		ZEND_ASSERT(Z_TYPE_FLAGS(link->port.z) != PHP_PARALLEL_LINK_CLOSURE_BUFFER);
 	}
 	link->s.w++;
+	php_parallel_link_notify_sync(link);
 
 	if (link->s.r) {
 		pthread_cond_signal(&link->c.r);
@@ -222,6 +245,7 @@ static zend_always_inline bool php_parallel_link_send_buffered(php_parallel_link
 	PARALLEL_ZVAL_COPY(&sent, value, 1);
 
 	zend_llist_add_element(&link->port.q.l, &sent);
+	php_parallel_link_notify_sync(link);
 
 	if (link->s.r) {
 		pthread_cond_signal(&link->c.r);
@@ -247,8 +271,10 @@ static zend_always_inline bool php_parallel_link_recv_unbuffered(php_parallel_li
 
 	while (!link->s.c && !link->s.w) {
 		link->s.r++;
+		php_parallel_link_notify_sync(link);
 		pthread_cond_wait(&link->c.r, &link->m.m);
 		link->s.r--;
+		php_parallel_link_notify_sync(link);
 	}
 
 	if (link->s.c) {
@@ -263,6 +289,7 @@ static zend_always_inline bool php_parallel_link_recv_unbuffered(php_parallel_li
 	}
 	ZVAL_UNDEF(&link->port.z);
 	link->s.w--;
+	php_parallel_link_notify_sync(link);
 
 	pthread_cond_signal(&link->c.w);
 	pthread_mutex_unlock(&link->m.m);
@@ -294,6 +321,7 @@ static zend_always_inline bool php_parallel_link_recv_buffered(php_parallel_link
 	PARALLEL_ZVAL_COPY(value, head, 0);
 
 	zend_llist_del_element(&link->port.q.l, head, php_parallel_link_queue_delete);
+	php_parallel_link_notify_sync(link);
 
 	if (link->s.w) {
 		pthread_cond_signal(&link->c.w);
@@ -323,6 +351,7 @@ bool php_parallel_link_close(php_parallel_link_t *link)
 	}
 
 	link->s.c = 1;
+	php_parallel_link_notify_sync(link);
 	pthread_cond_broadcast(&link->c.r);
 	pthread_cond_broadcast(&link->c.w);
 	pthread_mutex_unlock(&link->m.m);
@@ -360,6 +389,14 @@ bool php_parallel_link_readable(php_parallel_link_t *link)
 	}
 
 	return 0;
+}
+
+int php_parallel_link_notify(php_parallel_link_t *link, bool writable)
+{
+	php_parallel_notify_t *notify = writable ? &link->notify.write : &link->notify.read;
+	bool ready = link->s.c || (writable ? php_parallel_link_writable(link) : php_parallel_link_readable(link));
+
+	return php_parallel_notify_observe(notify, ready);
 }
 
 void php_parallel_link_debug(php_parallel_link_t *link, HashTable *debug)

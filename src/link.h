@@ -34,6 +34,7 @@ void                                php_parallel_link_destroy(php_parallel_link_
 bool                                php_parallel_link_lock(php_parallel_link_t *link);
 bool                                php_parallel_link_writable(php_parallel_link_t *link);
 bool                                php_parallel_link_readable(php_parallel_link_t *link);
+int                                 php_parallel_link_notify(php_parallel_link_t *link, bool writable);
 bool                                php_parallel_link_unlock(php_parallel_link_t *link);
 
 void                                php_parallel_link_debug(php_parallel_link_t *link, HashTable *debug);
