@@ -20,10 +20,14 @@
 
 #include "parallel.h"
 
-#include "Zend/zend_hrtime.h"
-
 #include <errno.h>
 #include <time.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+#define PHP_PARALLEL_EVENTS_NANO_IN_SEC 1000000000ULL
 
 #if PHP_VERSION_ID >= 80400
 #include "ext/random/php_random.h"
@@ -38,8 +42,8 @@ typedef struct _php_parallel_events_poll_notifier_t {
 } php_parallel_events_poll_notifier_t;
 
 typedef struct _php_parallel_events_poll_t {
-	uint64_t      epoch;
-	zend_hrtime_t stop;
+	uint64_t epoch;
+	uint64_t stop;
 	struct {
 		zend_fcall_info       fci;
 		zend_fcall_info_cache fcc;
@@ -91,6 +95,25 @@ static zend_always_inline uint64_t php_parallel_events_poll_epoch(void)
 	return epoch;
 }
 
+static zend_always_inline uint64_t php_parallel_events_poll_now(void)
+{
+#ifdef _WIN32
+	LARGE_INTEGER now, frequency;
+
+	QueryPerformanceCounter(&now);
+	QueryPerformanceFrequency(&frequency);
+
+	return (now.QuadPart / frequency.QuadPart) * PHP_PARALLEL_EVENTS_NANO_IN_SEC +
+	       (now.QuadPart % frequency.QuadPart) * PHP_PARALLEL_EVENTS_NANO_IN_SEC / frequency.QuadPart;
+#else
+	struct timespec now;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+
+	return (uint64_t)now.tv_sec * PHP_PARALLEL_EVENTS_NANO_IN_SEC + now.tv_nsec;
+#endif
+}
+
 static zend_always_inline php_parallel_events_poll_t *php_parallel_events_poll_init(php_parallel_events_t *events)
 {
 	php_parallel_events_poll_t *poll;
@@ -103,13 +126,13 @@ static zend_always_inline php_parallel_events_poll_t *php_parallel_events_poll_i
 	poll->epoch = php_parallel_events_poll_epoch();
 
 	if (events->timeout > -1) {
-		zend_hrtime_t now = zend_hrtime();
-		zend_hrtime_t duration;
+		uint64_t now = php_parallel_events_poll_now();
+		uint64_t duration;
 
 		if ((zend_ulong)events->timeout > UINT64_MAX / 1000) {
 			duration = UINT64_MAX;
 		} else {
-			duration = (zend_hrtime_t)events->timeout * 1000;
+			duration = (uint64_t)events->timeout * 1000;
 		}
 
 		poll->stop = duration > UINT64_MAX - now ? UINT64_MAX : now + duration;
@@ -146,23 +169,23 @@ static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_
 	php_parallel_events_poll_free(poll);
 }
 
-static zend_always_inline void php_parallel_events_poll_realtime(struct timespec *timeout, zend_hrtime_t remaining)
+static zend_always_inline void php_parallel_events_poll_realtime(struct timespec *timeout, uint64_t remaining)
 {
 	timespec_get(timeout, TIME_UTC);
 
-	timeout->tv_sec += remaining / ZEND_NANO_IN_SEC;
-	timeout->tv_nsec += remaining % ZEND_NANO_IN_SEC;
+	timeout->tv_sec += remaining / PHP_PARALLEL_EVENTS_NANO_IN_SEC;
+	timeout->tv_nsec += remaining % PHP_PARALLEL_EVENTS_NANO_IN_SEC;
 
-	if (timeout->tv_nsec >= ZEND_NANO_IN_SEC) {
+	if (timeout->tv_nsec >= PHP_PARALLEL_EVENTS_NANO_IN_SEC) {
 		timeout->tv_sec++;
-		timeout->tv_nsec -= ZEND_NANO_IN_SEC;
+		timeout->tv_nsec -= PHP_PARALLEL_EVENTS_NANO_IN_SEC;
 	}
 }
 
 static zend_always_inline bool php_parallel_events_poll_expired(php_parallel_events_poll_t *poll,
                                                                 php_parallel_events_t      *events)
 {
-	if (events->timeout > -1 && zend_hrtime() >= poll->stop) {
+	if (events->timeout > -1 && php_parallel_events_poll_now() >= poll->stop) {
 		php_parallel_exception_ex(php_parallel_events_error_timeout_ce, "timeout occured");
 		return 1;
 	}
@@ -181,7 +204,7 @@ static zend_always_inline bool php_parallel_events_poll_wait(php_parallel_events
 		int result;
 
 		if (events->timeout > -1) {
-			zend_hrtime_t   now = zend_hrtime();
+			uint64_t        now = php_parallel_events_poll_now();
 			struct timespec timeout;
 
 			if (now >= poll->stop) {
