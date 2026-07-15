@@ -30,9 +30,9 @@ jobs:
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, ${{matrix.mode.name}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
