@@ -212,6 +212,11 @@ static zend_always_inline bool php_parallel_events_poll_expired(php_parallel_eve
 static zend_always_inline bool php_parallel_events_poll_wait(php_parallel_events_poll_t *poll,
                                                              php_parallel_events_t      *events)
 {
+#if defined(_WIN32) && !defined(_WIN64)
+	/* ponytail: pthreads-win32 condition waits hang on x86; use native conditions if x86 polling cost matters. */
+	usleep(1);
+	return !php_parallel_events_poll_expired(poll, events);
+#else
 	uint64_t epoch;
 
 	pthread_mutex_lock(&php_parallel_events_poll_notifier.mutex);
@@ -253,6 +258,7 @@ static zend_always_inline bool php_parallel_events_poll_wait(php_parallel_events
 	}
 
 	return !php_parallel_events_poll_expired(poll, events);
+#endif
 }
 
 static zend_always_inline bool php_parallel_events_poll_begin_link(php_parallel_events_t       *events,
