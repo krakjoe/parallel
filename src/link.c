@@ -191,14 +191,9 @@ static zend_always_inline void php_parallel_link_notify_sync(php_parallel_link_t
 	}
 }
 
-static zend_always_inline bool php_parallel_link_send_unbuffered(php_parallel_link_t *link, zval *value)
+static zend_always_inline bool php_parallel_link_send_unbuffered_locked(php_parallel_link_t *link, zval *value)
 {
-	pthread_mutex_lock(&link->m.w);
-	pthread_mutex_lock(&link->m.m);
-
 	if (link->s.c) {
-		pthread_mutex_unlock(&link->m.m);
-		pthread_mutex_unlock(&link->m.w);
 		return 0;
 	}
 
@@ -219,10 +214,20 @@ static zend_always_inline bool php_parallel_link_send_unbuffered(php_parallel_li
 
 	pthread_cond_wait(&link->c.w, &link->m.m);
 
+	return 1;
+}
+
+static zend_always_inline bool php_parallel_link_send_unbuffered(php_parallel_link_t *link, zval *value)
+{
+	bool result;
+
+	pthread_mutex_lock(&link->m.w);
+	pthread_mutex_lock(&link->m.m);
+	result = php_parallel_link_send_unbuffered_locked(link, value);
 	pthread_mutex_unlock(&link->m.m);
 	pthread_mutex_unlock(&link->m.w);
 
-	return 1;
+	return result;
 }
 
 static zend_always_inline bool php_parallel_link_send_buffered(php_parallel_link_t *link, zval *value)
@@ -262,6 +267,24 @@ bool php_parallel_link_send(php_parallel_link_t *link, zval *value)
 	} else {
 		return php_parallel_link_send_buffered(link, value);
 	}
+}
+
+bool php_parallel_link_send_event(php_parallel_link_t *link, zval *value)
+{
+	bool result;
+
+	if (link->type == PHP_PARALLEL_LINK_BUFFERED) {
+		return php_parallel_link_send_buffered(link, value);
+	}
+
+	if (pthread_mutex_trylock(&link->m.w) != SUCCESS) {
+		return false;
+	}
+
+	result = php_parallel_link_send_unbuffered_locked(link, value);
+	pthread_mutex_unlock(&link->m.w);
+
+	return result;
 }
 
 static zend_always_inline bool php_parallel_link_recv_unbuffered(php_parallel_link_t *link, zval *value)

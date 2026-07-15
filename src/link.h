@@ -26,6 +26,7 @@ php_parallel_link_t                *php_parallel_link_init(zend_string *name, bo
 zend_string                        *php_parallel_link_name(php_parallel_link_t *link);
 php_parallel_link_t                *php_parallel_link_copy(php_parallel_link_t *link);
 bool                                php_parallel_link_send(php_parallel_link_t *link, zval *value);
+bool                                php_parallel_link_send_event(php_parallel_link_t *link, zval *value);
 bool                                php_parallel_link_recv(php_parallel_link_t *link, zval *value);
 bool                                php_parallel_link_close(php_parallel_link_t *link);
 bool                                php_parallel_link_closed(php_parallel_link_t *link);
