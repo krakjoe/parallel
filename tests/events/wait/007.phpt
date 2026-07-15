@@ -23,12 +23,24 @@ $events->setBlocker(function(){
 });
 
 if ($events->poll() === null && count($events)) {
-    echo "OK";
+    echo "OK\n";
+}
+
+$events = new Events();
+$events->addChannel(Channel::make("timeout"));
+$events->setTimeout(1);
+$events->setBlocker(fn() => false);
+
+try {
+    $events->poll();
+} catch (Events\Error\Timeout $error) {
+    echo "TIMEOUT";
 }
 ?>
 --EXPECT--
 BLOCKER
 BLOCKER
 OK
+TIMEOUT
 
 
