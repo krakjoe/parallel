@@ -14,10 +14,12 @@ use \parallel\Channel;
 $events = new Events();
 $events->addChannel(Channel::make("buffer"));
 $events->setBlocker(function(){
-    echo 
+    static $calls = 0;
+
+    echo
         "BLOCKER\n";
     /* interrupt loop */
-    return true;
+    return ++$calls == 2;
 });
 
 if ($events->poll() === null && count($events)) {
@@ -25,6 +27,7 @@ if ($events->poll() === null && count($events)) {
 }
 ?>
 --EXPECT--
+BLOCKER
 BLOCKER
 OK
 

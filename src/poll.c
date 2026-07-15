@@ -124,7 +124,7 @@ static zend_always_inline php_parallel_events_poll_t *php_parallel_events_poll_i
 {
 	php_parallel_events_poll_t *poll;
 
-	if (events->targets.nNumUsed == 0) {
+	if (zend_hash_num_elements(&events->targets) == 0) {
 		return NULL;
 	}
 
