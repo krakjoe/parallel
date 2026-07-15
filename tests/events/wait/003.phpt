@@ -17,7 +17,7 @@ $events = new Events();
 
 $events->addChannel($channel);
 
-$events->setTimeout(100000);
+$events->setTimeout(1000001);
 
 try {
     foreach ($events as $event) {

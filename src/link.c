@@ -20,6 +20,7 @@
 
 #include "link.h"
 #include "parallel.h"
+#include "poll.h"
 
 #define PHP_PARALLEL_LINK_CLOSURE_BUFFER GC_IMMUTABLE
 
@@ -189,6 +190,7 @@ static zend_always_inline bool php_parallel_link_send_unbuffered(php_parallel_li
 		ZEND_ASSERT(Z_TYPE_FLAGS(link->port.z) != PHP_PARALLEL_LINK_CLOSURE_BUFFER);
 	}
 	link->s.w++;
+	php_parallel_events_poll_notify();
 
 	if (link->s.r) {
 		pthread_cond_signal(&link->c.r);
@@ -204,6 +206,7 @@ static zend_always_inline bool php_parallel_link_send_unbuffered(php_parallel_li
 
 static zend_always_inline bool php_parallel_link_send_buffered(php_parallel_link_t *link, zval *value)
 {
+	bool notify;
 	zval sent;
 
 	pthread_mutex_lock(&link->m.m);
@@ -221,7 +224,12 @@ static zend_always_inline bool php_parallel_link_send_buffered(php_parallel_link
 
 	PARALLEL_ZVAL_COPY(&sent, value, 1);
 
+	notify = zend_llist_count(&link->port.q.l) == 0;
 	zend_llist_add_element(&link->port.q.l, &sent);
+
+	if (notify) {
+		php_parallel_events_poll_notify();
+	}
 
 	if (link->s.r) {
 		pthread_cond_signal(&link->c.r);
@@ -247,6 +255,7 @@ static zend_always_inline bool php_parallel_link_recv_unbuffered(php_parallel_li
 
 	while (!link->s.c && !link->s.w) {
 		link->s.r++;
+		php_parallel_events_poll_notify();
 		pthread_cond_wait(&link->c.r, &link->m.m);
 		link->s.r--;
 	}
@@ -274,6 +283,7 @@ static zend_always_inline int  php_parallel_link_queue_delete(void *lhs, void *r
 
 static zend_always_inline bool php_parallel_link_recv_buffered(php_parallel_link_t *link, zval *value)
 {
+	bool  notify;
 	zval *head;
 
 	pthread_mutex_lock(&link->m.m);
@@ -293,7 +303,12 @@ static zend_always_inline bool php_parallel_link_recv_buffered(php_parallel_link
 
 	PARALLEL_ZVAL_COPY(value, head, 0);
 
+	notify = link->port.q.c > 0 && zend_llist_count(&link->port.q.l) == link->port.q.c;
 	zend_llist_del_element(&link->port.q.l, head, php_parallel_link_queue_delete);
+
+	if (notify) {
+		php_parallel_events_poll_notify();
+	}
 
 	if (link->s.w) {
 		pthread_cond_signal(&link->c.w);
@@ -323,6 +338,7 @@ bool php_parallel_link_close(php_parallel_link_t *link)
 	}
 
 	link->s.c = 1;
+	php_parallel_events_poll_notify();
 	pthread_cond_broadcast(&link->c.r);
 	pthread_cond_broadcast(&link->c.w);
 	pthread_mutex_unlock(&link->m.m);

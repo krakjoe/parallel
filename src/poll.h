@@ -20,6 +20,9 @@
 
 #include "events.h"
 
+int  php_parallel_events_poll_startup(void);
+void php_parallel_events_poll_shutdown(void);
+void php_parallel_events_poll_notify(void);
 void php_parallel_events_poll(php_parallel_events_t *events, zval *retval);
 
 #endif

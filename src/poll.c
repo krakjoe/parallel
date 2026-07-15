@@ -20,15 +20,26 @@
 
 #include "parallel.h"
 
+#include "Zend/zend_hrtime.h"
+
+#include <errno.h>
+#include <time.h>
+
 #if PHP_VERSION_ID >= 80400
 #include "ext/random/php_random.h"
 #else
 #include "ext/standard/php_mt_rand.h"
 #endif
 
+typedef struct _php_parallel_events_poll_notifier_t {
+	pthread_mutex_t mutex;
+	pthread_cond_t  condition;
+	uint64_t        epoch;
+} php_parallel_events_poll_notifier_t;
+
 typedef struct _php_parallel_events_poll_t {
-	uint32_t       try;
-	struct timeval stop;
+	uint64_t      epoch;
+	zend_hrtime_t stop;
 	struct {
 		zend_fcall_info       fci;
 		zend_fcall_info_cache fcc;
@@ -37,21 +48,71 @@ typedef struct _php_parallel_events_poll_t {
 	php_parallel_events_state_t state;
 } php_parallel_events_poll_t;
 
+static php_parallel_events_poll_notifier_t php_parallel_events_poll_notifier;
+
+int                                        php_parallel_events_poll_startup(void)
+{
+	if (!php_parallel_mutex_init(&php_parallel_events_poll_notifier.mutex, 0)) {
+		return FAILURE;
+	}
+
+	if (!php_parallel_cond_init(&php_parallel_events_poll_notifier.condition)) {
+		php_parallel_mutex_destroy(&php_parallel_events_poll_notifier.mutex);
+		return FAILURE;
+	}
+
+	php_parallel_events_poll_notifier.epoch = 0;
+
+	return SUCCESS;
+}
+
+void php_parallel_events_poll_shutdown(void)
+{
+	php_parallel_cond_destroy(&php_parallel_events_poll_notifier.condition);
+	php_parallel_mutex_destroy(&php_parallel_events_poll_notifier.mutex);
+}
+
+void php_parallel_events_poll_notify(void)
+{
+	pthread_mutex_lock(&php_parallel_events_poll_notifier.mutex);
+	php_parallel_events_poll_notifier.epoch++;
+	pthread_cond_broadcast(&php_parallel_events_poll_notifier.condition);
+	pthread_mutex_unlock(&php_parallel_events_poll_notifier.mutex);
+}
+
+static zend_always_inline uint64_t php_parallel_events_poll_epoch(void)
+{
+	uint64_t epoch;
+
+	pthread_mutex_lock(&php_parallel_events_poll_notifier.mutex);
+	epoch = php_parallel_events_poll_notifier.epoch;
+	pthread_mutex_unlock(&php_parallel_events_poll_notifier.mutex);
+
+	return epoch;
+}
+
 static zend_always_inline php_parallel_events_poll_t *php_parallel_events_poll_init(php_parallel_events_t *events)
 {
+	php_parallel_events_poll_t *poll;
+
 	if (events->targets.nNumUsed == 0) {
 		return NULL;
 	}
 
-	php_parallel_events_poll_t *poll = (php_parallel_events_poll_t *)pecalloc(1, sizeof(php_parallel_events_poll_t), 1);
+	poll = (php_parallel_events_poll_t *)pecalloc(1, sizeof(php_parallel_events_poll_t), 1);
+	poll->epoch = php_parallel_events_poll_epoch();
 
 	if (events->timeout > -1) {
-		if (gettimeofday(&poll->stop, NULL) == SUCCESS) {
-			poll->stop.tv_sec += (events->timeout / 1000000L);
-			poll->stop.tv_sec += (poll->stop.tv_usec + (events->timeout % 1000000L)) / 1000000L;
-			poll->stop.tv_usec = (poll->stop.tv_usec + (events->timeout % 1000000L)) % 1000000L;
+		zend_hrtime_t now = zend_hrtime();
+		zend_hrtime_t duration;
+
+		if ((zend_ulong)events->timeout > UINT64_MAX / 1000) {
+			duration = UINT64_MAX;
+		} else {
+			duration = (zend_hrtime_t)events->timeout * 1000;
 		}
-		/* return 0 ? */
+
+		poll->stop = duration > UINT64_MAX - now ? UINT64_MAX : now + duration;
 	}
 
 	if (!Z_ISUNDEF(events->blocker)) {
@@ -85,41 +146,74 @@ static zend_always_inline void php_parallel_events_poll_end(php_parallel_events_
 	php_parallel_events_poll_free(poll);
 }
 
-static zend_always_inline bool php_parallel_events_poll_timeout(php_parallel_events_poll_t *poll,
+static zend_always_inline void php_parallel_events_poll_realtime(struct timespec *timeout, zend_hrtime_t remaining)
+{
+	timespec_get(timeout, TIME_UTC);
+
+	timeout->tv_sec += remaining / ZEND_NANO_IN_SEC;
+	timeout->tv_nsec += remaining % ZEND_NANO_IN_SEC;
+
+	if (timeout->tv_nsec >= ZEND_NANO_IN_SEC) {
+		timeout->tv_sec++;
+		timeout->tv_nsec -= ZEND_NANO_IN_SEC;
+	}
+}
+
+static zend_always_inline bool php_parallel_events_poll_expired(php_parallel_events_poll_t *poll,
                                                                 php_parallel_events_t      *events)
 {
-	struct timeval now;
-
-	if (events->timeout > -1 && gettimeofday(&now, NULL) == SUCCESS) {
-		if (now.tv_sec >= poll->stop.tv_sec && now.tv_usec >= poll->stop.tv_usec) {
-			php_parallel_exception_ex(php_parallel_events_error_timeout_ce, "timeout occured");
-			return 1;
-		}
+	if (events->timeout > -1 && zend_hrtime() >= poll->stop) {
+		php_parallel_exception_ex(php_parallel_events_error_timeout_ce, "timeout occured");
+		return 1;
 	}
 
 	return 0;
 }
 
-static zend_always_inline bool php_parallel_events_poll_random(php_parallel_events_t *events, zend_string **name,
-                                                               zend_object **object)
+static zend_always_inline bool php_parallel_events_poll_wait(php_parallel_events_poll_t *poll,
+                                                             php_parallel_events_t      *events)
 {
-	uint32_t  size = events->targets.nNumUsed;
-	zend_long random = php_mt_rand_range(0, (zend_long)size - 1);
+	uint64_t epoch;
 
-	do {
-		Bucket *bucket = &events->targets.arData[random];
+	pthread_mutex_lock(&php_parallel_events_poll_notifier.mutex);
 
-		if (!Z_ISUNDEF(bucket->val)) {
-			*name = bucket->key;
-			*object = Z_OBJ(bucket->val);
+	while (php_parallel_events_poll_notifier.epoch == poll->epoch) {
+		int result;
 
-			return 1;
+		if (events->timeout > -1) {
+			zend_hrtime_t   now = zend_hrtime();
+			struct timespec timeout;
+
+			if (now >= poll->stop) {
+				break;
+			}
+
+			php_parallel_events_poll_realtime(&timeout, poll->stop - now);
+			result = pthread_cond_timedwait(&php_parallel_events_poll_notifier.condition,
+			                                &php_parallel_events_poll_notifier.mutex, &timeout);
+
+			if (result != SUCCESS && result != ETIMEDOUT) {
+				break;
+			}
+		} else {
+			result = pthread_cond_wait(&php_parallel_events_poll_notifier.condition,
+			                           &php_parallel_events_poll_notifier.mutex);
+
+			if (result != SUCCESS) {
+				break;
+			}
 		}
+	}
 
-		random = php_mt_rand_range(0, (zend_long)size - 1);
-	} while (1);
+	epoch = php_parallel_events_poll_notifier.epoch;
+	pthread_mutex_unlock(&php_parallel_events_poll_notifier.mutex);
 
-	return 0;
+	if (epoch != poll->epoch) {
+		poll->epoch = epoch;
+		return 1;
+	}
+
+	return !php_parallel_events_poll_expired(poll, events);
 }
 
 static zend_always_inline bool php_parallel_events_poll_begin_link(php_parallel_events_t       *events,
@@ -177,19 +271,32 @@ static zend_always_inline bool php_parallel_events_poll_begin_future(php_paralle
 static zend_always_inline bool php_parallel_events_poll_begin(php_parallel_events_t       *events,
                                                               php_parallel_events_state_t *state)
 {
-	zend_string *name;
-	zend_object *object;
+	uint32_t size = events->targets.nNumUsed;
+	uint32_t index = (uint32_t)php_mt_rand_range(0, (zend_long)size - 1);
+	uint32_t scanned;
 
-	if (!php_parallel_events_poll_random(events, &name, &object)) {
-		return 0;
-	}
+	for (scanned = 0; scanned < size; scanned++) {
+		Bucket      *bucket = &events->targets.arData[index];
+		zend_object *object;
 
-	memset(state, 0, sizeof(php_parallel_events_state_t));
+		if (++index == size) {
+			index = 0;
+		}
 
-	if (instanceof_function(object->ce, php_parallel_channel_ce)) {
-		return php_parallel_events_poll_begin_link(events, state, name, object);
-	} else {
-		return php_parallel_events_poll_begin_future(events, state, name, object);
+		if (Z_ISUNDEF(bucket->val)) {
+			continue;
+		}
+
+		memset(state, 0, sizeof(php_parallel_events_state_t));
+		object = Z_OBJ(bucket->val);
+
+		if (instanceof_function(object->ce, php_parallel_channel_ce)) {
+			if (php_parallel_events_poll_begin_link(events, state, bucket->key, object)) {
+				return 1;
+			}
+		} else if (php_parallel_events_poll_begin_future(events, state, bucket->key, object)) {
+			return 1;
+		}
 	}
 
 	return 0;
@@ -293,13 +400,16 @@ void php_parallel_events_poll(php_parallel_events_t *events, zval *retval)
 				}
 
 				zval_ptr_dtor(&poll->block.ival);
-			} else {
-				if ((poll->try++ % 10) == 0) {
-					usleep(1);
+
+				if (php_parallel_events_poll_expired(poll, events)) {
+					php_parallel_events_poll_free(poll);
+					return;
 				}
+
+				continue;
 			}
 
-			if (php_parallel_events_poll_timeout(poll, events)) {
+			if (!php_parallel_events_poll_wait(poll, events)) {
 				php_parallel_events_poll_free(poll);
 				return;
 			}

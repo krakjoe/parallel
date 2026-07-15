@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_PARALLEL
 
 #include "parallel.h"
+#include "poll.h"
 
 /* {{{ */
 TSRM_TLS HashTable php_parallel_runtimes;
@@ -155,6 +156,10 @@ zend_function_entry php_parallel_functions[] = {
 
 PHP_MINIT_FUNCTION(PARALLEL_CORE)
 {
+	if (php_parallel_events_poll_startup() != SUCCESS) {
+		return FAILURE;
+	}
+
 	if (strncmp(sapi_module.name, "cli", sizeof("cli") - 1) == SUCCESS) {
 		php_sapi_deactivate_function = sapi_module.deactivate;
 
@@ -192,6 +197,7 @@ PHP_MSHUTDOWN_FUNCTION(PARALLEL_CORE)
 	PHP_MSHUTDOWN(PARALLEL_EXCEPTIONS)(INIT_FUNC_ARGS_PASSTHRU);
 	PHP_MSHUTDOWN(PARALLEL_HANDLERS)(INIT_FUNC_ARGS_PASSTHRU);
 
+	php_parallel_events_poll_shutdown();
 	php_parallel_mutex_destroy(&PCG(mutex));
 
 	if (strncmp(sapi_module.name, "cli", sizeof("cli") - 1) == SUCCESS) {

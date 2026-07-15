@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_MONITOR
 
 #include "parallel.h"
+#include "poll.h"
 
 php_parallel_monitor_t *php_parallel_monitor_create(void)
 {
@@ -91,6 +92,10 @@ void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state)
 	pthread_cond_signal(&monitor->condition);
 
 	pthread_mutex_unlock(&monitor->mutex);
+
+	if (state & (PHP_PARALLEL_READY | PHP_PARALLEL_KILLED | PHP_PARALLEL_ERROR | PHP_PARALLEL_CANCELLED)) {
+		php_parallel_events_poll_notify();
+	}
 }
 
 void php_parallel_monitor_add(php_parallel_monitor_t *monitor, int32_t state)
