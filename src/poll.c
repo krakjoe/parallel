@@ -20,10 +20,14 @@
 
 #include "parallel.h"
 
+#if PHP_VERSION_ID >= 80300
+#include "Zend/zend_hrtime.h"
+#endif
+
 #include <errno.h>
 #include <time.h>
 
-#ifdef _WIN32
+#if PHP_VERSION_ID < 80300 && defined(_WIN32)
 #include <windows.h>
 #endif
 
@@ -97,7 +101,9 @@ static zend_always_inline uint64_t php_parallel_events_poll_epoch(void)
 
 static zend_always_inline uint64_t php_parallel_events_poll_now(void)
 {
-#ifdef _WIN32
+#if PHP_VERSION_ID >= 80300
+	return zend_hrtime();
+#elif defined(_WIN32)
 	LARGE_INTEGER now, frequency;
 
 	QueryPerformanceCounter(&now);
