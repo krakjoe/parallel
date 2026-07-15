@@ -1,4 +1,4 @@
-name: Linux
+name: UBSAN
 
 on:
   pull_request: null
@@ -11,14 +11,14 @@ on:
     - cron: "30 4 * * *"
 
 env:
-  NODE_COVERALLS_DEBUG: true
+  UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
 jobs:
   test:
     strategy:
       fail-fast: false
       matrix:
         version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
-        build: ["gcov", "release"]
         mode:
           - name: vanilla
             args: ""
@@ -27,7 +27,7 @@ jobs:
           - name: jit
             args: -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
     runs-on: ubuntu-latest
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, ${{matrix.mode.name}}
+    name: UBSAN, PHP v${{matrix.version}}, ${{matrix.mode.name}}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,22 +38,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Test parallel
-        run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test ${{matrix.mode.args}}
-      - name: Send Coverage
-        if: ${{ matrix.build == 'gcov' }}
-        uses: coverallsapp/github-action@v2.3.6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ github.workspace }}/coverage.info
-          flag-name: ${{matrix.mode.name}}-${{matrix.version}}
-          parallel: true
-  finish:
-    if: always()
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Finish Coveralls
-        uses: coverallsapp/github-action@v2.3.6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true
+        run: |
+          PHP_BUILD=ubsan PHP_BASE_BUILD=release PHP_VERSION=${{matrix.version}} docker compose run --rm -e UBSAN_OPTIONS parallel \
+            -c 'export LD_PRELOAD=$(cc -print-file-name=libubsan.so); docker/parallel.test "$@"' \
+            -- ${{matrix.mode.args}}

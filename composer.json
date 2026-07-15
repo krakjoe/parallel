@@ -24,6 +24,10 @@
         "description": "Enable address sanitizer flags for parallel",
         "needs-value": false
       }, {
+        "name": "enable-parallel-undefined-sanitizer",
+        "description": "Enable undefined behavior sanitizer flags for parallel",
+        "needs-value": false
+      }, {
         "name": "enable-parallel-gcov",
         "description": "Enable gcov for parallel",
         "needs-value": false

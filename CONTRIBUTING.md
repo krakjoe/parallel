@@ -53,9 +53,10 @@ Testing (an example)
 ====================
 
 ```sh
-docker compose build php-asan-8.4
-docker compose build parallel-asan-8.4
-docker compose run --rm parallel-asan-8.4
+export PHP_BUILD=asan PHP_VERSION=8.4 PHP_VERSION_MINOR=4 PHP_VERSION_PATCH=1 PHP_SRC_ASAN=enable
+docker compose build php
+docker compose build parallel
+docker compose run --rm parallel
 phpize
 ./configure --enable-parallel
 make
