@@ -40,13 +40,18 @@ static php_sapi_deactivate_t php_sapi_deactivate_function;
 static php_sapi_output_t     php_sapi_output_function;
 
 static pthread_mutex_t       php_parallel_output_mutex = PTHREAD_MUTEX_INITIALIZER;
+static TSRM_TLS bool         php_parallel_output_locked = false;
 
 static size_t                php_parallel_output_function(const char *str, size_t len)
 {
 	size_t result;
 
 	pthread_mutex_lock(&php_parallel_output_mutex);
+	php_parallel_output_locked = true;
+
 	result = php_sapi_output_function(str, len);
+
+	php_parallel_output_locked = false;
 	pthread_mutex_unlock(&php_parallel_output_mutex);
 
 	return result;
@@ -228,10 +233,10 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE)
 
 	PHP_RSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
 
-	// In case of a `zend_bailout()` this mutex could still be locked, so we
-	// unlock it just in case.
-	// See https://github.com/krakjoe/parallel/issues/313 for more details
-	if (UNEXPECTED(CG(unclean_shutdown) == 1)) {
+	// A `zend_bailout()` from the SAPI writer skips the normal unlock.
+	// See https://github.com/krakjoe/parallel/issues/313 for more details.
+	if (UNEXPECTED(CG(unclean_shutdown) == 1 && php_parallel_output_locked)) {
+		php_parallel_output_locked = false;
 		pthread_mutex_unlock(&php_parallel_output_mutex);
 	}
 

@@ -1,0 +1,19 @@
+name: FrankenPHP
+
+on:
+  pull_request: null
+  push:
+    branches:
+      - master
+      - develop
+      - release
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Output bailout recovery
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Test aborted output
+        run: docker/frankenphp.test
