@@ -11,25 +11,26 @@ on:
     - cron: "30 4 * * *"
 
 env:
-  PHP_BUILD: tsan
-  PHP_VERSION: "8.5"
-  PHP_VERSION_MAJOR: "8"
-  PHP_VERSION_MINOR: "5"
-  PHP_VERSION_PATCH: "0"
-  PHP_VERSION_RC: ""
-  PHP_SRC_TSAN: enable
   TSAN_OPTIONS: halt_on_error=1:exitcode=1
 
 jobs:
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
     runs-on: ubuntu-latest
-    name: TSan, PHP v8.5, vanilla
+    name: TSan, PHP v${{ matrix.version }}, vanilla
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Build PHP
-        run: docker compose build php
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build parallel
-        run: docker compose build parallel
+        run: PHP_BUILD=tsan PHP_VERSION=${{ matrix.version }} docker compose build parallel
       - name: Test parallel
-        run: docker compose run --rm -e TSAN_OPTIONS parallel docker/parallel.test
+        run: PHP_BUILD=tsan PHP_VERSION=${{ matrix.version }} docker compose run --rm -e TSAN_OPTIONS parallel docker/parallel.test
