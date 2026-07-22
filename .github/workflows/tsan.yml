@@ -1,0 +1,35 @@
+name: ThreadSanitizer
+
+on:
+  pull_request: null
+  push:
+    branches:
+      - master
+      - develop
+      - release
+  schedule:
+    - cron: "30 4 * * *"
+
+env:
+  PHP_BUILD: tsan
+  PHP_VERSION: "8.5"
+  PHP_VERSION_MAJOR: "8"
+  PHP_VERSION_MINOR: "5"
+  PHP_VERSION_PATCH: "0"
+  PHP_VERSION_RC: ""
+  PHP_SRC_TSAN: enable
+  TSAN_OPTIONS: halt_on_error=1:exitcode=1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: TSan, PHP v8.5, vanilla
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Build PHP
+        run: docker compose build php
+      - name: Build parallel
+        run: docker compose build parallel
+      - name: Test parallel
+        run: docker compose run --rm -e TSAN_OPTIONS parallel docker/parallel.test

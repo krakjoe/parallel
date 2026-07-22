@@ -23,11 +23,12 @@ services:
         PHP_SRC_TYPE: ${PHP_SOURCE:-dist}
         PHP_SRC_DEBUG: ${PHP_SRC_DEBUG:-disable}
         PHP_SRC_ASAN: ${PHP_SRC_ASAN:-disable}
+        PHP_SRC_TSAN: ${PHP_SRC_TSAN:-disable}
         PHP_SRC_GCOV: ${PHP_SRC_GCOV:-disable}
         PHP_VERSION_MAJOR: ${PHP_VERSION_MAJOR:-8}
         PHP_VERSION_MINOR: ${PHP_VERSION_MINOR:-5}
         PHP_VERSION_PATCH: ${PHP_VERSION_PATCH:-0}
-        PHP_VERSION_RC: ${PHP_VERSION_RC:-RC2}
+        PHP_VERSION_RC: ${PHP_VERSION_RC-RC2}
 
   parallel:
     <<: *common
