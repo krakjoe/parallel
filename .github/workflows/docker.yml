@@ -8,7 +8,6 @@ jobs:
     permissions:
       packages: write
     strategy:
-      fail-fast: false
       matrix:
         php:
           - major: 8
@@ -56,14 +55,12 @@ jobs:
             asan: disable
             tsan: disable
             gcov: disable
-          - name: tsan
-            debug: disable
-            asan: disable
-            tsan: enable
-            gcov: disable
         exclude:
           - php: {major: 8, minor: 0}
             flags: {name: asan}
+        include:
+          - php: {major: 8, minor: 5, patch: 8, rc: ''}
+            flags: {name: tsan, debug: disable, asan: disable, tsan: enable, gcov: disable}
 
     steps:
       - name: Prepare build variables

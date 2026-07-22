@@ -66,7 +66,7 @@ RUN mkdir -p /opt/etc/php.d
 
 ENV PATH=/opt/bin:$PATH
 
-RUN if [ "$PHP_SRC_TSAN" != enable ] && [ "$PHP_VERSION_MAJOR" -eq 8 ] && [ "$PHP_VERSION_MINOR" -lt 5 ]; then \
+RUN if [ "$PHP_VERSION_MAJOR" -eq 8 ] && [ "$PHP_VERSION_MINOR" -lt 5 ]; then \
         echo "zend_extension=opcache.so" > /opt/etc/php.d/opcache.ini; \
     fi
 
