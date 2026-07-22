@@ -122,7 +122,7 @@ zend_class_entry *php_parallel_copy_scope(zend_class_entry *class)
 		}
 	}
 
-	if ((scope = zend_hash_index_find_ptr(&PCG(scope), (zend_ulong)class))) {
+	if ((scope = zend_hash_index_find_ptr(&PCG(scope), (zend_ulong) class))) {
 		return scope;
 	}
 
@@ -147,7 +147,7 @@ zend_class_entry *php_parallel_copy_scope(zend_class_entry *class)
 		return php_parallel_copy_type_unavailable_ce;
 	}
 
-	return zend_hash_index_update_ptr(&PCG(scope), (zend_ulong)class, scope);
+	return zend_hash_index_update_ptr(&PCG(scope), (zend_ulong) class, scope);
 }
 
 static zend_always_inline zend_long php_parallel_copy_resource_ctor(zend_resource *source, bool persistent)

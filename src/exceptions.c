@@ -21,7 +21,7 @@
 #include "parallel.h"
 
 struct _php_parallel_exception_t {
-	zval                        class;
+	zval class;
 	zval                        file;
 	zval                        line;
 	zval                        code;
