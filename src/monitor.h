@@ -22,9 +22,9 @@
 #include <stdint.h>
 
 typedef struct _php_parallel_monitor_t {
-	pthread_mutex_t  mutex;
-	pthread_cond_t   condition;
-	int32_t          state;
+	pthread_mutex_t mutex;
+	pthread_cond_t  condition;
+	int32_t         state;
 } php_parallel_monitor_t;
 
 #define PHP_PARALLEL_READY (1 << 0)
