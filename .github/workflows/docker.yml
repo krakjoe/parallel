@@ -8,6 +8,7 @@ jobs:
     permissions:
       packages: write
     strategy:
+      fail-fast: false
       matrix:
         php:
           - major: 8
@@ -32,8 +33,8 @@ jobs:
             rc: ''
           - major: 8
             minor: 5
-            patch: 0
-            rc: RC2
+            patch: 8
+            rc: ''
         flags:
           - name: asan
             debug: disable
