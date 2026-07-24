@@ -32,28 +32,35 @@ jobs:
             rc: ''
           - major: 8
             minor: 5
-            patch: 0
-            rc: RC2
+            patch: 8
+            rc: ''
         flags:
           - name: asan
             debug: disable
             asan: enable
+            tsan: disable
             gcov: disable
           - name: dbg
             debug: enable
             asan: disable
+            tsan: disable
             gcov: disable
           - name: gcov
             debug: disable
             asan: disable
+            tsan: disable
             gcov: enable
           - name: release
             debug: disable
             asan: disable
+            tsan: disable
             gcov: disable
         exclude:
           - php: {major: 8, minor: 0}
             flags: {name: asan}
+        include:
+          - php: {major: 8, minor: 5, patch: 8, rc: ''}
+            flags: {name: tsan, debug: disable, asan: disable, tsan: enable, gcov: disable}
 
     steps:
       - name: Prepare build variables
@@ -84,6 +91,7 @@ jobs:
             "PHP_SRC_TYPE=dist"
             "PHP_SRC_DEBUG=${{ matrix.flags.debug }}"
             "PHP_SRC_ASAN=${{ matrix.flags.asan }}"
+            "PHP_SRC_TSAN=${{ matrix.flags.tsan }}"
             "PHP_SRC_GCOV=${{ matrix.flags.gcov }}"
             "PHP_VERSION_MAJOR=${{ matrix.php.major }}"
             "PHP_VERSION_MINOR=${{ matrix.php.minor }}"
@@ -98,7 +106,12 @@ jobs:
 
       # https://docs.docker.com/build/ci/github-actions/test-before-push/
       - name: Test Docker Image
-        run: docker run --rm ${{ steps.build-vars.outputs.repository }}:latest php --version
+        run: |
+          if [ "${{ matrix.flags.name }}" = tsan ]; then
+            docker run --rm --security-opt seccomp=unconfined ${{ steps.build-vars.outputs.repository }}:latest php --version
+          else
+            docker run --rm ${{ steps.build-vars.outputs.repository }}:latest php --version
+          fi
 
       - name: Push Docker Image
         run: docker push --all-tags ${{ steps.build-vars.outputs.repository }}
