@@ -36,7 +36,7 @@
 #include <sys/select.h>
 #endif
 
-#define PHP_PARALLEL_EVENTS_NANO_IN_SEC 1000000000ULL
+#define PHP_PARALLEL_EVENTS_MICRO_IN_SEC 1000000ULL
 
 #if PHP_VERSION_ID >= 80400
 #include "ext/random/php_random.h"
@@ -59,21 +59,21 @@ typedef struct _php_parallel_events_poll_t {
 static zend_always_inline uint64_t php_parallel_events_poll_now(void)
 {
 #if PHP_VERSION_ID >= 80300
-	return zend_hrtime();
+	return zend_hrtime() / 1000;
 #elif defined(_WIN32)
 	LARGE_INTEGER now, frequency;
 
 	QueryPerformanceCounter(&now);
 	QueryPerformanceFrequency(&frequency);
 
-	return (now.QuadPart / frequency.QuadPart) * PHP_PARALLEL_EVENTS_NANO_IN_SEC +
-	       (now.QuadPart % frequency.QuadPart) * PHP_PARALLEL_EVENTS_NANO_IN_SEC / frequency.QuadPart;
+	return (now.QuadPart / frequency.QuadPart) * PHP_PARALLEL_EVENTS_MICRO_IN_SEC +
+	       (now.QuadPart % frequency.QuadPart) * PHP_PARALLEL_EVENTS_MICRO_IN_SEC / frequency.QuadPart;
 #else
 	struct timespec now;
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
-	return (uint64_t)now.tv_sec * PHP_PARALLEL_EVENTS_NANO_IN_SEC + now.tv_nsec;
+	return (uint64_t)now.tv_sec * PHP_PARALLEL_EVENTS_MICRO_IN_SEC + now.tv_nsec / 1000;
 #endif
 }
 
@@ -92,15 +92,9 @@ static zend_always_inline php_parallel_events_poll_t *php_parallel_events_poll_i
 
 	if (events->timeout > -1) {
 		uint64_t now = php_parallel_events_poll_now();
-		uint64_t duration;
+		uint64_t timeout = (uint64_t)events->timeout;
 
-		if ((zend_ulong)events->timeout > UINT64_MAX / 1000) {
-			duration = UINT64_MAX;
-		} else {
-			duration = (uint64_t)events->timeout * 1000;
-		}
-
-		poll->stop = duration > UINT64_MAX - now ? UINT64_MAX : now + duration;
+		poll->stop = timeout > UINT64_MAX - now ? UINT64_MAX : now + timeout;
 	}
 
 	if (!Z_ISUNDEF(events->blocker)) {
@@ -221,21 +215,15 @@ static zend_always_inline bool php_parallel_events_poll_native(php_parallel_even
 		uint64_t now = php_parallel_events_poll_now();
 		uint64_t remaining;
 		uint64_t seconds;
-		uint64_t microseconds;
 
 		if (now >= poll->stop) {
 			return !php_parallel_events_poll_expired(poll, events);
 		}
 
 		remaining = poll->stop - now;
-		seconds = remaining / PHP_PARALLEL_EVENTS_NANO_IN_SEC;
-		microseconds = (remaining % PHP_PARALLEL_EVENTS_NANO_IN_SEC + 999) / 1000;
-		if (microseconds == 1000000) {
-			seconds++;
-			microseconds = 0;
-		}
+		seconds = remaining / PHP_PARALLEL_EVENTS_MICRO_IN_SEC;
 		timeout.tv_sec = seconds > LONG_MAX ? LONG_MAX : (long)seconds;
-		timeout.tv_usec = (long)microseconds;
+		timeout.tv_usec = (long)(remaining % PHP_PARALLEL_EVENTS_MICRO_IN_SEC);
 		timeout_pointer = &timeout;
 	}
 

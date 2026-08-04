@@ -46,13 +46,6 @@ int32_t php_parallel_monitor_check(php_parallel_monitor_t *monitor, int32_t stat
 
 int php_parallel_monitor_unlock(php_parallel_monitor_t *monitor) { return pthread_mutex_unlock(&monitor->mutex); }
 
-static zend_always_inline void php_parallel_monitor_notify_sync(php_parallel_monitor_t *monitor)
-{
-	if (monitor->notify.read != -1) {
-		php_parallel_notify_sync(&monitor->notify, monitor->state & PHP_PARALLEL_READY);
-	}
-}
-
 int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state)
 {
 	int32_t changed = FAILURE;
@@ -72,7 +65,7 @@ int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state
 	}
 
 	monitor->state ^= changed;
-	php_parallel_monitor_notify_sync(monitor);
+	php_parallel_notify_sync(&monitor->notify, monitor->state & PHP_PARALLEL_READY);
 
 	if (pthread_mutex_unlock(&monitor->mutex) != SUCCESS) {
 		return FAILURE;
@@ -93,7 +86,7 @@ int32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, int32_
 	}
 
 	monitor->state ^= changed;
-	php_parallel_monitor_notify_sync(monitor);
+	php_parallel_notify_sync(&monitor->notify, monitor->state & PHP_PARALLEL_READY);
 
 	return changed;
 }
@@ -103,7 +96,7 @@ void php_parallel_monitor_set(php_parallel_monitor_t *monitor, int32_t state)
 	pthread_mutex_lock(&monitor->mutex);
 
 	monitor->state |= state;
-	php_parallel_monitor_notify_sync(monitor);
+	php_parallel_notify_sync(&monitor->notify, monitor->state & PHP_PARALLEL_READY);
 
 	pthread_cond_signal(&monitor->condition);
 
@@ -115,7 +108,7 @@ void php_parallel_monitor_add(php_parallel_monitor_t *monitor, int32_t state)
 	pthread_mutex_lock(&monitor->mutex);
 
 	monitor->state |= state;
-	php_parallel_monitor_notify_sync(monitor);
+	php_parallel_notify_sync(&monitor->notify, monitor->state & PHP_PARALLEL_READY);
 
 	pthread_mutex_unlock(&monitor->mutex);
 }
@@ -125,7 +118,7 @@ void php_parallel_monitor_remove(php_parallel_monitor_t *monitor, int32_t state)
 	pthread_mutex_lock(&monitor->mutex);
 
 	monitor->state &= ~state;
-	php_parallel_monitor_notify_sync(monitor);
+	php_parallel_notify_sync(&monitor->notify, monitor->state & PHP_PARALLEL_READY);
 
 	pthread_mutex_unlock(&monitor->mutex);
 }
