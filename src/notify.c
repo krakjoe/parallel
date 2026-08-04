@@ -67,41 +67,6 @@ static bool php_parallel_notify_create(php_parallel_notify_t *notify)
 	return true;
 }
 
-static void php_parallel_notify_raise(php_parallel_notify_t *notify)
-{
-	char    byte = 0;
-	ssize_t result;
-
-	if (notify->read == -1 || notify->raised) {
-		return;
-	}
-
-	do {
-		result = write(notify->write, &byte, sizeof(byte));
-	} while (result == -1 && errno == EINTR);
-
-	if (result == sizeof(byte) || (result == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))) {
-		notify->raised = true;
-	}
-}
-
-static void php_parallel_notify_lower(php_parallel_notify_t *notify)
-{
-	char    byte;
-	ssize_t result;
-
-	if (notify->read == -1 || !notify->raised) {
-		return;
-	}
-
-	do {
-		result = read(notify->read, &byte, sizeof(byte));
-	} while (result == -1 && errno == EINTR);
-
-	if (result == sizeof(byte) || (result == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))) {
-		notify->raised = false;
-	}
-}
 #endif
 
 int php_parallel_notify_observe(php_parallel_notify_t *notify, bool ready)
@@ -122,10 +87,19 @@ int php_parallel_notify_observe(php_parallel_notify_t *notify, bool ready)
 void php_parallel_notify_sync(php_parallel_notify_t *notify, bool ready)
 {
 #ifndef _WIN32
-	if (ready) {
-		php_parallel_notify_raise(notify);
-	} else {
-		php_parallel_notify_lower(notify);
+	char    byte = 0;
+	ssize_t result;
+
+	if (notify->read == -1 || notify->raised == ready) {
+		return;
+	}
+
+	do {
+		result = ready ? write(notify->write, &byte, sizeof(byte)) : read(notify->read, &byte, sizeof(byte));
+	} while (result == -1 && errno == EINTR);
+
+	if (result == sizeof(byte) || (result == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))) {
+		notify->raised = ready;
 	}
 #endif
 }
