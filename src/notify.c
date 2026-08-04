@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | parallel                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2019-2024                                  |
+  | Copyright (c) Florian Engelhardt 2026                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author: krakjoe                                                      |
+  | Author: Florian Engelhardt <flo@dotbox.org>                          |
   +----------------------------------------------------------------------+
  */
 #ifndef HAVE_PARALLEL_NOTIFY
