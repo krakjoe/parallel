@@ -25,7 +25,6 @@
 #endif
 
 #include <errno.h>
-#include <limits.h>
 #include <time.h>
 
 #ifdef _WIN32
@@ -91,10 +90,7 @@ static zend_always_inline php_parallel_events_poll_t *php_parallel_events_poll_i
 #endif
 
 	if (events->timeout > -1) {
-		uint64_t now = php_parallel_events_poll_now();
-		uint64_t timeout = (uint64_t)events->timeout;
-
-		poll->stop = timeout > UINT64_MAX - now ? UINT64_MAX : now + timeout;
+		poll->stop = php_parallel_events_poll_now() + (uint64_t)events->timeout;
 	}
 
 	if (!Z_ISUNDEF(events->blocker)) {
@@ -214,15 +210,13 @@ static zend_always_inline bool php_parallel_events_poll_native(php_parallel_even
 	if (events->timeout > -1) {
 		uint64_t now = php_parallel_events_poll_now();
 		uint64_t remaining;
-		uint64_t seconds;
 
 		if (now >= poll->stop) {
 			return !php_parallel_events_poll_expired(poll, events);
 		}
 
 		remaining = poll->stop - now;
-		seconds = remaining / PHP_PARALLEL_EVENTS_MICRO_IN_SEC;
-		timeout.tv_sec = seconds > LONG_MAX ? LONG_MAX : (long)seconds;
+		timeout.tv_sec = (long)(remaining / PHP_PARALLEL_EVENTS_MICRO_IN_SEC);
 		timeout.tv_usec = (long)(remaining % PHP_PARALLEL_EVENTS_MICRO_IN_SEC);
 		timeout_pointer = &timeout;
 	}
