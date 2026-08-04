@@ -44,7 +44,7 @@ int32_t php_parallel_monitor_check(php_parallel_monitor_t *monitor, int32_t stat
 	return result;
 }
 
-int php_parallel_monitor_unlock(php_parallel_monitor_t *monitor) { return pthread_mutex_unlock(&monitor->mutex); }
+int     php_parallel_monitor_unlock(php_parallel_monitor_t *monitor) { return pthread_mutex_unlock(&monitor->mutex); }
 
 int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state)
 {
