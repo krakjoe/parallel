@@ -1,5 +1,9 @@
 --TEST--
 Check Events notification-driven wakeups
+--DESCRIPTION--
+Exercises repeated unbuffered reads, bounded buffered writes, unbuffered
+writes, delayed Future completion among idle Channels, multiple observers of
+a completed Future, and delayed Future errors.
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {

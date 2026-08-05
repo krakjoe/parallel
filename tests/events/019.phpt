@@ -1,5 +1,9 @@
 --TEST--
 Check Events channel readiness levels
+--DESCRIPTION--
+Exercises a lowered read notification timing out, the same notification being
+raised by a delayed send and lowered when consumed, and Channel close raising
+previously armed read and write notifications.
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
