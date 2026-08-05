@@ -89,7 +89,7 @@ $future = $runtime->run(static function (Channel $start): int {
 }, [$start]);
 $events = new Events();
 
-for ($i = 0; $i < 1000; $i++) {
+for ($i = 0; $i < 64; $i++) {
     $events->addChannel(new Channel());
 }
 

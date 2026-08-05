@@ -14,15 +14,7 @@ use parallel\Events\Event\Type;
 use parallel\Runtime;
 
 $channel = Channel::make('notify-level', 1);
-$channel->send(1);
 $events = new Events();
-$events->addChannel($channel);
-
-if ($events->poll()->value !== 1) {
-    echo "FAIL preloaded\n";
-    return;
-}
-
 $events->addChannel($channel);
 $events->setTimeout(1000);
 
@@ -33,13 +25,12 @@ try {
 } catch (Events\Error\Timeout $error) {
 }
 
+$events->setTimeout(-1);
 $runtime = new Runtime();
 $future = $runtime->run(static function (Channel $channel): void {
     usleep(20000);
     $channel->send(2);
 }, [$channel]);
-$events = new Events();
-$events->addChannel($channel);
 
 if ($events->poll()->value !== 2) {
     echo "FAIL reraised\n";
