@@ -220,7 +220,7 @@ static zend_always_inline HashTable *php_parallel_copy_hash_persistent_inline(
 		return ht;
 	}
 
-#ifdef HT_PACKED_SIZE
+#if PHP_VERSION_ID >= 80200
 	// if array is packed, copy it as packed
 	if (HT_IS_PACKED(ht)) {
 		HT_SET_DATA_ADDR(ht, php_parallel_copy_memory_func(HT_GET_DATA_ADDR(source),
@@ -301,7 +301,7 @@ static zend_always_inline HashTable *php_parallel_copy_hash_thread(HashTable *so
 
 	HT_SET_DATA_ADDR(ht, emalloc(HT_SIZE(ht)));
 	memcpy(HT_GET_DATA_ADDR(ht), HT_GET_DATA_ADDR(source), HT_HASH_SIZE(ht->nTableMask));
-#ifdef HT_PACKED_SIZE
+#if PHP_VERSION_ID >= 80200
 	if (HT_IS_PACKED(ht)) {
 		zval *p = ht->arPacked, *q = source->arPacked, *p_end = p + ht->nNumUsed;
 		for (; p < p_end; p++, q++) {
@@ -388,7 +388,7 @@ void php_parallel_copy_hash_dtor(HashTable *table, bool persistent)
 #endif
 		}
 
-#ifdef HT_PACKED_SIZE
+#if PHP_VERSION_ID >= 80200
 		if (HT_IS_PACKED(table)) {
 			zval *p = table->arPacked, *end = p + table->nNumUsed;
 			while (p < end) {
