@@ -26,6 +26,8 @@ jobs:
             args: -d opcache.enable_cli=1 -d opcache.jit=disable
           - name: jit
             args: -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+          - name: tracing jit
+            args: -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=32M
     runs-on: ubuntu-latest
     name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, ${{matrix.mode.name}}
     steps:
