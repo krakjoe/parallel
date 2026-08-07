@@ -1,4 +1,9 @@
 name: Docker
+
+permissions:
+  contents: read
+  pull-requests: read
+
 on: [workflow_dispatch]
 
 jobs:
