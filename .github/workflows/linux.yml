@@ -45,7 +45,7 @@ jobs:
         run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test ${{matrix.mode.args}}
       - name: Send Coverage
         if: ${{ matrix.build == 'gcov' }}
-        uses: coverallsapp/github-action@v2.3.6
+        uses: coverallsapp/github-action@v2.3.8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
@@ -57,7 +57,7 @@ jobs:
     needs: test
     steps:
       - name: Finish Coveralls
-        uses: coverallsapp/github-action@v2.3.6
+        uses: coverallsapp/github-action@v2.3.8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           parallel-finished: true
