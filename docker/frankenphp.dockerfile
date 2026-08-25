@@ -1,4 +1,4 @@
-FROM dunglas/frankenphp:1.12.6-php8.5-bookworm AS build
+FROM dunglas/frankenphp:1.12.7-php8.5-bookworm AS build
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends $PHPIZE_DEPS
@@ -11,6 +11,6 @@ RUN phpize \
  && make -j"$(nproc)" \
  && make install
 
-FROM dunglas/frankenphp:1.12.6-php8.5-bookworm
+FROM dunglas/frankenphp:1.12.7-php8.5-bookworm
 COPY --from=build /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 RUN docker-php-ext-enable parallel
