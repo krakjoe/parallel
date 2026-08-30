@@ -1,26 +1,22 @@
 --TEST--
-Check INIT_FCALL fix with \parallel\run() (undefined function)
+Missing direct function remains catchable in task
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
 	echo 'skip';
 }
-if (ini_get("opcache.enable_cli")) {
-	die("skip opcache must not be loaded");
-}
 ?>
 --FILE--
 <?php
-function dummy_func() { return "FOO"; }
-\parallel\run(function(){
-    try {
-        // This will be compiled as INIT_FCALL but should be converted to INIT_FCALL_BY_NAME
-        // and fail gracefully because it doesn't exist in the thread.
-		return dummy_func();
-    } catch (Error $e) {
-        echo "Caught: " . $e->getMessage();
-    }
-})->value();
+function dummy_func(string $value): string { return $value . getenv('DUMMY_VALUE'); }
+
+\parallel\run(function(string $value){
+	try {
+		return dummy_func($value);
+	} catch (Error $e) {
+		echo $e->getMessage();
+	}
+}, ['value'])->value();
 ?>
 --EXPECT--
-Caught: Call to undefined function dummy_func()
+Call to undefined function dummy_func()

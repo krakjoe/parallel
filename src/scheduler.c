@@ -125,6 +125,174 @@ static zend_always_inline bool php_parallel_scheduler_exit_exception(void)
 #endif
 }
 
+typedef struct _php_parallel_scheduler_rewrite_t {
+	struct _php_parallel_scheduler_rewrite_t *next;
+	zend_op_array                            *op_array;
+	zend_op                                  *opcodes;
+	zval                                     *literals;
+	uint32_t                                  last_literal;
+} php_parallel_scheduler_rewrite_t;
+
+/* Shared cache and OPcache opcodes cannot be changed in place. */
+static void php_parallel_scheduler_clone(zend_function *function, uint32_t fallbacks,
+                                         php_parallel_scheduler_rewrite_t **rewrites)
+{
+	zend_op_array                    *op_array = &function->op_array;
+	zend_op                          *source = op_array->opcodes;
+	zval                             *source_literals = op_array->literals;
+	size_t                            header = ZEND_MM_ALIGNED_SIZE(sizeof(php_parallel_scheduler_rewrite_t));
+	size_t                            opcodes = ZEND_MM_ALIGNED_SIZE(sizeof(zend_op) * op_array->last);
+	size_t                            literals = sizeof(zval) * (op_array->last_literal + fallbacks * 2);
+	php_parallel_scheduler_rewrite_t *rewrite = emalloc(header + opcodes + literals);
+	zend_op                          *copy = (zend_op *)((char *)rewrite + header);
+	zval                             *copy_literals = (zval *)((char *)copy + opcodes);
+
+	rewrite->next = *rewrites;
+	rewrite->op_array = op_array;
+	rewrite->opcodes = source;
+	rewrite->literals = source_literals;
+	rewrite->last_literal = op_array->last_literal;
+	*rewrites = rewrite;
+
+	memcpy(copy, source, sizeof(zend_op) * op_array->last);
+	memcpy(copy_literals, source_literals, sizeof(zval) * op_array->last_literal);
+
+	for (uint32_t i = 0; i < op_array->last; i++) {
+		zend_op *opline = &copy[i], *source_opline = &source[i];
+
+		if (opline->op1_type == IS_CONST) {
+			uint32_t idx;
+#if ZEND_USE_ABS_CONST_ADDR
+			idx = (zval *)source_opline->op1.zv - source_literals;
+			opline->op1.zv = &copy_literals[idx];
+#else
+			idx = ((zval *)((char *)source_opline + source_opline->op1.constant) - source_literals);
+			opline->op1.constant = (char *)&copy_literals[idx] - (char *)opline;
+#endif
+		}
+		if (opline->op2_type == IS_CONST) {
+			uint32_t idx;
+#if ZEND_USE_ABS_CONST_ADDR
+			idx = (zval *)source_opline->op2.zv - source_literals;
+			opline->op2.zv = &copy_literals[idx];
+#else
+			idx = ((zval *)((char *)source_opline + source_opline->op2.constant) - source_literals);
+			opline->op2.constant = (char *)&copy_literals[idx] - (char *)opline;
+#endif
+		}
+#if ZEND_USE_ABS_JMP_ADDR
+		switch (opline->opcode) {
+		case ZEND_JMP:
+		case ZEND_FAST_CALL:
+			opline->op1.jmp_addr = &copy[opline->op1.jmp_addr - source];
+			break;
+#if PHP_VERSION_ID < 80200
+		case ZEND_JMPZNZ:
+#endif
+		case ZEND_JMPZ:
+		case ZEND_JMPNZ:
+		case ZEND_JMPZ_EX:
+		case ZEND_JMPNZ_EX:
+		case ZEND_JMP_SET:
+		case ZEND_COALESCE:
+		case ZEND_FE_RESET_R:
+		case ZEND_FE_RESET_RW:
+		case ZEND_ASSERT_CHECK:
+			opline->op2.jmp_addr = &copy[opline->op2.jmp_addr - source];
+			break;
+		case ZEND_CATCH:
+			if (!(opline->extended_value & ZEND_LAST_CATCH)) {
+				opline->op2.jmp_addr = &copy[opline->op2.jmp_addr - source];
+			}
+			break;
+		}
+#endif
+		ZEND_VM_SET_OPCODE_HANDLER(opline);
+	}
+
+	op_array->opcodes = copy;
+	op_array->literals = copy_literals;
+	op_array->last_literal += fallbacks * 2;
+}
+
+static void php_parallel_scheduler_link(zend_function *function, php_parallel_scheduler_rewrite_t **rewrites)
+{
+	zend_op_array *op_array = &function->op_array;
+	uint32_t       fallbacks = 0;
+	bool           rewrite = false;
+
+	for (zend_op *opline = op_array->opcodes, *end = opline + op_array->last; opline < end; opline++) {
+		if (opline->opcode == ZEND_INIT_FCALL) {
+			zend_function *required = zend_fetch_function(Z_STR_P(RT_CONSTANT(opline, opline->op2)));
+
+			if (!required || opline->op1.num != zend_vm_calc_used_stack(opline->extended_value, required)) {
+				fallbacks++;
+				rewrite = true;
+			} else if (required->type == ZEND_USER_FUNCTION) {
+				/* Function JIT may have embedded the submitter's target. */
+				rewrite = true;
+			}
+		}
+	}
+
+	if (rewrite) {
+		php_parallel_scheduler_clone(function, fallbacks, rewrites);
+	}
+
+	zend_init_func_run_time_cache(op_array);
+
+	zval *fallback = op_array->literals + op_array->last_literal - fallbacks * 2;
+	for (zend_op *opline = op_array->opcodes, *end = opline + op_array->last; opline < end; opline++) {
+		if (opline->opcode == ZEND_INIT_FCALL) {
+			zval          *name = RT_CONSTANT(opline, opline->op2);
+			zend_function *required = zend_fetch_function(Z_STR_P(name));
+
+			if (required && opline->op1.num == zend_vm_calc_used_stack(opline->extended_value, required)) {
+				CACHE_PTR_EX((void **)((char *)RUN_TIME_CACHE(op_array) + opline->result.num), required);
+			} else {
+				/* INIT_FCALL names are already lower-cased function-table keys. */
+				fallback[0] = *name;
+				fallback[1] = *name;
+				opline->opcode = ZEND_INIT_FCALL_BY_NAME;
+				opline->op1_type = IS_UNUSED;
+				opline->op1.var = 0;
+#if ZEND_USE_ABS_CONST_ADDR
+				opline->op2.zv = fallback;
+#else
+				opline->op2.constant = (char *)fallback - (char *)opline;
+#endif
+				ZEND_VM_SET_OPCODE_HANDLER(opline);
+				fallback += 2;
+			}
+		} else if (opline->opcode == ZEND_DECLARE_LAMBDA_FUNCTION) {
+			zend_string   *key;
+			zend_function *nested;
+
+			PARALLEL_COPY_OPLINE_TO_FUNCTION(function, opline, &key, &nested);
+			php_parallel_scheduler_link(nested, rewrites);
+		}
+	}
+}
+
+static void php_parallel_scheduler_rewrites_restore(php_parallel_scheduler_rewrite_t *rewrite)
+{
+	while (rewrite) {
+		rewrite->op_array->opcodes = rewrite->opcodes;
+		rewrite->op_array->literals = rewrite->literals;
+		rewrite->op_array->last_literal = rewrite->last_literal;
+		rewrite = rewrite->next;
+	}
+}
+
+static void php_parallel_scheduler_rewrites_free(php_parallel_scheduler_rewrite_t *rewrite)
+{
+	while (rewrite) {
+		php_parallel_scheduler_rewrite_t *next = rewrite->next;
+		efree(rewrite);
+		rewrite = next;
+	}
+}
+
 static zend_always_inline void php_parallel_scheduler_kill_future(php_parallel_future_t *future)
 {
 	php_parallel_monitor_lock(future->monitor);
@@ -423,11 +591,12 @@ static zend_always_inline bool php_parallel_scheduler_pop(php_parallel_runtime_t
 
 static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_execute_data *frame)
 {
-	php_parallel_future_t *future = php_parallel_scheduler_future;
+	php_parallel_future_t            *future = php_parallel_scheduler_future;
 
 	/* READY allows the consumer to destroy the future, so publish it only after
 	 * the worker's final access through frame->return_value. */
-	volatile int32_t       future_state = PHP_PARALLEL_READY;
+	volatile int32_t                  future_state = PHP_PARALLEL_READY;
+	php_parallel_scheduler_rewrite_t *rewrites = NULL;
 
 	runtime->crashed = 0;
 	runtime->missing = NULL;
@@ -438,6 +607,8 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 	{
 		zend_try
 		{
+			php_parallel_scheduler_link(frame->func, &rewrites);
+			frame->opline = frame->func->op_array.opcodes;
 			zend_execute_ex(frame);
 
 			if (UNEXPECTED(EG(exception))) {
@@ -513,13 +684,22 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 			}
 		}
 
+		php_parallel_scheduler_rewrites_restore(rewrites);
+
 		php_parallel_scheduler_clean(frame->func);
 
 		pefree(frame->func, 1);
 
 		zend_vm_stack_free_call_frame(frame);
+		php_parallel_scheduler_rewrites_free(rewrites);
+		rewrites = NULL;
 	}
 	zend_end_try();
+
+	if (rewrites) {
+		php_parallel_scheduler_rewrites_restore(rewrites);
+		php_parallel_scheduler_rewrites_free(rewrites);
+	}
 
 	if (future) {
 		php_parallel_monitor_set(future->monitor, future_state);
