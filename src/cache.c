@@ -175,9 +175,7 @@ static zend_always_inline void php_parallel_cache_type(zend_type *type)
 static zend_op_array *php_parallel_cache_create(const zend_function *source PARALLEL_CACHE_STATICS_PARAM)
 {
 	zend_op_array *cached = php_parallel_cache_copy_mem((void *)source, sizeof(zend_op_array));
-	uint32_t      *literal_map = NULL;
-	uint32_t      *offset_map = NULL;
-	uint32_t       new_last_literal = cached->last_literal;
+	bool           shared = cached->refcount == NULL;
 
 	cached->fn_flags |= ZEND_ACC_IMMUTABLE;
 
@@ -210,58 +208,19 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source PARA
 	}
 #endif
 
-	if (!cached->refcount) {
+	if (shared) {
 		goto _php_parallel_cached_function_return;
 	}
 
 	cached->refcount = NULL;
 
 	if (cached->last_literal) {
-		zend_op *src_opline = source->op_array.opcodes;
-		zend_op *src_end = src_opline + source->op_array.last;
-
-		// A map to keep track of which literals are referenced by the
-		// `ZEND_INIT_FCALL` opcodes we found so that we can expand those later
-		literal_map = emalloc(sizeof(uint32_t) * cached->last_literal);
-		memset(literal_map, 0, sizeof(uint32_t) * cached->last_literal);
-
-		// Search for `ZEND_INIT_FCALL` opcodes and remember the indexes for the
-		// literals, as we are rewriting them later to `ZEND_INIT_FCALL_BY_NAME`
-		// which requires a second, lower cased literal just in the next literal
-		// slot.
-		while (src_opline < src_end) {
-			if (src_opline->opcode == ZEND_INIT_FCALL && src_opline->op2_type == IS_CONST) {
-				uint32_t idx;
-#if ZEND_USE_ABS_CONST_ADDR
-				idx = (zval *)src_opline->op2.zv - source->op_array.literals;
-#else
-				idx = ((zval *)((char *)src_opline + src_opline->op2.constant) - source->op_array.literals);
-#endif
-				if (idx < cached->last_literal) {
-					if (literal_map[idx] == 0) {
-						literal_map[idx] = 1;
-						new_last_literal++;
-					}
-				}
-			}
-			src_opline++;
-		}
-	}
-
-	if (new_last_literal) {
-		zval    *literal = source->op_array.literals;
-		zval    *slot = php_parallel_cache_alloc(sizeof(zval) * new_last_literal);
-		uint32_t idx = 0;
-
-		offset_map = emalloc(sizeof(uint32_t) * cached->last_literal);
+		zval *literal = source->op_array.literals, *end = literal + cached->last_literal;
+		zval *slot = php_parallel_cache_alloc(sizeof(zval) * cached->last_literal);
 
 		cached->literals = slot;
 
-		for (uint32_t i = 0; i < cached->last_literal; i++) {
-			/* Record the mapping from old literal index (i) to new literal index (idx)
-			   so we can update opcode operands later. */
-			offset_map[i] = idx;
-
+		while (literal < end) {
 			if (Z_TYPE_P(literal) == IS_ARRAY) {
 				ZVAL_ARR(slot, php_parallel_copy_hash_persistent(Z_ARRVAL_P(literal), php_parallel_copy_string_interned,
 				                                                 php_parallel_cache_copy_mem,
@@ -273,22 +232,9 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source PARA
 			}
 
 			Z_TYPE_FLAGS_P(slot) &= ~(IS_TYPE_REFCOUNTED | IS_TYPE_COLLECTABLE);
-
-			/* If this literal was used by INIT_FCALL, insert its lowercased version next. */
-			if (literal_map[i]) {
-				zend_string *lower = zend_string_tolower(Z_STR_P(slot));
-				slot++;
-				idx++;
-				ZVAL_STR(slot, php_parallel_copy_string_interned(lower));
-				zend_string_release(lower);
-				Z_TYPE_FLAGS_P(slot) &= ~(IS_TYPE_REFCOUNTED | IS_TYPE_COLLECTABLE);
-			}
-
 			literal++;
 			slot++;
-			idx++;
 		}
-		cached->last_literal = new_last_literal;
 	}
 
 	if (cached->last_var) {
@@ -308,43 +254,31 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source PARA
 		zend_op *opline = opcodes, *end = opline + cached->last;
 
 		while (opline < end) {
-			/* Replace ZEND_INIT_FCALL with ZEND_INIT_FCALL_BY_NAME.
-			   We must clear op1_type (IS_UNUSED) and op1.var (0) to invalidate the
-			   original thread's cache slot. */
-			if (opline->opcode == ZEND_INIT_FCALL) {
-				opline->opcode = ZEND_INIT_FCALL_BY_NAME;
-				opline->op1_type = IS_UNUSED;
-				opline->op1.var = 0;
-				ZEND_VM_SET_OPCODE_HANDLER(opline);
-			}
-
-			/* Remap IS_CONST operands to their new locations in the expanded literal table
-			   using the offset_map we built earlier. */
 			if (opline->op1_type == IS_CONST) {
 				uint32_t idx;
 				zend_op *src_opline = source->op_array.opcodes + (opline - opcodes);
 #if ZEND_USE_ABS_CONST_ADDR
 				idx = (zval *)src_opline->op1.zv - source->op_array.literals;
-				opline->op1.zv = &cached->literals[offset_map[idx]];
+				opline->op1.zv = &cached->literals[idx];
 #else
 				idx = ((zval *)((char *)src_opline + src_opline->op1.constant) - source->op_array.literals);
-				opline->op1.constant = (char *)&cached->literals[offset_map[idx]] - (char *)opline;
+				opline->op1.constant = (char *)&cached->literals[idx] - (char *)opline;
 #endif
-				if (opline->opcode == ZEND_SEND_VAL || opline->opcode == ZEND_SEND_VAL_EX ||
-				    opline->opcode == ZEND_QM_ASSIGN) {
-					zend_vm_set_opcode_handler_ex(opline, 0, 0, 0);
-				}
 			}
 			if (opline->op2_type == IS_CONST) {
 				uint32_t idx;
 				zend_op *src_opline = source->op_array.opcodes + (opline - opcodes);
 #if ZEND_USE_ABS_CONST_ADDR
 				idx = (zval *)src_opline->op2.zv - source->op_array.literals;
-				opline->op2.zv = &cached->literals[offset_map[idx]];
+				opline->op2.zv = &cached->literals[idx];
 #else
 				idx = ((zval *)((char *)src_opline + src_opline->op2.constant) - source->op_array.literals);
-				opline->op2.constant = (char *)&cached->literals[offset_map[idx]] - (char *)opline;
+				opline->op2.constant = (char *)&cached->literals[idx] - (char *)opline;
 #endif
+			}
+
+			if (opline->opcode == ZEND_INIT_FCALL) {
+				Z_EXTRA_P(RT_CONSTANT(opline, opline->op2)) = 0;
 			}
 #if ZEND_USE_ABS_JMP_ADDR
 			switch (opline->opcode) {
@@ -375,17 +309,11 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source PARA
 			}
 #endif
 
+			/* Copied opcodes cannot use handlers JIT-compiled for the source op array. */
+			ZEND_VM_SET_OPCODE_HANDLER(opline);
 			opline++;
 		}
 		cached->opcodes = opcodes;
-	}
-
-	if (literal_map) {
-		efree(literal_map);
-	}
-
-	if (offset_map) {
-		efree(offset_map);
 	}
 
 	if (cached->arg_info) {

@@ -48,6 +48,15 @@ This may output something like (output abbreviated):
 Using \parallel\Runtime is easy
 ```
 
+Task Dependencies
+=================
+
+A task receives its opcodes, captured values, and arguments. It does not inherit the submitting runtime's user-defined functions, classes, or constants.
+
+Functions already defined in the destination runtime, including functions loaded by its bootstrap, are linked before the task starts. Other functions are resolved when execution reaches the call, so an `include` earlier in the task can define them and an undefined-function `Error` remains catchable inside the task.
+
+Define required functions in the runtime bootstrap whenever possible so they can be linked before the task starts. An `include` or `require` inside a task is also supported. For dynamic dependencies, a `Closure` created with `Closure::fromCallable()` may be passed as a task argument.
+
 Development
 ===========
 

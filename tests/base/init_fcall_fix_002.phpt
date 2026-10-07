@@ -1,27 +1,20 @@
 --TEST--
-Check INIT_FCALL fix with Runtime::run() (undefined function)
+Include before direct function call resolves in task
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
 	echo 'skip';
 }
-if (ini_get("opcache.enable_cli")) {
-	die("skip opcache must not be loaded");
-}
 ?>
 --FILE--
 <?php
-function dummy_func() { return "FOO"; }
+function dummy_func(string $value): string { return 'submitter-' . $value . getenv('DUMMY_VALUE'); }
+
 $runtime = new \parallel\Runtime();
-$runtime->run(function(){
-    try {
-        // This will be compiled as INIT_FCALL but should be converted to INIT_FCALL_BY_NAME
-		// and fail gracefully because it doesn't exist in the thread.
-		return dummy_func();
-    } catch (Error $e) {
-        echo "Caught: " . $e->getMessage();
-    }
-})->value();
+echo $runtime->run(function(string $value){
+	include __DIR__ . '/init_fcall_fix_002_include.inc';
+	return dummy_func($value);
+}, ['value'])->value();
 ?>
 --EXPECT--
-Caught: Call to undefined function dummy_func()
+worker-value
