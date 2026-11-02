@@ -711,10 +711,23 @@ static zend_always_inline void php_parallel_copy_sync_dtor(zend_object *source, 
 	pefree(object, persistent);
 }
 
+/* the class entry of the sender is freed with its runtime, so keep what the receiver needs */
+typedef struct _php_parallel_copy_object_t {
+	zend_string *name;
+	uint32_t     count;
+	zend_object  std;
+} php_parallel_copy_object_t;
+
+static zend_always_inline php_parallel_copy_object_t *php_parallel_copy_object_fetch(zend_object *o)
+{
+	return (php_parallel_copy_object_t *)(((char *)o) - offsetof(php_parallel_copy_object_t, std));
+}
+
 static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_object *source)
 {
-	zend_object      *dest;
-	zend_class_entry *ce;
+	php_parallel_copy_object_t *copy;
+	zend_object                *dest;
+	zend_class_entry           *ce;
 
 	if (source->ce->create_object) {
 		ce = php_parallel_copy_object_unavailable_ce;
@@ -731,21 +744,23 @@ static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_
 		php_parallel_copy_context_end(context, restore);
 		return dest;
 	} else {
-		dest = php_parallel_copy_mem(source, sizeof(zend_object) + zend_object_properties_size(ce), 1);
+		copy = pemalloc(sizeof(php_parallel_copy_object_t) + zend_object_properties_size(ce), 1);
+		dest = &copy->std;
+		memcpy(dest, source, sizeof(zend_object) + zend_object_properties_size(ce));
 		php_parallel_copy_context_insert(context, source, dest);
 	}
+
+	copy->name = php_parallel_copy_string_interned(ce->name);
+	copy->count = ce->default_properties_count;
 
 	GC_SET_REFCOUNT(dest, 1);
 	GC_ADD_FLAGS(dest, GC_IMMUTABLE);
 
-	if (ce == php_parallel_copy_object_unavailable_ce) {
-		dest->ce = ce;
-		dest->handlers = zend_get_std_object_handlers();
-	}
+	dest->ce = php_parallel_copy_object_unavailable_ce;
+	dest->handlers = zend_get_std_object_handlers();
 
-	if (ce->default_properties_count) {
-		zval *property = source->properties_table, *slot = dest->properties_table,
-		     *end = property + source->ce->default_properties_count;
+	if (copy->count) {
+		zval *property = source->properties_table, *slot = dest->properties_table, *end = property + copy->count;
 
 		while (property < end) {
 			PARALLEL_ZVAL_COPY(slot, property, 1);
@@ -764,13 +779,12 @@ static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_
 
 static zend_always_inline zend_object *php_parallel_copy_object_thread(zend_object *source)
 {
-	zend_object      *dest;
-	zend_class_entry *ce;
+	php_parallel_copy_object_t *copy = php_parallel_copy_object_fetch(source);
+	zend_object                *dest;
+	zend_class_entry           *ce = zend_lookup_class(copy->name);
 
-	if (source->ce->create_object) {
-		ce = php_parallel_copy_object_unavailable_ce;
-	} else {
-		ce = php_parallel_copy_scope(source->ce);
+	if (!ce) {
+		ce = php_parallel_copy_type_unavailable_ce;
 	}
 
 	php_parallel_copy_context_t *context, *restore;
@@ -796,8 +810,7 @@ static zend_always_inline zend_object *php_parallel_copy_object_thread(zend_obje
 	GC_DEL_FLAGS(dest, GC_IMMUTABLE);
 
 	if (ce->default_properties_count) {
-		zval *property = source->properties_table, *slot = dest->properties_table,
-		     *end = property + source->ce->default_properties_count;
+		zval *property = source->properties_table, *slot = dest->properties_table, *end = property + copy->count;
 
 		while (property < end) {
 			PARALLEL_ZVAL_COPY(slot, property, 0);
@@ -858,8 +871,10 @@ static zend_always_inline void php_parallel_copy_object_dtor(zend_object *source
 	}
 
 	if (GC_DELREF(source) == 0) {
-		if (source->ce->default_properties_count) {
-			zval *property = source->properties_table, *end = property + source->ce->default_properties_count;
+		php_parallel_copy_object_t *copy = php_parallel_copy_object_fetch(source);
+
+		if (copy->count) {
+			zval *property = source->properties_table, *end = property + copy->count;
 
 			while (property < end) {
 				PARALLEL_ZVAL_DTOR(property);
@@ -871,7 +886,7 @@ static zend_always_inline void php_parallel_copy_object_dtor(zend_object *source
 			php_parallel_copy_hash_dtor(source->properties, 1);
 		}
 
-		pefree(source, 1);
+		pefree(copy, 1);
 	}
 }
 
