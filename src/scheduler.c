@@ -848,7 +848,7 @@ PHP_MINIT_FUNCTION(PARALLEL_SCHEDULER)
 
 	memset(&sa, 0, sizeof(struct sigaction));
 	sa.sa_sigaction = php_parallel_sigsegv_handler;
-	sa.sa_flags = SA_SIGINFO;
+	sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
 
 	sigaction(SIGSEGV, &sa, &php_parallel_old_sigsegv_action);
 #endif
