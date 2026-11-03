@@ -8,11 +8,16 @@ if (!extension_loaded('parallel')) {
 if (!extension_loaded('Zend OPcache')) {
     die("skip OPcache not loaded");
 }
+/* Expected fix releases for php/php-src#22225; adjust if delayed. */
+if ((PHP_VERSION_ID >= 80500 && version_compare(PHP_VERSION, "8.5.13", "<"))
+    || (PHP_VERSION_ID === 80600 && version_compare(PHP_VERSION, "8.6.0RC5", "<"))) {
+    die("xfail PHP GH-22216: incorrect OPcache memory statistics in new threads");
+}
 ?>
 --INI--
 opcache.enable=1
 opcache.enable_cli=1
-opcache.log_verbosity_level=2
+opcache.log_verbosity_level=1
 --FILE--
 <?php
 $check = static function () {
