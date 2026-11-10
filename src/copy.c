@@ -813,8 +813,10 @@ static zend_always_inline void php_parallel_copy_object_layout_error(zend_string
 		break;
 	case PHP_PARALLEL_COPY_ORIGIN_TASK:
 		/* the worker is between tasks here and no frame is executing:
-		   zend_throw_exception_ex is fatal without a frame, so set the
-		   pending exception and let the task fail when it starts */
+		   zend_throw_exception_ex without an active frame becomes an
+		   immediate uncaught-exception E_ERROR and kills the process,
+		   so set the pending exception instead and let the task fail
+		   when it starts */
 		{
 			char *message;
 
