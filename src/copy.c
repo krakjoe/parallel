@@ -27,6 +27,7 @@ TSRM_TLS struct {
 	HashTable                    scope;
 	zval                         unavailable;
 	php_parallel_copy_context_t *context;
+	php_parallel_copy_origin_t   origin;
 } php_parallel_copy_globals;
 
 static struct {
@@ -39,6 +40,15 @@ zend_class_entry *php_parallel_copy_object_unavailable_ce;
 
 #define PCG(e) php_parallel_copy_globals.e
 #define PCS(e) php_parallel_copy_strings.e
+
+php_parallel_copy_origin_t php_parallel_copy_origin_set(php_parallel_copy_origin_t origin)
+{
+	php_parallel_copy_origin_t previous = PCG(origin);
+
+	PCG(origin) = origin;
+
+	return previous;
+}
 
 static void           php_parallel_copy_zval_persistent(zval *dest, zval *source,
                                                         zend_string *(*php_parallel_copy_string_func)(zend_string *),
@@ -715,12 +725,117 @@ static zend_always_inline void php_parallel_copy_sync_dtor(zend_object *source, 
 typedef struct _php_parallel_copy_object_t {
 	zend_string *name;
 	uint32_t     count;
+	uint64_t     layout;
 	zend_object  std;
 } php_parallel_copy_object_t;
 
 static zend_always_inline php_parallel_copy_object_t *php_parallel_copy_object_fetch(zend_object *o)
 {
 	return (php_parallel_copy_object_t *)(((char *)o) - offsetof(php_parallel_copy_object_t, std));
+}
+
+/* fingerprint of the declared property layout: slot offset, name and type of
+   every property, so the receiver can check the runtimes declare the class the
+   same way without the class entry of the sender */
+#define PHP_PARALLEL_COPY_LAYOUT_OFFSET 1469598103934665603ULL
+#define PHP_PARALLEL_COPY_LAYOUT_PRIME 1099511628211ULL
+
+static zend_always_inline uint64_t php_parallel_copy_layout_update(uint64_t hash, const char *data, size_t length)
+{
+	const char *end = data + length;
+
+	while (data < end) {
+		hash ^= (unsigned char)*data++;
+		hash *= PHP_PARALLEL_COPY_LAYOUT_PRIME;
+	}
+
+	return hash;
+}
+
+static zend_always_inline uint64_t php_parallel_copy_layout_hash(zend_class_entry *ce)
+{
+	uint64_t            hash = PHP_PARALLEL_COPY_LAYOUT_OFFSET;
+	zend_property_info *info;
+	zend_type          *single;
+
+	hash = php_parallel_copy_layout_update(hash, (const char *)&ce->default_properties_count,
+	                                       sizeof(ce->default_properties_count));
+
+	ZEND_HASH_FOREACH_PTR(&ce->properties_info, info)
+	{
+		hash = php_parallel_copy_layout_update(hash, (const char *)&info->offset, sizeof(info->offset));
+		hash = php_parallel_copy_layout_update(hash, ZSTR_VAL(info->name), ZSTR_LEN(info->name));
+		hash = php_parallel_copy_layout_update(hash, (const char *)&info->type.type_mask, sizeof(info->type.type_mask));
+
+		if (ZEND_TYPE_HAS_LIST(info->type)) {
+			zend_type_list *list = ZEND_TYPE_LIST(info->type);
+
+			hash = php_parallel_copy_layout_update(hash, (const char *)&list->num_types, sizeof(list->num_types));
+		}
+
+		ZEND_TYPE_FOREACH(info->type, single)
+		{
+#ifdef ZEND_TYPE_HAS_CE
+			if (ZEND_TYPE_HAS_CE(*single)) {
+				zend_class_entry *type_ce = ZEND_TYPE_CE(*single);
+
+				hash = php_parallel_copy_layout_update(hash, ZSTR_VAL(type_ce->name), ZSTR_LEN(type_ce->name));
+			} else
+#endif
+			    if (ZEND_TYPE_HAS_NAME(*single)) {
+				zend_string *name = ZEND_TYPE_NAME(*single);
+
+				hash = php_parallel_copy_layout_update(hash, ZSTR_VAL(name), ZSTR_LEN(name));
+			}
+		}
+		ZEND_TYPE_FOREACH_END();
+	}
+	ZEND_HASH_FOREACH_END();
+
+	return hash;
+}
+
+/* the copy layer does not know which userland call it is serving, the
+   entry points tell it so the error names the operation the user sees */
+static zend_always_inline void php_parallel_copy_object_layout_error(zend_string *name)
+{
+	switch (PCG(origin)) {
+	case PHP_PARALLEL_COPY_ORIGIN_CHANNEL:
+		php_parallel_exception_ex(
+		    php_parallel_channel_error_illegal_value_ce,
+		    "cannot receive object of class %s, sending and receiving runtimes declare it differently", ZSTR_VAL(name));
+		break;
+	case PHP_PARALLEL_COPY_ORIGIN_FUTURE:
+		php_parallel_exception_ex(
+		    php_parallel_future_error_ce,
+		    "cannot retrieve object of class %s, sending and receiving runtimes declare it differently",
+		    ZSTR_VAL(name));
+		break;
+	case PHP_PARALLEL_COPY_ORIGIN_TASK:
+		/* the worker is between tasks here and no frame is executing:
+		   zend_throw_exception_ex without an active frame becomes an
+		   immediate uncaught-exception E_ERROR and kills the process,
+		   so set the pending exception instead and let the task fail
+		   when it starts */
+		{
+			char *message;
+
+			spprintf(
+			    &message, 0,
+			    "cannot pass object of class %s to the task, sending and receiving runtimes declare it differently",
+			    ZSTR_VAL(name));
+
+			EG(exception) =
+			    php_parallel_exception_object(php_parallel_runtime_error_illegal_parameter_ce, message, 0, NULL, 0);
+
+			efree(message);
+		}
+		break;
+	default:
+		php_parallel_exception_ex(
+		    php_parallel_error_ce,
+		    "cannot copy object of class %s, sending and receiving runtimes declare it differently", ZSTR_VAL(name));
+	}
 }
 
 static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_object *source)
@@ -752,6 +867,7 @@ static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_
 
 	copy->name = php_parallel_copy_string_interned(ce->name);
 	copy->count = ce->default_properties_count;
+	copy->layout = php_parallel_copy_layout_hash(ce);
 
 	GC_SET_REFCOUNT(dest, 1);
 	GC_ADD_FLAGS(dest, GC_IMMUTABLE);
@@ -785,6 +901,12 @@ static zend_always_inline zend_object *php_parallel_copy_object_thread(zend_obje
 
 	if (!ce) {
 		ce = php_parallel_copy_type_unavailable_ce;
+	} else if (ce->default_properties_count != copy->count || php_parallel_copy_layout_hash(ce) != copy->layout) {
+		/* the copy allocates for the receiving class, but copies as many
+		   properties as the sending class declared: differing layouts
+		   write past the object or copy values into the wrong slots */
+		php_parallel_copy_object_layout_error(copy->name);
+		return NULL;
 	}
 
 	php_parallel_copy_context_t *context, *restore;
@@ -1044,6 +1166,8 @@ void php_parallel_copy_context_end(php_parallel_copy_context_t *context, php_par
 
 PHP_RINIT_FUNCTION(PARALLEL_COPY)
 {
+	PCG(origin) = PHP_PARALLEL_COPY_ORIGIN_NONE;
+
 	zend_hash_init(&PCG(scope), 32, NULL, NULL, 0);
 
 	PHP_RINIT(PARALLEL_CHECK)(INIT_FUNC_ARGS_PASSTHRU);

@@ -16,6 +16,7 @@ The source tree deliberately uses a regular module layout. Keep new and modified
   - Define lifecycle hooks in pairs: `MINIT` with `MSHUTDOWN`, and `RINIT` with `RSHUTDOWN`. Keep the matching hook even when it is empty, and declare the pair in the module header.
   - Keep initialization hierarchical: `parallel.c` initializes top-level modules, and each module initializes its own submodules. Preserve lifecycle ordering unless a dependency requires changing it.
   - Use the `php_parallel_copy_string*` helpers for strings entering persistent or shared state. Allocate reusable internal keys and labels once as persistent interned strings during `MINIT`, rather than allocating them at each use.
+  - Do not throw exceptions from code that runs in a worker while no userland frame is executing, for example `scheduler_pop`: `zend_throw_exception_ex` becomes an immediate uncaught-exception `E_ERROR` and kills the process. Set `EG(exception)` directly and let the task fail when it starts.
   - Preserve the standard license banner and format C sources and headers with the repository's `.clang-format` configuration.
 
 PHP Services

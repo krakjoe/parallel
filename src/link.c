@@ -306,11 +306,18 @@ static zend_always_inline bool php_parallel_link_recv_buffered(php_parallel_link
 
 bool php_parallel_link_recv(php_parallel_link_t *link, zval *value)
 {
+	php_parallel_copy_origin_t previous = php_parallel_copy_origin_set(PHP_PARALLEL_COPY_ORIGIN_CHANNEL);
+	bool                       received;
+
 	if (link->type == PHP_PARALLEL_LINK_UNBUFFERED) {
-		return php_parallel_link_recv_unbuffered(link, value);
+		received = php_parallel_link_recv_unbuffered(link, value);
 	} else {
-		return php_parallel_link_recv_buffered(link, value);
+		received = php_parallel_link_recv_buffered(link, value);
 	}
+
+	php_parallel_copy_origin_set(previous);
+
+	return received;
 }
 
 bool php_parallel_link_close(php_parallel_link_t *link)

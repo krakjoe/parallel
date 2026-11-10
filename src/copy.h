@@ -99,6 +99,15 @@ void              php_parallel_copy_zval_dtor(zval *zv);
 
 zend_class_entry *php_parallel_copy_scope(zend_class_entry *);
 
+typedef enum _php_parallel_copy_origin_t {
+	PHP_PARALLEL_COPY_ORIGIN_NONE,
+	PHP_PARALLEL_COPY_ORIGIN_CHANNEL,
+	PHP_PARALLEL_COPY_ORIGIN_FUTURE,
+	PHP_PARALLEL_COPY_ORIGIN_TASK,
+} php_parallel_copy_origin_t;
+
+php_parallel_copy_origin_t php_parallel_copy_origin_set(php_parallel_copy_origin_t origin);
+
 typedef struct _php_parallel_copy_context_t {
 	php_parallel_copy_direction_t direction;
 	HashTable                     copied;
