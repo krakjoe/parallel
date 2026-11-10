@@ -35,9 +35,12 @@ bool php_parallel_future_readable(php_parallel_future_t *future)
 static zend_always_inline void php_parallel_future_value_inline(php_parallel_future_t *future, zval *return_value)
 {
 	if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_DONE)) {
-		zval garbage = future->value;
+		zval                       garbage = future->value;
+		php_parallel_copy_origin_t previous = php_parallel_copy_origin_set(PHP_PARALLEL_COPY_ORIGIN_FUTURE);
 
 		PARALLEL_ZVAL_COPY(&future->value, &garbage, 0);
+
+		php_parallel_copy_origin_set(previous);
 
 		if (Z_OPT_REFCOUNTED(garbage)) {
 			PARALLEL_ZVAL_DTOR(&garbage);
@@ -54,7 +57,12 @@ void php_parallel_future_value(php_parallel_future_t *future, zval *return_value
 	php_parallel_monitor_lock(future->monitor);
 
 	if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_ERROR)) {
+		php_parallel_copy_origin_t previous = php_parallel_copy_origin_set(PHP_PARALLEL_COPY_ORIGIN_FUTURE);
+
 		ZVAL_OBJ(return_value, php_parallel_exceptions_restore(&future->value));
+
+		php_parallel_copy_origin_set(previous);
+
 		php_parallel_monitor_unlock(future->monitor);
 		return;
 	} else if (php_parallel_monitor_check(future->monitor, PHP_PARALLEL_KILLED | PHP_PARALLEL_CANCELLED)) {
@@ -111,9 +119,12 @@ PHP_METHOD(Parallel_Future, value)
 	}
 
 	if ((state & PHP_PARALLEL_ERROR)) {
-		zval exception;
+		zval                       exception;
+		php_parallel_copy_origin_t previous = php_parallel_copy_origin_set(PHP_PARALLEL_COPY_ORIGIN_FUTURE);
 
 		ZVAL_OBJ(&exception, php_parallel_exceptions_restore(&future->value));
+
+		php_parallel_copy_origin_set(previous);
 
 		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY | PHP_PARALLEL_ERROR);
 

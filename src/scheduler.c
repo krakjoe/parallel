@@ -378,6 +378,10 @@ static zend_always_inline bool php_parallel_scheduler_pop(php_parallel_runtime_t
 		return 0;
 	}
 
+	/* arguments and statics are copied into the worker here: the task is
+	   the origin of these copies when a layout mismatch is rejected */
+	php_parallel_copy_origin_t previous = php_parallel_copy_origin_set(PHP_PARALLEL_COPY_ORIGIN_TASK);
+
 	head = zend_llist_get_first(&runtime->schedule);
 	function = head->frame->func;
 	head->frame->func = NULL;
@@ -417,6 +421,8 @@ static zend_always_inline bool php_parallel_scheduler_pop(php_parallel_runtime_t
 	php_parallel_scheduler_future = Z_PTR(head->frame->This);
 
 	zend_llist_del_element(&runtime->schedule, head, php_parallel_scheduler_list_delete);
+
+	php_parallel_copy_origin_set(previous);
 
 	return 1;
 }
