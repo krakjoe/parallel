@@ -785,6 +785,15 @@ static zend_always_inline zend_object *php_parallel_copy_object_thread(zend_obje
 
 	if (!ce) {
 		ce = php_parallel_copy_type_unavailable_ce;
+	} else if (ce->default_properties_count != copy->count) {
+		/* the copy allocates for the receiving class, but copies as many
+		   properties as the sending class declared: differing layouts
+		   write past the object or copy values into the wrong slots */
+		php_parallel_exception_ex(
+		    php_parallel_channel_error_illegal_value_ce,
+		    "cannot receive object of class %s, sending and receiving runtimes declare it differently",
+		    ZSTR_VAL(copy->name));
+		return NULL;
 	}
 
 	php_parallel_copy_context_t *context, *restore;
