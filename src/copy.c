@@ -715,12 +715,74 @@ static zend_always_inline void php_parallel_copy_sync_dtor(zend_object *source, 
 typedef struct _php_parallel_copy_object_t {
 	zend_string *name;
 	uint32_t     count;
+	uint64_t     layout;
 	zend_object  std;
 } php_parallel_copy_object_t;
 
 static zend_always_inline php_parallel_copy_object_t *php_parallel_copy_object_fetch(zend_object *o)
 {
 	return (php_parallel_copy_object_t *)(((char *)o) - offsetof(php_parallel_copy_object_t, std));
+}
+
+/* fingerprint of the declared property layout: slot offset, name and type of
+   every property, so the receiver can check the runtimes declare the class the
+   same way without the class entry of the sender */
+#define PHP_PARALLEL_COPY_LAYOUT_OFFSET 1469598103934665603ULL
+#define PHP_PARALLEL_COPY_LAYOUT_PRIME 1099511628211ULL
+
+static zend_always_inline uint64_t php_parallel_copy_layout_update(uint64_t hash, const char *data, size_t length)
+{
+	const char *end = data + length;
+
+	while (data < end) {
+		hash ^= (unsigned char)*data++;
+		hash *= PHP_PARALLEL_COPY_LAYOUT_PRIME;
+	}
+
+	return hash;
+}
+
+static zend_always_inline uint64_t php_parallel_copy_layout_hash(zend_class_entry *ce)
+{
+	uint64_t            hash = PHP_PARALLEL_COPY_LAYOUT_OFFSET;
+	zend_property_info *info;
+	zend_type          *single;
+
+	hash = php_parallel_copy_layout_update(hash, (const char *) &ce->default_properties_count,
+	                                      sizeof(ce->default_properties_count));
+
+	ZEND_HASH_FOREACH_PTR(&ce->properties_info, info)
+	{
+		hash = php_parallel_copy_layout_update(hash, (const char *) &info->offset, sizeof(info->offset));
+		hash = php_parallel_copy_layout_update(hash, ZSTR_VAL(info->name), ZSTR_LEN(info->name));
+		hash = php_parallel_copy_layout_update(hash, (const char *) &info->type.type_mask, sizeof(info->type.type_mask));
+
+		if (ZEND_TYPE_HAS_LIST(info->type)) {
+			zend_type_list *list = ZEND_TYPE_LIST(info->type);
+
+			hash = php_parallel_copy_layout_update(hash, (const char *) &list->num_types, sizeof(list->num_types));
+		}
+
+		ZEND_TYPE_FOREACH(info->type, single)
+		{
+#ifdef ZEND_TYPE_HAS_CE
+			if (ZEND_TYPE_HAS_CE(*single)) {
+				zend_class_entry *type_ce = ZEND_TYPE_CE(*single);
+
+				hash = php_parallel_copy_layout_update(hash, ZSTR_VAL(type_ce->name), ZSTR_LEN(type_ce->name));
+			} else
+#endif
+			    if (ZEND_TYPE_HAS_NAME(*single)) {
+				zend_string *name = ZEND_TYPE_NAME(*single);
+
+				hash = php_parallel_copy_layout_update(hash, ZSTR_VAL(name), ZSTR_LEN(name));
+			}
+		}
+		ZEND_TYPE_FOREACH_END();
+	}
+	ZEND_HASH_FOREACH_END();
+
+	return hash;
 }
 
 static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_object *source)
@@ -752,6 +814,7 @@ static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_
 
 	copy->name = php_parallel_copy_string_interned(ce->name);
 	copy->count = ce->default_properties_count;
+	copy->layout = php_parallel_copy_layout_hash(ce);
 
 	GC_SET_REFCOUNT(dest, 1);
 	GC_ADD_FLAGS(dest, GC_IMMUTABLE);
@@ -785,7 +848,7 @@ static zend_always_inline zend_object *php_parallel_copy_object_thread(zend_obje
 
 	if (!ce) {
 		ce = php_parallel_copy_type_unavailable_ce;
-	} else if (ce->default_properties_count != copy->count) {
+	} else if (ce->default_properties_count != copy->count || php_parallel_copy_layout_hash(ce) != copy->layout) {
 		/* the copy allocates for the receiving class, but copies as many
 		   properties as the sending class declared: differing layouts
 		   write past the object or copy values into the wrong slots */
