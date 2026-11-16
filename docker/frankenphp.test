@@ -21,6 +21,35 @@ if (!extension_loaded("parallel")) {
 sleep(1);
 echo "hello\n";
 PHP
+cat >"$fixture/public/parallel.php" <<'PHP'
+<?php
+$runtime = new parallel\Runtime();
+$future = $runtime->run(static function () {
+    $nested = new parallel\Runtime();
+    $future = $nested->run(static function () {
+        echo "hello\n";
+    });
+    $future->value();
+});
+$future->value();
+PHP
+cat >"$fixture/public/aborted.php" <<'PHP'
+<?php
+parallel\run(static function () {
+    usleep(1500000);
+    echo "child\n";
+});
+sleep(1);
+echo "root\n";
+PHP
+cat >"$fixture/public/large.php" <<'PHP'
+<?php
+$runtime = new parallel\Runtime();
+$chunk = str_repeat("x", 1 << 20);
+for ($i = 0; $i < 64; $i++) {
+    echo $chunk;
+}
+PHP
 cat >"$fixture/Caddyfile" <<'CADDY'
 {
 	auto_https off
@@ -53,6 +82,33 @@ if [ "${ready:-}" != 1 ]; then
 	exit 1
 fi
 
+# A blocked writer must not hold up unrelated requests, even when they use parallel.
+python3 - "$port" <<'PY'
+import http.client
+import socket
+import struct
+import sys
+import time
+
+port = int(sys.argv[1])
+with socket.create_connection(("127.0.0.1", port), timeout=5) as slow:
+    slow.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
+    slow.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+    slow.sendall(b"GET /large.php HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    assert slow.recv(1), "large response did not start"
+    # Stop reading and let the response fill the socket buffers.
+    time.sleep(1)
+    for path in ["/", "/parallel.php"] * 3:
+        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        try:
+            connection.request("GET", path)
+            response = connection.getresponse()
+            assert response.status == 200
+            assert response.read() == b"hello\n"
+        finally:
+            connection.close()
+PY
+
 python3 - "$port" <<'PY'
 import socket
 import struct
@@ -62,7 +118,7 @@ import time
 sockets = []
 for _ in range(8):
     connection = socket.create_connection(("127.0.0.1", int(sys.argv[1])))
-    connection.sendall(b"GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+    connection.sendall(b"GET /aborted.php HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
     sockets.append(connection)
 
 time.sleep(0.2)

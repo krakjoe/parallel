@@ -20,13 +20,24 @@
 # define PHP_PARALLEL_H
 
 #include "php.h"
-#include "php_ini.h"
+
 #include "ext/standard/info.h"
+#include "php_ini.h"
+#include "pthread.h"
 
 extern zend_module_entry parallel_module_entry;
 # define phpext_parallel_ptr &parallel_module_entry
 
 # define PHP_PARALLEL_VERSION "1.3.0-dev"
+
+ZEND_BEGIN_MODULE_GLOBALS(parallel)
+pthread_mutex_t  output_mutex;
+pthread_mutex_t *output;
+ZEND_END_MODULE_GLOBALS(parallel)
+
+ZEND_EXTERN_MODULE_GLOBALS(parallel)
+
+#define PARALLEL_G(v) ZEND_MODULE_GLOBALS_ACCESSOR(parallel, v)
 
 # if !defined(ZTS)
 # error Only ZTS build are supported

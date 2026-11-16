@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_PARALLEL
 
 #include "parallel.h"
+#include "../php_parallel.h"
 
 /* {{{ */
 TSRM_TLS HashTable php_parallel_runtimes;
@@ -39,20 +40,19 @@ typedef size_t (*php_sapi_output_t)(const char *, size_t);
 static php_sapi_deactivate_t php_sapi_deactivate_function;
 static php_sapi_output_t     php_sapi_output_function;
 
-static pthread_mutex_t       php_parallel_output_mutex = PTHREAD_MUTEX_INITIALIZER;
 static TSRM_TLS bool         php_parallel_output_locked = false;
 
 static size_t                php_parallel_output_function(const char *str, size_t len)
 {
 	size_t result;
 
-	pthread_mutex_lock(&php_parallel_output_mutex);
+	pthread_mutex_lock(PARALLEL_G(output));
 	php_parallel_output_locked = true;
 
 	result = php_sapi_output_function(str, len);
 
 	php_parallel_output_locked = false;
-	pthread_mutex_unlock(&php_parallel_output_mutex);
+	pthread_mutex_unlock(PARALLEL_G(output));
 
 	return result;
 } /* }}} */
@@ -229,16 +229,16 @@ PHP_RINIT_FUNCTION(PARALLEL_CORE)
 
 PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE)
 {
-	zend_hash_destroy(&php_parallel_runtimes);
-
-	PHP_RSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
-
-	// A `zend_bailout()` from the SAPI writer skips the normal unlock.
+	// Release a bailed-out writer before joining children that may also write.
 	// See https://github.com/krakjoe/parallel/issues/313 for more details.
 	if (UNEXPECTED(CG(unclean_shutdown) == 1 && php_parallel_output_locked)) {
 		php_parallel_output_locked = false;
-		pthread_mutex_unlock(&php_parallel_output_mutex);
+		pthread_mutex_unlock(PARALLEL_G(output));
 	}
+
+	zend_hash_destroy(&php_parallel_runtimes);
+
+	PHP_RSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
 
 	return SUCCESS;
 }

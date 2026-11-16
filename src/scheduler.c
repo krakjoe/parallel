@@ -187,6 +187,9 @@ static zend_always_inline php_parallel_runtime_t *php_parallel_scheduler_setup(p
 
 	TSRMLS_CACHE_UPDATE();
 
+	// Descendants share the root thread's output mutex, including during startup and shutdown.
+	PARALLEL_G(output) = runtime->parent.output;
+
 	SG(server_context) = runtime->parent.server;
 	SG(request_info).argc = runtime->parent.argc;
 	SG(request_info).argv = runtime->parent.argv;
