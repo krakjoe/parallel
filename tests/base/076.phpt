@@ -5,6 +5,10 @@ parallel nested and idle runtime output during startup and shutdown
 if (!extension_loaded('parallel')) {
     die('skip');
 }
+if (PHP_VERSION_ID < 80300 && function_exists('opcache_get_status')
+    && (opcache_get_status(false)['jit']['on'] ?? false)) {
+    die('skip PHP <= 8.2 JIT can reuse freed internal-function pointers after worker shutdown');
+}
 ?>
 --FILE--
 <?php
