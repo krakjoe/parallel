@@ -18,8 +18,8 @@
 #ifndef HAVE_PARALLEL_PARALLEL_H
 #define HAVE_PARALLEL_PARALLEL_H
 
+#include "../php_parallel.h"
 #include "monitor.h"
-#include "php.h"
 #include "pthread.h"
 #include "stdint.h"
 
@@ -95,18 +95,7 @@ static zend_always_inline bool php_parallel_cond_init(pthread_cond_t *cond)
 	return (pthread_cond_init(cond, NULL) == SUCCESS);
 }
 
-static zend_always_inline void     php_parallel_cond_destroy(pthread_cond_t *cond) { pthread_cond_destroy(cond); }
-
-static zend_always_inline uint32_t php_parallel_atomic_load(uint32_t *value)
-{
-#ifdef _WIN32
-	return InterlockedCompareExchange((LONG *)value, 0, 0);
-#elif defined(HAVE_BUILTIN_ATOMIC_CPP11)
-	return __atomic_load_n(value, __ATOMIC_SEQ_CST);
-#else
-	return __sync_fetch_and_add(value, 0);
-#endif
-}
+static zend_always_inline void php_parallel_cond_destroy(pthread_cond_t *cond) { pthread_cond_destroy(cond); }
 
 static zend_always_inline void php_parallel_atomic_addref(uint32_t *refcount)
 {
@@ -128,6 +117,32 @@ static zend_always_inline uint32_t php_parallel_atomic_delref(uint32_t *refcount
 #else
 	return __sync_sub_and_fetch(refcount, 1);
 #endif
+}
+
+static zend_always_inline void php_parallel_atomic_uint32_init(php_parallel_atomic_uint32_t *value, uint32_t initial)
+{
+	value->value = initial;
+}
+
+static zend_always_inline uint32_t php_parallel_atomic_uint32_load(php_parallel_atomic_uint32_t *value)
+{
+#ifdef _WIN32
+	return InterlockedCompareExchange((LONG *)&value->value, 0, 0);
+#elif defined(HAVE_BUILTIN_ATOMIC_CPP11)
+	return __atomic_load_n(&value->value, __ATOMIC_SEQ_CST);
+#else
+	return __sync_fetch_and_add(&value->value, 0);
+#endif
+}
+
+static zend_always_inline void php_parallel_atomic_uint32_inc(php_parallel_atomic_uint32_t *value)
+{
+	php_parallel_atomic_addref(&value->value);
+}
+
+static zend_always_inline void php_parallel_atomic_uint32_dec(php_parallel_atomic_uint32_t *value)
+{
+	php_parallel_atomic_delref(&value->value);
 }
 
 extern zend_function_entry php_parallel_functions[];

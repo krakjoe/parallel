@@ -677,9 +677,9 @@ void php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *
 
 	runtime->monitor = php_parallel_monitor_create();
 
-	php_parallel_atomic_addref(&runtime->parent.output->workers);
+	php_parallel_atomic_uint32_inc(&runtime->parent.output->workers);
 	if (pthread_create(&runtime->thread, NULL, php_parallel_thread, runtime) != SUCCESS) {
-		php_parallel_atomic_delref(&runtime->parent.output->workers);
+		php_parallel_atomic_uint32_dec(&runtime->parent.output->workers);
 		php_parallel_exception_ex(php_parallel_runtime_error_ce, "cannot create thread %s", strerror(errno));
 		// No thread was created, so cleanup must not join it.
 		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE | PHP_PARALLEL_CLOSED);
@@ -714,7 +714,7 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime)
 		php_parallel_monitor_unlock(runtime->monitor);
 
 		if (pthread_join(runtime->thread, NULL) == SUCCESS) {
-			php_parallel_atomic_delref(&runtime->parent.output->workers);
+			php_parallel_atomic_uint32_dec(&runtime->parent.output->workers);
 		}
 	} else {
 		php_parallel_monitor_unlock(runtime->monitor);
@@ -776,7 +776,7 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, bool kill)
 	php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED);
 
 	if (pthread_join(runtime->thread, NULL) == SUCCESS) {
-		php_parallel_atomic_delref(&runtime->parent.output->workers);
+		php_parallel_atomic_uint32_dec(&runtime->parent.output->workers);
 	}
 }
 

@@ -48,7 +48,7 @@ static size_t                php_parallel_output_function(const char *str, size_
 	size_t                 result;
 
 	// At zero, only the root can write or create another runtime.
-	if (php_parallel_atomic_load(&output->workers) == 0) {
+	if (php_parallel_atomic_uint32_load(&output->workers) == 0) {
 		return php_sapi_output_function(str, len);
 	}
 
