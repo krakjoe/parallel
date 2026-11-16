@@ -1,0 +1,94 @@
+#!/bin/bash
+# A client that stops reading its response must not stall the output of every
+# other request served by the same process (see the output mutex in src/parallel.c).
+set -euo pipefail
+
+image=parallel-frankenphp:test
+name="parallel-frankenphp-slow-client-test-$$"
+fixture=$(mktemp -d "$PWD/.frankenphp-test.XXXXXX")
+
+cleanup() {
+	if [ -n "${client:-}" ]; then
+		kill "$client" >/dev/null 2>&1 || true
+	fi
+	docker rm -f "$name" >/dev/null 2>&1 || true
+	rm -rf "$fixture"
+}
+trap cleanup EXIT
+
+mkdir "$fixture/public"
+cat >"$fixture/public/index.php" <<'PHP'
+<?php
+if (!extension_loaded("parallel")) {
+    http_response_code(500);
+    exit("parallel not loaded\n");
+}
+echo "hello\n";
+PHP
+cat >"$fixture/public/large.php" <<'PHP'
+<?php
+// Far more than the socket buffers can hold: the write blocks while the
+// client does not read.
+$chunk = str_repeat("x", 1 << 20);
+for ($i = 0; $i < 64; $i++) {
+    echo $chunk;
+}
+PHP
+cat >"$fixture/Caddyfile" <<'CADDY'
+{
+	auto_https off
+	frankenphp {
+		num_threads 8
+	}
+}
+
+:8080 {
+	root * /test/public
+	php_server
+}
+CADDY
+
+docker build -f docker/frankenphp.dockerfile -t "$image" .
+docker run -d --rm --name "$name" -p 127.0.0.1::8080 \
+	-v "$fixture:/test:ro" "$image" frankenphp run --config /test/Caddyfile >/dev/null
+port=$(docker port "$name" 8080/tcp | awk -F: '{print $NF}')
+
+for _ in {1..30}; do
+	if curl -fsS --max-time 2 "http://127.0.0.1:$port/" >/dev/null 2>&1; then
+		ready=1
+		break
+	fi
+	sleep 0.1
+done
+
+if [ "${ready:-}" != 1 ]; then
+	docker logs "$name"
+	exit 1
+fi
+
+# The slow client: requests the large page, then never reads from the socket.
+python3 - "$port" <<'PY' &
+import socket
+import sys
+import time
+
+connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connection.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
+connection.connect(("127.0.0.1", int(sys.argv[1])))
+connection.sendall(b"GET /large.php HTTP/1.1\r\nHost: localhost\r\n\r\n")
+time.sleep(60)
+PY
+client=$!
+
+# Let the large response fill the socket buffers and block its writer.
+sleep 2
+
+# Every other request must still be answered.
+for _ in {1..3}; do
+	response=$(curl -fsS --max-time 5 "http://127.0.0.1:$port/") || {
+		echo "a request stalled behind a client that does not read its response" >&2
+		docker logs "$name"
+		exit 1
+	}
+	test "$response" = hello
+done

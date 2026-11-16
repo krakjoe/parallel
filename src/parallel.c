@@ -41,10 +41,23 @@ static php_sapi_output_t     php_sapi_output_function;
 
 static pthread_mutex_t       php_parallel_output_mutex = PTHREAD_MUTEX_INITIALIZER;
 static TSRM_TLS bool         php_parallel_output_locked = false;
+static volatile bool         php_parallel_output_shared = false;
+
+// Called before the first thread of a runtime is created: from then on, every
+// write to the SAPI is serialized.
+void                         php_parallel_output_share(void) { php_parallel_output_shared = true; }
 
 static size_t                php_parallel_output_function(const char *str, size_t len)
 {
 	size_t result;
+
+	// Until parallel creates a thread, there is no output to serialize. In a
+	// threaded SAPI, taking the mutex anyway would let a request blocked while
+	// writing to a client that stops reading stall the output of every other
+	// request, although the application never uses parallel.
+	if (!php_parallel_output_shared) {
+		return php_sapi_output_function(str, len);
+	}
 
 	pthread_mutex_lock(&php_parallel_output_mutex);
 	php_parallel_output_locked = true;

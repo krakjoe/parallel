@@ -674,6 +674,8 @@ void php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *
 
 	runtime->monitor = php_parallel_monitor_create();
 
+	php_parallel_output_share();
+
 	if (pthread_create(&runtime->thread, NULL, php_parallel_thread, runtime) != SUCCESS) {
 		php_parallel_exception_ex(php_parallel_runtime_error_ce, "cannot create thread %s", strerror(errno));
 		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE);
