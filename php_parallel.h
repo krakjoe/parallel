@@ -30,9 +30,14 @@ extern zend_module_entry parallel_module_entry;
 
 # define PHP_PARALLEL_VERSION "1.3.0-dev"
 
+typedef struct _php_parallel_output_t {
+	pthread_mutex_t mutex;
+	uint32_t        workers; // Created threads not yet joined, including nested runtimes.
+} php_parallel_output_t;
+
 ZEND_BEGIN_MODULE_GLOBALS(parallel)
-pthread_mutex_t  output_mutex;
-pthread_mutex_t *output;
+php_parallel_output_t  output_context;
+php_parallel_output_t *output;
 ZEND_END_MODULE_GLOBALS(parallel)
 
 ZEND_EXTERN_MODULE_GLOBALS(parallel)

@@ -1,5 +1,5 @@
 --TEST--
-parallel nested runtime output during startup and shutdown
+parallel nested and idle runtime output during startup and shutdown
 --SKIPIF--
 <?php
 if (!extension_loaded('parallel')) {
@@ -12,6 +12,7 @@ $bootstrap = __DIR__ . '/076-bootstrap.inc';
 for ($i = 0; $i < 2; $i++) {
     echo "root start\n";
     $runtime = new parallel\Runtime($bootstrap);
+    $idle = new parallel\Runtime();
     $future = $runtime->run(static function ($bootstrap) {
         echo "child\n";
         $nested = new parallel\Runtime($bootstrap);
@@ -24,6 +25,9 @@ for ($i = 0; $i < 2; $i++) {
     }, [$bootstrap]);
     $future->value();
     unset($future, $runtime);
+    echo "root with idle\n";
+    $idle->kill();
+    unset($idle);
     echo "root end\n";
 }
 ?>
@@ -36,6 +40,7 @@ grandchild
 shutdown
 child end
 shutdown
+root with idle
 root end
 root start
 bootstrap
@@ -45,4 +50,5 @@ grandchild
 shutdown
 child end
 shutdown
+root with idle
 root end

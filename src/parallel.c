@@ -44,15 +44,21 @@ static TSRM_TLS bool         php_parallel_output_locked = false;
 
 static size_t                php_parallel_output_function(const char *str, size_t len)
 {
-	size_t result;
+	php_parallel_output_t *output = PARALLEL_G(output);
+	size_t                 result;
 
-	pthread_mutex_lock(PARALLEL_G(output));
+	// At zero, only the root can write or create another runtime.
+	if (php_parallel_atomic_load(&output->workers) == 0) {
+		return php_sapi_output_function(str, len);
+	}
+
+	pthread_mutex_lock(&output->mutex);
 	php_parallel_output_locked = true;
 
 	result = php_sapi_output_function(str, len);
 
 	php_parallel_output_locked = false;
-	pthread_mutex_unlock(PARALLEL_G(output));
+	pthread_mutex_unlock(&output->mutex);
 
 	return result;
 } /* }}} */
@@ -233,7 +239,7 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE)
 	// See https://github.com/krakjoe/parallel/issues/313 for more details.
 	if (UNEXPECTED(CG(unclean_shutdown) == 1 && php_parallel_output_locked)) {
 		php_parallel_output_locked = false;
-		pthread_mutex_unlock(PARALLEL_G(output));
+		pthread_mutex_unlock(&PARALLEL_G(output)->mutex);
 	}
 
 	zend_hash_destroy(&php_parallel_runtimes);

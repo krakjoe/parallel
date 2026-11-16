@@ -95,7 +95,18 @@ static zend_always_inline bool php_parallel_cond_init(pthread_cond_t *cond)
 	return (pthread_cond_init(cond, NULL) == SUCCESS);
 }
 
-static zend_always_inline void php_parallel_cond_destroy(pthread_cond_t *cond) { pthread_cond_destroy(cond); }
+static zend_always_inline void     php_parallel_cond_destroy(pthread_cond_t *cond) { pthread_cond_destroy(cond); }
+
+static zend_always_inline uint32_t php_parallel_atomic_load(uint32_t *value)
+{
+#ifdef _WIN32
+	return InterlockedCompareExchange((LONG *)value, 0, 0);
+#elif defined(HAVE_BUILTIN_ATOMIC_CPP11)
+	return __atomic_load_n(value, __ATOMIC_SEQ_CST);
+#else
+	return __sync_fetch_and_add(value, 0);
+#endif
+}
 
 static zend_always_inline void php_parallel_atomic_addref(uint32_t *refcount)
 {
