@@ -25,19 +25,20 @@
 #include "php_ini.h"
 #include "pthread.h"
 
+#if PHP_VERSION_ID < 80700
+# include "src/atomic_compat.h"
+#else
+# include <stdatomic.h>
+#endif
+
 extern zend_module_entry parallel_module_entry;
 # define phpext_parallel_ptr &parallel_module_entry
 
 # define PHP_PARALLEL_VERSION "1.3.0-dev"
 
-// Access the storage only through php_parallel_atomic_uint32_* helpers.
-typedef struct _php_parallel_atomic_uint32_t {
-	uint32_t value;
-} php_parallel_atomic_uint32_t;
-
 typedef struct _php_parallel_output_t {
-	pthread_mutex_t              mutex;
-	php_parallel_atomic_uint32_t workers; // Created threads not yet joined, including nested runtimes.
+	pthread_mutex_t mutex;
+	atomic_uint     workers; // Created threads not yet joined, including nested runtimes.
 } php_parallel_output_t;
 
 ZEND_BEGIN_MODULE_GLOBALS(parallel)

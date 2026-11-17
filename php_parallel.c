@@ -34,13 +34,13 @@ static PHP_GINIT_FUNCTION(parallel)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 	php_parallel_mutex_init(&parallel_globals->output_context.mutex, 0);
-	php_parallel_atomic_uint32_init(&parallel_globals->output_context.workers, 0);
+	atomic_init(&parallel_globals->output_context.workers, 0);
 	parallel_globals->output = &parallel_globals->output_context;
 }
 
 static PHP_GSHUTDOWN_FUNCTION(parallel)
 {
-	ZEND_ASSERT(php_parallel_atomic_uint32_load(&parallel_globals->output_context.workers) == 0);
+	ZEND_ASSERT(atomic_load(&parallel_globals->output_context.workers) == 0);
 	php_parallel_mutex_destroy(&parallel_globals->output_context.mutex);
 }
 
