@@ -40,8 +40,6 @@ typedef size_t (*php_sapi_output_t)(const char *, size_t);
 static php_sapi_deactivate_t php_sapi_deactivate_function;
 static php_sapi_output_t     php_sapi_output_function;
 
-static TSRM_TLS bool         php_parallel_output_locked = false;
-
 static size_t                php_parallel_output_function(const char *str, size_t len)
 {
 	php_parallel_output_t *output = PARALLEL_G(output);
@@ -53,11 +51,14 @@ static size_t                php_parallel_output_function(const char *str, size_
 	}
 
 	pthread_mutex_lock(&output->mutex);
-	php_parallel_output_locked = true;
-
-	result = php_sapi_output_function(str, len);
-
-	php_parallel_output_locked = false;
+	zend_try { result = php_sapi_output_function(str, len); }
+	zend_catch
+	{
+		// A worker can catch the bailout without ending its request.
+		pthread_mutex_unlock(&output->mutex);
+		zend_bailout();
+	}
+	zend_end_try();
 	pthread_mutex_unlock(&output->mutex);
 
 	return result;
@@ -235,13 +236,6 @@ PHP_RINIT_FUNCTION(PARALLEL_CORE)
 
 PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE)
 {
-	// Release a bailed-out writer before joining children that may also write.
-	// See https://github.com/krakjoe/parallel/issues/313 for more details.
-	if (UNEXPECTED(CG(unclean_shutdown) == 1 && php_parallel_output_locked)) {
-		php_parallel_output_locked = false;
-		pthread_mutex_unlock(&PARALLEL_G(output)->mutex);
-	}
-
 	zend_hash_destroy(&php_parallel_runtimes);
 
 	PHP_RSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
