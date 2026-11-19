@@ -187,6 +187,9 @@ static zend_always_inline php_parallel_runtime_t *php_parallel_scheduler_setup(p
 
 	TSRMLS_CACHE_UPDATE();
 
+	// Descendants share the root's output mutex and worker count through startup and shutdown.
+	PARALLEL_G(output) = runtime->parent.output;
+
 	SG(server_context) = runtime->parent.server;
 	SG(request_info).argc = runtime->parent.argc;
 	SG(request_info).argv = runtime->parent.argv;
@@ -674,9 +677,12 @@ void php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *
 
 	runtime->monitor = php_parallel_monitor_create();
 
+	atomic_fetch_add(&runtime->parent.output->workers, 1);
 	if (pthread_create(&runtime->thread, NULL, php_parallel_thread, runtime) != SUCCESS) {
+		atomic_fetch_sub(&runtime->parent.output->workers, 1);
 		php_parallel_exception_ex(php_parallel_runtime_error_ce, "cannot create thread %s", strerror(errno));
-		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE);
+		// No thread was created, so cleanup must not join it.
+		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE | PHP_PARALLEL_CLOSED);
 		php_parallel_scheduler_stop(runtime);
 		return;
 	}
@@ -707,7 +713,9 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime)
 
 		php_parallel_monitor_unlock(runtime->monitor);
 
-		pthread_join(runtime->thread, NULL);
+		if (pthread_join(runtime->thread, NULL) == SUCCESS) {
+			atomic_fetch_sub(&runtime->parent.output->workers, 1);
+		}
 	} else {
 		php_parallel_monitor_unlock(runtime->monitor);
 	}
@@ -767,7 +775,9 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, bool kill)
 
 	php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED);
 
-	pthread_join(runtime->thread, NULL);
+	if (pthread_join(runtime->thread, NULL) == SUCCESS) {
+		atomic_fetch_sub(&runtime->parent.output->workers, 1);
+	}
 }
 
 bool php_parallel_scheduler_cancel(php_parallel_future_t *future)

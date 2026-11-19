@@ -19,6 +19,7 @@
 #define HAVE_PARALLEL_PARALLEL
 
 #include "parallel.h"
+#include "../php_parallel.h"
 
 /* {{{ */
 TSRM_TLS HashTable php_parallel_runtimes;
@@ -39,20 +40,26 @@ typedef size_t (*php_sapi_output_t)(const char *, size_t);
 static php_sapi_deactivate_t php_sapi_deactivate_function;
 static php_sapi_output_t     php_sapi_output_function;
 
-static pthread_mutex_t       php_parallel_output_mutex = PTHREAD_MUTEX_INITIALIZER;
-static TSRM_TLS bool         php_parallel_output_locked = false;
-
 static size_t                php_parallel_output_function(const char *str, size_t len)
 {
-	size_t result;
+	php_parallel_output_t *output = PARALLEL_G(output);
+	size_t                 result;
 
-	pthread_mutex_lock(&php_parallel_output_mutex);
-	php_parallel_output_locked = true;
+	// At zero, only the root can write or create another runtime.
+	if (atomic_load(&output->workers) == 0) {
+		return php_sapi_output_function(str, len);
+	}
 
-	result = php_sapi_output_function(str, len);
-
-	php_parallel_output_locked = false;
-	pthread_mutex_unlock(&php_parallel_output_mutex);
+	pthread_mutex_lock(&output->mutex);
+	zend_try { result = php_sapi_output_function(str, len); }
+	zend_catch
+	{
+		// A worker can catch the bailout without ending its request.
+		pthread_mutex_unlock(&output->mutex);
+		zend_bailout();
+	}
+	zend_end_try();
+	pthread_mutex_unlock(&output->mutex);
 
 	return result;
 } /* }}} */
@@ -232,13 +239,6 @@ PHP_RSHUTDOWN_FUNCTION(PARALLEL_CORE)
 	zend_hash_destroy(&php_parallel_runtimes);
 
 	PHP_RSHUTDOWN(PARALLEL_COPY)(INIT_FUNC_ARGS_PASSTHRU);
-
-	// A `zend_bailout()` from the SAPI writer skips the normal unlock.
-	// See https://github.com/krakjoe/parallel/issues/313 for more details.
-	if (UNEXPECTED(CG(unclean_shutdown) == 1 && php_parallel_output_locked)) {
-		php_parallel_output_locked = false;
-		pthread_mutex_unlock(&php_parallel_output_mutex);
-	}
 
 	return SUCCESS;
 }

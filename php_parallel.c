@@ -26,6 +26,24 @@
 
 #include "src/parallel.h"
 
+ZEND_DECLARE_MODULE_GLOBALS(parallel)
+
+static PHP_GINIT_FUNCTION(parallel)
+{
+#if defined(COMPILE_DL_PARALLEL)
+	ZEND_TSRMLS_CACHE_UPDATE();
+#endif
+	php_parallel_mutex_init(&parallel_globals->output_context.mutex, 0);
+	atomic_init(&parallel_globals->output_context.workers, 0);
+	parallel_globals->output = &parallel_globals->output_context;
+}
+
+static PHP_GSHUTDOWN_FUNCTION(parallel)
+{
+	ZEND_ASSERT(atomic_load(&parallel_globals->output_context.workers) == 0);
+	php_parallel_mutex_destroy(&parallel_globals->output_context.mutex);
+}
+
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(parallel)
 {
@@ -89,7 +107,11 @@ zend_module_entry parallel_module_entry = {
 	PHP_RSHUTDOWN(parallel),
 	PHP_MINFO(parallel),
 	PHP_PARALLEL_VERSION,
-	STANDARD_MODULE_PROPERTIES
+	PHP_MODULE_GLOBALS(parallel),
+	PHP_GINIT(parallel),
+	PHP_GSHUTDOWN(parallel),
+	NULL,
+	STANDARD_MODULE_PROPERTIES_EX
 };
 /* }}} */
 

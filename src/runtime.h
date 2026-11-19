@@ -31,9 +31,10 @@ typedef struct _php_parallel_runtime_t {
 		zend_atomic_bool *interrupt;
 	} child;
 	struct {
-		void  *server;
-		int    argc;
-		char **argv;
+		void                          *server;
+		struct _php_parallel_output_t *output;
+		int                            argc;
+		char                         **argv;
 	} parent;
 	zend_llist   schedule;
 	zend_bool    crashed;
