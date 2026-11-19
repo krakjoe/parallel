@@ -75,7 +75,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Future, value)
 {
-	php_parallel_future_t *future = php_parallel_future_from(getThis());
+	php_parallel_future_t *future = php_parallel_future_from(ZEND_THIS);
 	int32_t                state;
 
 	PARALLEL_PARAMETERS_NONE(return);
@@ -132,7 +132,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Future, cancel)
 {
-	php_parallel_future_t *future = php_parallel_future_from(getThis());
+	php_parallel_future_t *future = php_parallel_future_from(ZEND_THIS);
 
 	PARALLEL_PARAMETERS_NONE(return);
 
@@ -154,7 +154,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Future, cancelled)
 {
-	php_parallel_future_t *future = php_parallel_future_from(getThis());
+	php_parallel_future_t *future = php_parallel_future_from(ZEND_THIS);
 
 	PARALLEL_PARAMETERS_NONE(return);
 
@@ -166,7 +166,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Future, done)
 {
-	php_parallel_future_t *future = php_parallel_future_from(getThis());
+	php_parallel_future_t *future = php_parallel_future_from(ZEND_THIS);
 
 	RETURN_BOOL(php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY));
 }
@@ -176,7 +176,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Future, __construct)
 {
-	php_parallel_future_t *future = php_parallel_future_from(getThis());
+	php_parallel_future_t *future = php_parallel_future_from(ZEND_THIS);
 
 	php_parallel_exception_ex(php_parallel_future_error_ce, "construction of Future objects is not allowed");
 
