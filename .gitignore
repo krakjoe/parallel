@@ -54,6 +54,7 @@ mkinstalldirs
 modules
 run-tests.php
 run-tests.log
+/analyze.log
 tmp-php.ini
 
 # Windows build files

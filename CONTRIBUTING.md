@@ -40,6 +40,8 @@ parallel-[dbg|gcov|asan|release]-[version]
 Testing
 =======
 
+After `./configure`, run `make analyze` to check the extension with the configured GCC or Clang. It scans all sources, prints the raw diagnostics, and overwrites `analyze.log` in the build directory. Findings or compiler errors make the target fail.
+
 The various kinds of testing you may want to perform are all covered in docker-compose.yml.
 
 In summary, `docker/parallel.test` is a helper for `run-tests.php`, arguments passed to it are forwarded to `run-tests.php`.
