@@ -487,6 +487,11 @@ _php_parallel_checked_function_return:
 
 static zend_always_inline bool php_parallel_check_closure(zend_closure_t *closure)
 { /* {{{ */
+	/* a Closure over an internal function, e.g. strlen(...), has no op_array */
+	if (closure->func.type != ZEND_USER_FUNCTION) {
+		return 0;
+	}
+
 	return php_parallel_check_statics(&closure->func, NULL, NULL) &&
 	       php_parallel_check_function(&closure->func, NULL, NULL);
 } /* }}} */

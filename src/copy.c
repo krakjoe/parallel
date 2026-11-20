@@ -845,7 +845,9 @@ static zend_always_inline zend_object *php_parallel_copy_object_thread(zend_obje
 
 static zend_always_inline zend_object *php_parallel_copy_object_ctor(zend_object *source, bool persistent)
 {
-	if (source->ce == zend_ce_closure) {
+	/* a Closure over an internal function has no op_array to copy, it takes
+	 * the generic path and arrives as parallel\Runtime\Object\Unavailable */
+	if (source->ce == zend_ce_closure && ((zend_closure_t *)source)->func.type == ZEND_USER_FUNCTION) {
 		return php_parallel_copy_closure_ctor(source, persistent);
 	}
 
