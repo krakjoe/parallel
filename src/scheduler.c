@@ -751,6 +751,17 @@ void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure,
 	php_parallel_monitor_unlock(runtime->monitor);
 }
 
+static zend_always_inline void php_parallel_scheduler_request_interrupt(php_parallel_runtime_t *runtime)
+{
+#if PHP_VERSION_ID >= 80700
+	atomic_store(runtime->child.interrupt, true);
+#elif PHP_VERSION_ID >= 80200
+	zend_atomic_bool_store(runtime->child.interrupt, true);
+#else
+	*runtime->child.interrupt = true;
+#endif
+}
+
 void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, bool kill)
 {
 	php_parallel_monitor_lock(runtime->monitor);
@@ -764,7 +775,7 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, bool kill)
 	if (kill) {
 		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_KILLED);
 
-		zend_atomic_bool_store(runtime->child.interrupt, true);
+		php_parallel_scheduler_request_interrupt(runtime);
 	} else {
 		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSE);
 	}
@@ -800,7 +811,7 @@ bool php_parallel_scheduler_cancel(php_parallel_future_t *future)
 		php_parallel_monitor_lock(future->monitor);
 
 		if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY)) {
-			zend_atomic_bool_store(future->runtime->child.interrupt, true);
+			php_parallel_scheduler_request_interrupt(future->runtime);
 
 			php_parallel_monitor_set(future->monitor, PHP_PARALLEL_CANCELLED);
 			php_parallel_monitor_wait_locked(future->monitor, PHP_PARALLEL_READY);
