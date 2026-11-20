@@ -6,6 +6,8 @@ if (!extension_loaded('parallel')) {
 	echo 'skip';
 }
 ?>
+--INI--
+error_reporting=E_ALL & ~E_DEPRECATED
 --FILE--
 <?php
 $parallel = new parallel\Runtime();

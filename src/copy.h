@@ -40,9 +40,13 @@
 #endif
 
 typedef struct _zend_closure_t {
-	zend_object       std;
-	zend_function     func;
-	zval              this_ptr;
+	zend_object   std;
+	zend_function func;
+#if PHP_VERSION_ID >= 80600
+	zend_object *this_ptr;
+#else
+	zval this_ptr;
+#endif
 	zend_class_entry *called_scope;
 	zif_handler       orig_internal_handler;
 } zend_closure_t;
