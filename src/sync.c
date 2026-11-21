@@ -133,7 +133,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Sync, __construct)
 {
-	php_parallel_sync_object_t *object = php_parallel_sync_object_from(getThis());
+	php_parallel_sync_object_t *object = php_parallel_sync_object_from(ZEND_THIS);
 	zval                       *value = NULL;
 
 	if (ZEND_NUM_ARGS()) {
@@ -161,7 +161,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Sync, set)
 {
-	php_parallel_sync_object_t *object = php_parallel_sync_object_from(getThis());
+	php_parallel_sync_object_t *object = php_parallel_sync_object_from(ZEND_THIS);
 	zval                       *value;
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -191,7 +191,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Sync, get)
 {
-	php_parallel_sync_object_t *object = php_parallel_sync_object_from(getThis());
+	php_parallel_sync_object_t *object = php_parallel_sync_object_from(ZEND_THIS);
 
 	pthread_mutex_lock(&object->sync->mutex);
 
@@ -208,7 +208,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Sync, __invoke)
 {
-	php_parallel_sync_object_t *object = php_parallel_sync_object_from(getThis());
+	php_parallel_sync_object_t *object = php_parallel_sync_object_from(ZEND_THIS);
 	zend_fcall_info             fci;
 	zend_fcall_info_cache       fcc;
 
@@ -231,7 +231,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Sync, wait)
 {
-	php_parallel_sync_object_t *object = php_parallel_sync_object_from(getThis());
+	php_parallel_sync_object_t *object = php_parallel_sync_object_from(ZEND_THIS);
 
 	switch (pthread_cond_wait(&object->sync->condition, &object->sync->mutex)) {
 	case SUCCESS:
@@ -250,7 +250,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Sync, notify)
 {
-	php_parallel_sync_object_t *object = php_parallel_sync_object_from(getThis());
+	php_parallel_sync_object_t *object = php_parallel_sync_object_from(ZEND_THIS);
 	bool                        all = 0;
 
 	ZEND_PARSE_PARAMETERS_START(0, 1)

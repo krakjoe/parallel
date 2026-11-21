@@ -48,7 +48,6 @@ int     php_parallel_monitor_unlock(php_parallel_monitor_t *monitor) { return pt
 int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state)
 {
 	int32_t changed = FAILURE;
-	int     rc = SUCCESS;
 
 	if (pthread_mutex_lock(&monitor->mutex) != SUCCESS) {
 		return FAILURE;
@@ -56,7 +55,7 @@ int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state
 
 	while (!(changed = (monitor->state & state))) {
 
-		if ((rc = pthread_cond_wait(&monitor->condition, &monitor->mutex)) != SUCCESS) {
+		if (pthread_cond_wait(&monitor->condition, &monitor->mutex) != SUCCESS) {
 			pthread_mutex_unlock(&monitor->mutex);
 
 			return FAILURE;
@@ -75,10 +74,9 @@ int32_t php_parallel_monitor_wait(php_parallel_monitor_t *monitor, int32_t state
 int32_t php_parallel_monitor_wait_locked(php_parallel_monitor_t *monitor, int32_t state)
 {
 	int32_t changed = FAILURE;
-	int     rc = SUCCESS;
 
 	while (!(changed = (monitor->state & state))) {
-		if ((rc = pthread_cond_wait(&monitor->condition, &monitor->mutex)) != SUCCESS) {
+		if (pthread_cond_wait(&monitor->condition, &monitor->mutex) != SUCCESS) {
 			return FAILURE;
 		}
 	}

@@ -49,7 +49,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Runtime, __construct)
 {
-	php_parallel_runtime_t *runtime = php_parallel_runtime_from(getThis());
+	php_parallel_runtime_t *runtime = php_parallel_runtime_from(ZEND_THIS);
 	zend_string            *bootstrap = NULL;
 
 	ZEND_PARSE_PARAMETERS_START(0, 1)
@@ -67,7 +67,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Runtime, run)
 {
-	php_parallel_runtime_t *runtime = php_parallel_runtime_from(getThis());
+	php_parallel_runtime_t *runtime = php_parallel_runtime_from(ZEND_THIS);
 	zval                   *closure = NULL;
 	zval                   *argv = NULL;
 
@@ -91,7 +91,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Runtime, close)
 {
-	php_parallel_runtime_t *runtime = php_parallel_runtime_from(getThis());
+	php_parallel_runtime_t *runtime = php_parallel_runtime_from(ZEND_THIS);
 
 	PARALLEL_PARAMETERS_NONE(return);
 
@@ -100,7 +100,7 @@ PHP_METHOD(Parallel_Runtime, close)
 
 PHP_METHOD(Parallel_Runtime, kill)
 {
-	php_parallel_runtime_t *runtime = php_parallel_runtime_from(getThis());
+	php_parallel_runtime_t *runtime = php_parallel_runtime_from(ZEND_THIS);
 
 	PARALLEL_PARAMETERS_NONE(return);
 
