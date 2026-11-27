@@ -24,15 +24,8 @@ jobs:
       matrix:
         version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5", "8.6"]
         build: ["gcov", "release"]
-        mode:
-          - name: vanilla
-            args: -d opcache.enable=0 -d opcache.enable_cli=0
-          - name: opcache
-            args: -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=disable
-          - name: jit
-            args: -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
     runs-on: ubuntu-latest
-    name: Linux, PHP v${{ matrix.version }}, ${{ matrix.build }}, ${{ matrix.mode.name }}
+    name: Linux, PHP v${{ matrix.version }}, ${{ matrix.build }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -47,46 +40,52 @@ jobs:
         env:
           phpts: zts
 
-      - name: Smoke test PHP mode
-        env:
-          TEST_MODE: ${{ matrix.mode.name }}
+      - name: Smoke test PHP modes
         run: |
-          php ${{ matrix.mode.args }} -r '
-            $mode = getenv("TEST_MODE");
-            $enable = filter_var(ini_get("opcache.enable"), FILTER_VALIDATE_BOOL);
-            $enableCli = filter_var(ini_get("opcache.enable_cli"), FILTER_VALIDATE_BOOL);
-            $status = function_exists("opcache_get_status") ? opcache_get_status(false) : false;
-            $opcacheOn = is_array($status) && !empty($status["opcache_enabled"]);
-            $jitOn = $opcacheOn
-              && !empty($status["jit"]["enabled"])
-              && !empty($status["jit"]["on"])
-              && (($status["jit"]["buffer_size"] ?? 0) > 0);
+          check_mode() {
+            local mode="$1"
+            shift
+            TEST_MODE="$mode" php "$@" -r '
+              $mode = getenv("TEST_MODE");
+              $enable = filter_var(ini_get("opcache.enable"), FILTER_VALIDATE_BOOL);
+              $enableCli = filter_var(ini_get("opcache.enable_cli"), FILTER_VALIDATE_BOOL);
+              $status = function_exists("opcache_get_status") ? opcache_get_status(false) : false;
+              $opcacheOn = is_array($status) && !empty($status["opcache_enabled"]);
+              $jitOn = $opcacheOn
+                && !empty($status["jit"]["enabled"])
+                && !empty($status["jit"]["on"])
+                && (($status["jit"]["buffer_size"] ?? 0) > 0);
 
-            printf(
-              "mode=%s opcache.enable=%d opcache.enable_cli=%d opcache_enabled=%d jit_on=%d\n",
-              $mode, (int)$enable, (int)$enableCli, (int)$opcacheOn, (int)$jitOn
-            );
+              printf(
+                "mode=%s opcache.enable=%d opcache.enable_cli=%d opcache_enabled=%d jit_on=%d\n",
+                $mode, (int)$enable, (int)$enableCli, (int)$opcacheOn, (int)$jitOn
+              );
 
-            if ($mode === "vanilla") {
-              if ($enable || $enableCli || $opcacheOn) {
-                fwrite(STDERR, "ERROR: OPcache must be disabled (opcache.enable and opcache.enable_cli) in vanilla mode\n");
+              if ($mode === "vanilla") {
+                if ($enable || $enableCli || $opcacheOn) {
+                  fwrite(STDERR, "ERROR: OPcache must be disabled (opcache.enable and opcache.enable_cli) in vanilla mode\n");
+                  exit(1);
+                }
+              } elseif ($mode === "opcache") {
+                if (!$enable || !$enableCli || !$opcacheOn || $jitOn) {
+                  fwrite(STDERR, "ERROR: OPcache (including CLI) must be enabled and JIT disabled in opcache mode\n");
+                  exit(1);
+                }
+              } elseif ($mode === "jit") {
+                if (!$enable || !$enableCli || !$opcacheOn || !$jitOn) {
+                  fwrite(STDERR, "ERROR: OPcache (including CLI) and JIT must be enabled in jit mode\n");
+                  exit(1);
+                }
+              } else {
+                fwrite(STDERR, "ERROR: Unknown test mode: $mode\n");
                 exit(1);
               }
-            } elseif ($mode === "opcache") {
-              if (!$enable || !$enableCli || !$opcacheOn || $jitOn) {
-                fwrite(STDERR, "ERROR: OPcache (including CLI) must be enabled and JIT disabled in opcache mode\n");
-                exit(1);
-              }
-            } elseif ($mode === "jit") {
-              if (!$enable || !$enableCli || !$opcacheOn || !$jitOn) {
-                fwrite(STDERR, "ERROR: OPcache (including CLI) and JIT must be enabled in jit mode\n");
-                exit(1);
-              }
-            } else {
-              fwrite(STDERR, "ERROR: Unknown test mode: $mode\n");
-              exit(1);
-            }
-          '
+            '
+          }
+
+          check_mode vanilla -d opcache.enable=0 -d opcache.enable_cli=0
+          check_mode opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=disable
+          check_mode jit -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
 
       - name: Install lcov
         if: ${{ matrix.build == 'gcov' }}
@@ -105,19 +104,20 @@ jobs:
           echo "extension=parallel.so" | sudo tee -a "$(php -r 'echo php_ini_loaded_file();')"
           php -m
 
-      - name: Test parallel
+      - name: Test parallel (vanilla)
         env:
           REPORT_EXIT_STATUS: 1
           ZEND_DONT_UNLOAD_MODULES: 1
         run: |
+          rm -f src/.libs/*.gcda
           php run-tests.php \
             -P \
             -q \
             -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
             --show-diff \
-            ${{ matrix.mode.args }}
+            -d opcache.enable=0 -d opcache.enable_cli=0
 
-      - name: Generate Coverage
+      - name: Generate Coverage (vanilla)
         if: ${{ matrix.build == 'gcov' }}
         run: |
           lcov --capture \
@@ -127,13 +127,77 @@ jobs:
             --output-file coverage.info
           sed -i "s|${{ github.workspace }}/||g" coverage.info
 
-      - name: Send Coverage
+      - name: Send Coverage (vanilla)
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@v2.3.8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
-          flag-name: ${{ matrix.mode.name }}-${{ matrix.version }}
+          flag-name: vanilla-${{ matrix.version }}
+          parallel: true
+
+      - name: Test parallel (opcache)
+        env:
+          REPORT_EXIT_STATUS: 1
+          ZEND_DONT_UNLOAD_MODULES: 1
+        run: |
+          rm -f src/.libs/*.gcda
+          php run-tests.php \
+            -P \
+            -q \
+            -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
+            --show-diff \
+            -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=disable
+
+      - name: Generate Coverage (opcache)
+        if: ${{ matrix.build == 'gcov' }}
+        run: |
+          lcov --capture \
+            --directory src/.libs \
+            --exclude '/usr/*' \
+            --ignore-errors inconsistent,mismatch,unused \
+            --output-file coverage.info
+          sed -i "s|${{ github.workspace }}/||g" coverage.info
+
+      - name: Send Coverage (opcache)
+        if: ${{ matrix.build == 'gcov' }}
+        uses: coverallsapp/github-action@v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ github.workspace }}/coverage.info
+          flag-name: opcache-${{ matrix.version }}
+          parallel: true
+
+      - name: Test parallel (jit)
+        env:
+          REPORT_EXIT_STATUS: 1
+          ZEND_DONT_UNLOAD_MODULES: 1
+        run: |
+          rm -f src/.libs/*.gcda
+          php run-tests.php \
+            -P \
+            -q \
+            -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
+            --show-diff \
+            -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+
+      - name: Generate Coverage (jit)
+        if: ${{ matrix.build == 'gcov' }}
+        run: |
+          lcov --capture \
+            --directory src/.libs \
+            --exclude '/usr/*' \
+            --ignore-errors inconsistent,mismatch,unused \
+            --output-file coverage.info
+          sed -i "s|${{ github.workspace }}/||g" coverage.info
+
+      - name: Send Coverage (jit)
+        if: ${{ matrix.build == 'gcov' }}
+        uses: coverallsapp/github-action@v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ github.workspace }}/coverage.info
+          flag-name: jit-${{ matrix.version }}
           parallel: true
 
   finish:
