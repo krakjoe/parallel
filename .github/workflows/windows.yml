@@ -60,7 +60,7 @@ jobs:
       contents: write
     steps:
       - name: Upload artifact to the release
-        uses: php/php-windows-builder/release@29352c0ef9e8ce65264ea9e287881a6f7758a953 #v1.9.0
+        uses: php/php-windows-builder/release@227d3cb94e4fd9e9ab9459020df2394ee9a00eb4 #v1.10.0
         with:
           release: ${{ github.event.release.tag_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
