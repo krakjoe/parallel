@@ -90,7 +90,6 @@ jobs:
       - name: Smoke test ASAN, UBSan, and LeakSanitizer
         run: |
           cat > /tmp/sanitizer_smoke.c <<'EOF'
-          #define _GNU_SOURCE
           #include "php.h"
           #include <limits.h>
           #include <stdlib.h>
@@ -145,7 +144,7 @@ jobs:
             local pattern="$2"
             shift 2
             set +e
-            output=$(SMOKE_TRIGGER="$trigger" "$@" php -d extension=/tmp/sanitizer_smoke.so -r '' 2>&1)
+            output=$(SMOKE_TRIGGER="$trigger" "$@" php -d extension=/tmp/sanitizer_smoke.so -v 2>&1)
             rc=$?
             set -e
             if [ "$rc" -eq 0 ] || ! printf '%s\n' "$output" | grep -q "$pattern"; then
