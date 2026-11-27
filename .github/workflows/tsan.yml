@@ -15,24 +15,181 @@ on:
     - cron: "30 4 * * *"
 
 env:
-  PHP_BUILD: tsan
-  PHP_VERSION: "8.5"
   TSAN_OPTIONS: halt_on_error=1:exitcode=1
 
 jobs:
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5", "8.6"]
     runs-on: ubuntu-latest
-    name: TSan, PHP v8.5, vanilla
+    name: TSan, PHP v${{ matrix.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+
+      - name: Resolve PHP source tag and cache key
+        id: php-ref
+        run: |
+          ver="${{ matrix.version }}"
+          tags=$(git ls-remote --tags https://github.com/php/php-src.git "refs/tags/php-${ver}.*" \
+            | awk '$2 !~ /\^\{\}$/ { sub("^refs/tags/", "", $2); print $2 }')
+          tag=$(printf '%s\n' "$tags" | grep -E "^php-${ver}\.[0-9]+$" | sort -V | tail -n 1 || true)
+          if [ -z "$tag" ]; then
+            tag=$(printf '%s\n' "$tags" | sort -V | tail -n 1)
+          fi
+          if [ -z "$tag" ]; then
+            echo "Could not resolve php-src tag for PHP $ver" >&2
+            exit 1
+          fi
+          os_ver=$(. /etc/os-release && echo "$VERSION_ID")
+          clang_ver=$(clang --version | head -n 1 | awk '{for(i=1;i<=NF;i++) if ($i ~ /^[0-9]+\.[0-9]+/) {print $i; exit}}')
+          echo "PHP_PREFIX=$HOME/php-tsan" >> "$GITHUB_ENV"
+          echo "$HOME/php-tsan/bin" >> "$GITHUB_PATH"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "cache_key=php-tsan-ubuntu${os_ver}-clang${clang_ver}-${tag}" >> "$GITHUB_OUTPUT"
+          echo "Resolved PHP tag=$tag (ubuntu=$os_ver, clang=$clang_ver)"
+
+      - name: Restore cached TSan PHP
+        id: cache-php
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ env.PHP_PREFIX }}
+          key: ${{ steps.php-ref.outputs.cache_key }}
+
+      - name: Build PHP with TSan
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends autoconf pkg-config bison re2c
+
+          git clone --depth 1 --branch "${{ steps.php-ref.outputs.tag }}" https://github.com/php/php-src.git /tmp/php-src
+          cd /tmp/php-src
+
+          ./buildconf --force
+          CC=clang CXX=clang++ ./configure \
+            --disable-all \
+            --disable-cgi \
+            --disable-phpdbg \
+            --enable-opcache \
+            --enable-zts \
+            --prefix="$PHP_PREFIX" \
+            --with-config-file-scan-dir="$PHP_PREFIX/etc/php.d" \
+            --with-config-file-path="$PHP_PREFIX/etc"
+
+          make -j"$(nproc)" EXTRA_CFLAGS="-O1 -g -fsanitize=thread -fno-omit-frame-pointer" >/dev/null
+          make install EXTRA_CFLAGS="-O1 -g -fsanitize=thread -fno-omit-frame-pointer" >/dev/null
+
+          mkdir -p "$PHP_PREFIX/etc/php.d"
+          cp php.ini-development "$PHP_PREFIX/etc/php.ini"
+          if [ -f "$("$PHP_PREFIX/bin/php-config" --extension-dir)/opcache.so" ]; then
+            echo "zend_extension=opcache.so" > "$PHP_PREFIX/etc/php.d/opcache.ini"
+          fi
+
+          rm -rf /tmp/php-src
+
+      - name: Save TSan PHP to cache
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ${{ env.PHP_PREFIX }}
+          key: ${{ steps.php-ref.outputs.cache_key }}
+
+      - name: Smoke test PHP modes
+        run: |
+          check_mode() {
+            local mode="$1"
+            shift
+            TEST_MODE="$mode" php "$@" -r '
+              $mode = getenv("TEST_MODE");
+              $enable = filter_var(ini_get("opcache.enable"), FILTER_VALIDATE_BOOL);
+              $enableCli = filter_var(ini_get("opcache.enable_cli"), FILTER_VALIDATE_BOOL);
+              $status = function_exists("opcache_get_status") ? opcache_get_status(false) : false;
+              $opcacheOn = is_array($status) && !empty($status["opcache_enabled"]);
+              $jitOn = $opcacheOn
+                && !empty($status["jit"]["enabled"])
+                && !empty($status["jit"]["on"])
+                && (($status["jit"]["buffer_size"] ?? 0) > 0);
+
+              printf(
+                "mode=%s opcache.enable=%d opcache.enable_cli=%d opcache_enabled=%d jit_on=%d\n",
+                $mode, (int)$enable, (int)$enableCli, (int)$opcacheOn, (int)$jitOn
+              );
+
+              if ($mode === "vanilla") {
+                if ($enable || $enableCli || $opcacheOn) {
+                  fwrite(STDERR, "ERROR: OPcache must be disabled (opcache.enable and opcache.enable_cli) in vanilla mode\n");
+                  exit(1);
+                }
+              } elseif ($mode === "opcache") {
+                if (!$enable || !$enableCli || !$opcacheOn || $jitOn) {
+                  fwrite(STDERR, "ERROR: OPcache (including CLI) must be enabled and JIT disabled in opcache mode\n");
+                  exit(1);
+                }
+              } elseif ($mode === "jit") {
+                if (!$enable || !$enableCli || !$opcacheOn || !$jitOn) {
+                  fwrite(STDERR, "ERROR: OPcache (including CLI) and JIT must be enabled in jit mode\n");
+                  exit(1);
+                }
+              } else {
+                fwrite(STDERR, "ERROR: Unknown test mode: $mode\n");
+                exit(1);
+              }
+            '
+          }
+
+          check_mode vanilla -d opcache.enable=0 -d opcache.enable_cli=0
+          check_mode opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=disable
+          check_mode jit -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+
       - name: Build parallel
-        run: docker compose build parallel
-      - name: Test parallel
-        run: docker compose run --rm -e TSAN_OPTIONS parallel docker/parallel.test
+        run: |
+          php -v
+          phpize
+          CC=clang CXX=clang++ ./configure \
+            --enable-parallel \
+            --enable-parallel-thread-sanitizer
+          make -j"$(nproc)"
+          make install
+          echo "extension=parallel.so" > "$PHP_PREFIX/etc/php.d/parallel.ini"
+          php -m
+
+      - name: Test parallel (vanilla)
+        env:
+          REPORT_EXIT_STATUS: 1
+          ZEND_DONT_UNLOAD_MODULES: 1
+        run: |
+          php run-tests.php \
+            -P \
+            -q \
+            -j"$(nproc)" \
+            -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
+            --show-diff \
+            -d opcache.enable=0 -d opcache.enable_cli=0
+
+      - name: Test parallel (opcache)
+        env:
+          REPORT_EXIT_STATUS: 1
+          ZEND_DONT_UNLOAD_MODULES: 1
+        run: |
+          php run-tests.php \
+            -P \
+            -q \
+            -j"$(nproc)" \
+            -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
+            --show-diff \
+            -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=disable
+
+      - name: Test parallel (jit)
+        env:
+          REPORT_EXIT_STATUS: 1
+          ZEND_DONT_UNLOAD_MODULES: 1
+        run: |
+          php run-tests.php \
+            -P \
+            -q \
+            -j"$(nproc)" \
+            -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
+            --show-diff \
+            -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
