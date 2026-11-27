@@ -15,9 +15,6 @@ RUN apt-get update
 RUN apt-get -y install bash git wget build-essential autoconf pkg-config bison re2c
 
 RUN if test "$PHP_SRC_TSAN" = enable; then \
-        wget -qO /etc/apt/trusted.gpg.d/apt.llvm.org.asc https://apt.llvm.org/llvm-snapshot.gpg.key && \
-        echo "deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-20 main" > /etc/apt/sources.list.d/llvm.list && \
-        apt-get update && \
         apt-get -y install clang-20 llvm-20; \
     fi
 
@@ -49,9 +46,9 @@ RUN if [ "$PHP_SRC_TSAN" = enable ]; then \
                 --with-config-file-path=/opt/etc
 
 RUN if test "$PHP_SRC_TSAN" = enable; then \
-        make -j EXTRA_CFLAGS="-O1 -g -fsanitize=thread -fno-omit-frame-pointer" >/dev/null; \
+        make -j"$(nproc)" EXTRA_CFLAGS="-O1 -g -fsanitize=thread -fno-omit-frame-pointer" >/dev/null; \
     else \
-        make -j >/dev/null; \
+        make -j"$(nproc)" >/dev/null; \
     fi
 
 RUN if test "$PHP_SRC_TSAN" = enable; then \

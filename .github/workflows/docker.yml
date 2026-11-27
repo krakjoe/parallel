@@ -39,6 +39,10 @@ jobs:
             minor: 5
             patch: 8
             rc: ''
+          - major: 8
+            minor: 6
+            patch: 0
+            rc: ''
         flags:
           - name: asan
             debug: disable
@@ -64,7 +68,7 @@ jobs:
           - php: {major: 8, minor: 0}
             flags: {name: asan}
         include:
-          - php: {major: 8, minor: 5, patch: 8, rc: ''}
+          - php: {major: 8, minor: 6, patch: 0, rc: ''}
             flags: {name: tsan, debug: disable, asan: disable, tsan: enable, gcov: disable}
 
     steps:

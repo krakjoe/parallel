@@ -15,7 +15,7 @@ x-common: &common
 services:
   php:
     <<: *common
-    image: ghcr.io/krakjoe/php-${PHP_BUILD:-release}-${PHP_VERSION:-8.5}:${PHP_IMAGE_TAG:-latest}
+    image: ghcr.io/krakjoe/php-${PHP_BUILD:-release}-${PHP_VERSION:-8.6}:${PHP_IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: docker/php.dockerfile
@@ -26,18 +26,18 @@ services:
         PHP_SRC_TSAN: ${PHP_SRC_TSAN:-disable}
         PHP_SRC_GCOV: ${PHP_SRC_GCOV:-disable}
         PHP_VERSION_MAJOR: ${PHP_VERSION_MAJOR:-8}
-        PHP_VERSION_MINOR: ${PHP_VERSION_MINOR:-5}
-        PHP_VERSION_PATCH: ${PHP_VERSION_PATCH:-8}
+        PHP_VERSION_MINOR: ${PHP_VERSION_MINOR:-6}
+        PHP_VERSION_PATCH: ${PHP_VERSION_PATCH:-0}
         PHP_VERSION_RC: ${PHP_VERSION_RC:-}
 
   parallel:
     <<: *common
-    image: ghcr.io/krakjoe/parallel-${PHP_BUILD:-release}-${PHP_VERSION:-8.5}:${PHP_IMAGE_TAG:-latest}
+    image: ghcr.io/krakjoe/parallel-${PHP_BUILD:-release}-${PHP_VERSION:-8.6}:${PHP_IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: docker/parallel.dockerfile
       args:
         PHP_SRC_TYPE: ${PHP_BUILD:-release}
         PHP_BASE_TYPE: ${PHP_BASE_BUILD:-${PHP_BUILD:-release}}
-        PHP_VERSION: ${PHP_VERSION:-8.5}
+        PHP_VERSION: ${PHP_VERSION:-8.6}
         PHP_IMAGE_TAG: ${PHP_IMAGE_TAG:-latest}

@@ -16,13 +16,13 @@ on:
 
 env:
   PHP_BUILD: tsan
-  PHP_VERSION: "8.5"
+  PHP_VERSION: "8.6"
   TSAN_OPTIONS: halt_on_error=1:exitcode=1
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    name: TSan, PHP v8.5, vanilla
+    name: TSan, PHP v8.6, vanilla
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
