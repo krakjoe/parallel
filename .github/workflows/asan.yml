@@ -1,4 +1,4 @@
-name: ASAN
+name: ASAN & UBSAN
 
 permissions:
   contents: read
@@ -19,24 +19,200 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["8.1", "8.2", "8.3", "8.4", "8.5"]
-        mode:
-          - name: vanilla
-            args: ""
-          - name: opcache
-            args: -d opcache.enable_cli=1 -d opcache.jit=disable
-          - name: jit
-            args: -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+        version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5", "8.6"]
     runs-on: ubuntu-latest
-    name: ASAN, PHP v${{matrix.version}}, ${{matrix.mode.name}}
+    name: ASAN & UBSAN, PHP v${{ matrix.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@62d8c661cf9d600500b5543fdffef9f063128a33 # develop (pre-release with ASAN)
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Test parallel
-        run: PHP_BUILD=asan PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test ${{matrix.mode.args}} --asan
+          php-version: ${{ matrix.version }}
+          extensions: none, opcache
+          ini-file: development
+          coverage: none
+          tools: none
+        env:
+          asan: true
+          phpts: zts
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
+      - name: Smoke test PHP modes
+        run: |
+          check_mode() {
+            local mode="$1"
+            shift
+            TEST_MODE="$mode" php "$@" -r '
+              $mode = getenv("TEST_MODE");
+              $iniBool = static fn(string $key): bool => in_array(strtolower((string) ini_get($key)), ["1", "on", "true", "yes"], true);
+              $enable = $iniBool("opcache.enable");
+              $enableCli = $iniBool("opcache.enable_cli");
+              $status = function_exists("opcache_get_status") ? opcache_get_status(false) : false;
+              $opcacheOn = is_array($status) && !empty($status["opcache_enabled"]);
+              $jitOn = $opcacheOn
+                && !empty($status["jit"]["enabled"])
+                && !empty($status["jit"]["on"])
+                && (($status["jit"]["buffer_size"] ?? 0) > 0);
+
+              printf(
+                "mode=%s opcache.enable=%d opcache.enable_cli=%d opcache_enabled=%d jit_on=%d\n",
+                $mode, (int)$enable, (int)$enableCli, (int)$opcacheOn, (int)$jitOn
+              );
+
+              if ($mode === "vanilla") {
+                if ($enable || $enableCli || $opcacheOn) {
+                  fwrite(STDERR, "ERROR: OPcache must be disabled (opcache.enable and opcache.enable_cli) in vanilla mode\n");
+                  exit(1);
+                }
+              } elseif ($mode === "opcache") {
+                if (!$enable || !$enableCli || !$opcacheOn || $jitOn) {
+                  fwrite(STDERR, "ERROR: OPcache (including CLI) must be enabled and JIT disabled in opcache mode\n");
+                  exit(1);
+                }
+              } elseif ($mode === "jit") {
+                if (!$enable || !$enableCli || !$opcacheOn || !$jitOn) {
+                  fwrite(STDERR, "ERROR: OPcache (including CLI) and JIT must be enabled in jit mode\n");
+                  exit(1);
+                }
+              } else {
+                fwrite(STDERR, "ERROR: Unknown test mode: $mode\n");
+                exit(1);
+              }
+            '
+          }
+
+          check_mode vanilla -d opcache.enable=0 -d opcache.enable_cli=0
+          check_mode opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=disable
+          check_mode jit -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
+
+      - name: Smoke test ASAN, UBSan, and LeakSanitizer
+        run: |
+          cat > /tmp/sanitizer_smoke.c <<'EOF'
+          #include "php.h"
+          #include <limits.h>
+          #include <stdlib.h>
+          #include <string.h>
+
+          static void *volatile smoke_sink;
+
+          static PHP_MINIT_FUNCTION(sanitizer_smoke)
+          {
+              const char *trigger = getenv("SMOKE_TRIGGER");
+              if (!trigger) {
+                  return SUCCESS;
+              }
+              if (strcmp(trigger, "asan") == 0) {
+                  char *buf = malloc(4);
+                  buf[0] = 42;
+                  free(buf);
+                  volatile char x = buf[0];
+                  (void)x;
+              } else if (strcmp(trigger, "ubsan") == 0) {
+                  volatile int x = INT_MAX;
+                  volatile int y = x + 1;
+                  (void)y;
+              } else if (strcmp(trigger, "leak") == 0) {
+                  smoke_sink = malloc(64);
+                  smoke_sink = NULL;
+              }
+              return SUCCESS;
+          }
+
+          zend_module_entry sanitizer_smoke_module_entry = {
+              STANDARD_MODULE_HEADER,
+              "sanitizer_smoke",
+              NULL,
+              PHP_MINIT(sanitizer_smoke),
+              NULL,
+              NULL,
+              NULL,
+              NULL,
+              "0.1",
+              STANDARD_MODULE_PROPERTIES
+          };
+
+          ZEND_GET_MODULE(sanitizer_smoke)
+          EOF
+
+          cc -shared -fPIC -O1 -fsanitize=address,undefined -fno-sanitize=object-size -fno-sanitize-recover=undefined \
+            $(php-config --includes) /tmp/sanitizer_smoke.c -o /tmp/sanitizer_smoke.so
+
+          expect_trigger() {
+            local trigger="$1"
+            local pattern="$2"
+            shift 2
+            set +e
+            output=$(SMOKE_TRIGGER="$trigger" "$@" php -d extension=/tmp/sanitizer_smoke.so -v 2>&1)
+            rc=$?
+            set -e
+            if [ "$rc" -eq 0 ] || ! printf '%s\n' "$output" | grep -q "$pattern"; then
+              echo "ERROR: $trigger smoke test did not trigger as expected (rc=$rc)" >&2
+              printf '%s\n' "$output" >&2
+              exit 1
+            fi
+            echo "OK: $trigger triggered (rc=$rc)"
+          }
+
+          expect_trigger asan "AddressSanitizer: heap-use-after-free"
+          expect_trigger ubsan "runtime error: signed integer overflow"
+          expect_trigger leak "LeakSanitizer: detected memory leaks" env ASAN_OPTIONS=detect_leaks=1
+          rm -f /tmp/sanitizer_smoke.c /tmp/sanitizer_smoke.so
+
+      - name: Build parallel
+        run: |
+          php -v
+          phpize
+          ./configure \
+            --enable-parallel \
+            --enable-parallel-address-sanitizer \
+            --enable-parallel-undefined-sanitizer
+          make -j"$(nproc)"
+          nm -u modules/parallel.so | grep -q '__asan_'
+          nm -u modules/parallel.so | grep -q '__ubsan_'
+          sudo make install
+          echo "extension=parallel.so" | sudo tee -a "$(php -r 'echo php_ini_loaded_file();')"
+          php -m
+
+      - name: Test parallel (vanilla)
+        env:
+          REPORT_EXIT_STATUS: 1
+          ASAN_OPTIONS: detect_leaks=1
+        run: |
+          php run-tests.php \
+            -P \
+            -q \
+            -j"$(nproc)" \
+            -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
+            --show-diff \
+            --asan \
+            -d opcache.enable=0 -d opcache.enable_cli=0
+
+      - name: Test parallel (opcache)
+        env:
+          REPORT_EXIT_STATUS: 1
+          ASAN_OPTIONS: detect_leaks=1
+        run: |
+          php run-tests.php \
+            -P \
+            -q \
+            -j"$(nproc)" \
+            -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
+            --show-diff \
+            --asan \
+            -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=disable
+
+      - name: Test parallel (jit)
+        env:
+          REPORT_EXIT_STATUS: 1
+          ASAN_OPTIONS: detect_leaks=1
+        run: |
+          php run-tests.php \
+            -P \
+            -q \
+            -j"$(nproc)" \
+            -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
+            --show-diff \
+            --asan \
+            -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
