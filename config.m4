@@ -76,6 +76,8 @@ if test "$PHP_PARALLEL" != "no"; then
   if test "$PHP_PARALLEL_GCOV" != "no"; then
     AX_CHECK_COMPILE_FLAG(-fprofile-arcs,           EXTRA_CFLAGS="$EXTRA_CFLAGS -fprofile-arcs")
     AX_CHECK_COMPILE_FLAG(-ftest-coverage,          EXTRA_CFLAGS="$EXTRA_CFLAGS -ftest-coverage")
+    PHP_ADD_LIBRARY(gcov, 1, PARALLEL_SHARED_LIBADD)
+    PHP_SUBST(PARALLEL_SHARED_LIBADD)
   fi
 
   PHP_NEW_EXTENSION(parallel, php_parallel.c src/exceptions.c src/monitor.c src/parallel.c src/runtime.c src/scheduler.c src/future.c src/copy.c src/check.c src/dependencies.c src/cache.c src/channel.c src/link.c src/handlers.c src/events.c src/poll.c src/loop.c src/event.c src/input.c src/sync.c, $ext_shared,, "-Wall -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 $_MAINTAINER_CFLAGS")

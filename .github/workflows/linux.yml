@@ -16,6 +16,7 @@ on:
 
 env:
   NODE_COVERALLS_DEBUG: true
+
 jobs:
   test:
     strategy:
@@ -31,26 +32,69 @@ jobs:
           - name: jit
             args: -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
     runs-on: ubuntu-latest
-    name: Linux, PHP v${{matrix.version}}, ${{matrix.build}}, ${{matrix.mode.name}}
+    name: Linux, PHP v${{ matrix.version }}, ${{ matrix.build }}, ${{ matrix.mode.name }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          php-version: ${{ matrix.version }}
+          ini-file: development
+          coverage: none
+          tools: none
+        env:
+          phpts: zts
+
+      - name: Install lcov
+        if: ${{ matrix.build == 'gcov' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lcov
+
+      - name: Build parallel
+        run: |
+          php -v
+          phpize
+          ./configure --enable-parallel \
+            --$(test "${{ matrix.build }}" = gcov && echo enable || echo disable)-parallel-gcov
+          make -j$(nproc)
+          sudo make install
+          echo "extension=parallel.so" | sudo tee -a "$(php -r 'echo php_ini_loaded_file();')"
+          php -m
+
       - name: Test parallel
-        run: PHP_BUILD=${{matrix.build}} PHP_VERSION=${{matrix.version}} docker compose run --rm parallel docker/parallel.test ${{matrix.mode.args}}
+        env:
+          REPORT_EXIT_STATUS: 1
+          ZEND_DONT_UNLOAD_MODULES: 1
+        run: |
+          php run-tests.php \
+            -P \
+            -q \
+            -g FAIL,XFAIL,XLEAK,SKIP,BORK,LEAK \
+            --show-diff \
+            ${{ matrix.mode.args }}
+
+      - name: Generate Coverage
+        if: ${{ matrix.build == 'gcov' }}
+        run: |
+          lcov --capture \
+            --directory src/.libs \
+            --exclude '/usr/*' \
+            --ignore-errors inconsistent,mismatch,unused \
+            --output-file coverage.info
+          sed -i "s|${{ github.workspace }}/||g" coverage.info
+
       - name: Send Coverage
         if: ${{ matrix.build == 'gcov' }}
         uses: coverallsapp/github-action@v2.3.8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ${{ github.workspace }}/coverage.info
-          flag-name: ${{matrix.mode.name}}-${{matrix.version}}
+          flag-name: ${{ matrix.mode.name }}-${{ matrix.version }}
           parallel: true
+
   finish:
     if: always()
     runs-on: ubuntu-latest
