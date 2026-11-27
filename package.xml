@@ -22,9 +22,9 @@
   <email>flo@dotbox.org</email>
   <active>yes</active>
  </lead>
- <date>2026-06-21</date>
+ <date>2026-11-27</date>
  <version>
-   <release>1.2.15</release>
+   <release>1.2.16</release>
    <api>1.2.0</api>
  </version>
  <stability>
@@ -33,10 +33,14 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-- Fix use-after-free race on future->monitor in error paths #381
-- Promote PIE installer #383
-- Fix: Update coverallsapp/github-action from master to v2.3.6 #384
-- Narrow the Windows VEH to undefined-function calls only #379
+- Fix a use-after-free during Future cleanup (#391)
+- Fix receiving or discarding buffered Channel objects after the sending Runtime closes (#419)
+- Reject closures over internal functions as task arguments and Channel values (#430)
+- Scope output locking to each root thread instead of locking across all threads (#426)
+- Use the alternate signal stack for SIGSEGV when running alongside Go (#407)
+- Fix copying packed arrays and closures bound to $this on PHP 8.6 (#393, #429)
+- Support VM interrupts on PHP 8.7 (#417)
+- Add build options for UndefinedBehaviorSanitizer and ThreadSanitizer (#385, #390)
  </notes>
  <contents>
   <dir name="/">
@@ -45,9 +49,11 @@
    <file name="CONTRIBUTING.md" role="doc"/>
    <file name="config.m4" role="src"/>
    <file name="config.w32" role="src"/>
+   <file name="Makefile.frag" role="src"/>
    <file name="php_parallel.h" role="src"/>
    <file name="php_parallel.c" role="src"/>
    <dir name="src">
+    <file name="atomic_compat.h" role="src"/>
     <file name="cache.c" role="src"/>
     <file name="cache.h" role="src"/>
     <file name="channel.c" role="src"/>
@@ -173,6 +179,12 @@
       <file name="072-bootstrap.php" role="test"/>
       <file name="073.phpt" role="test"/>
       <file name="073-bootstrap.inc" role="test"/>
+      <file name="074-autoload.inc" role="test"/>
+      <file name="074-fn.inc" role="test"/>
+      <file name="074.phpt" role="test"/>
+      <file name="075.phpt" role="test"/>
+      <file name="076-bootstrap.inc" role="test"/>
+      <file name="076.phpt" role="test"/>
       <file name="init_fcall_fix_001.phpt" role="test"/>
       <file name="init_fcall_fix_002.phpt" role="test"/>
       <file name="init_fcall_fix_003.phpt" role="test"/>
@@ -201,6 +213,9 @@
       <file name="021.phpt" role="test"/>
       <file name="022.phpt" role="test"/>
       <file name="023.phpt" role="test"/>
+      <file name="024.inc" role="test"/>
+      <file name="024.phpt" role="test"/>
+      <file name="025.phpt" role="test"/>
      </dir> <!-- channel -->
      <dir name="closures">
       <file name="001.phpt" role="test"/>
@@ -218,6 +233,7 @@
       <file name="011.phpt" role="test"/>
       <file name="012.phpt" role="test"/>
       <file name="013.phpt" role="test"/>
+      <file name="014.phpt" role="test"/>
      </dir> <!-- closures -->
      <dir name="events">
       <file name="001.phpt" role="test"/>
@@ -240,6 +256,7 @@
         <file name="004.phpt" role="test"/>
         <file name="005.phpt" role="test"/>
         <file name="006.phpt" role="test"/>
+        <file name="007.phpt" role="test"/>
        </dir> <!-- wait -->
      </dir> <!-- event -->
      <dir name="functional">
@@ -252,6 +269,7 @@
       <file name="005.phpt" role="test"/>
       <file name="006.phpt" role="test"/>
       <file name="007.phpt" role="test"/>
+      <file name="008.phpt" role="test"/>
      </dir> <!-- functional -->
      <dir name="handlers">
       <file name="001.phpt" role="test"/>
@@ -284,6 +302,24 @@
  <providesextension>parallel</providesextension>
  <extsrcrelease/>
  <changelog>
+ <release>
+   <date>2026-06-21</date>
+   <version>
+     <release>1.2.15</release>
+     <api>1.2.0</api>
+   </version>
+   <stability>
+     <release>stable</release>
+     <api>stable</api>
+   </stability>
+   <license uri="http://www.php.net/license">PHP License</license>
+   <notes>
+- Fix use-after-free race on future->monitor in error paths #381
+- Promote PIE installer #383
+- Fix: Update coverallsapp/github-action from master to v2.3.6 #384
+- Narrow the Windows VEH to undefined-function calls only #379
+   </notes>
+ </release>
  <release>
    <date>2026-06-16</date>
    <version>
