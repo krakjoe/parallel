@@ -18,6 +18,7 @@
 #ifndef HAVE_PARALLEL_RUNTIME
 #define HAVE_PARALLEL_RUNTIME
 
+#include "../php_parallel.h"
 #include "parallel.h"
 
 zend_class_entry       *php_parallel_runtime_ce;
@@ -123,6 +124,7 @@ zend_object *php_parallel_runtime_create(zend_class_entry *type)
 	php_parallel_scheduler_init(runtime);
 
 	runtime->parent.server = SG(server_context);
+	runtime->parent.output = PARALLEL_G(output);
 	runtime->parent.argc = SG(request_info).argc;
 	runtime->parent.argv = SG(request_info).argv;
 

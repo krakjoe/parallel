@@ -9,6 +9,12 @@ PHP_ARG_ENABLE(parallel-dev, whether to enable parallel developer build flags,
 PHP_ARG_ENABLE(parallel-address-sanitizer, whether to enable address sanitizer flags for parallel,
 [  --enable-parallel-address-sanitizer Enable address sanitizer flags for parallel], no, no)
 
+PHP_ARG_ENABLE(parallel-undefined-sanitizer, whether to enable undefined behavior sanitizer flags for parallel,
+[  --enable-parallel-undefined-sanitizer Enable undefined behavior sanitizer flags for parallel], no, no)
+
+PHP_ARG_ENABLE(parallel-thread-sanitizer, whether to enable thread sanitizer flags for parallel,
+[  --enable-parallel-thread-sanitizer Enable thread sanitizer flags for parallel], no, no)
+
 PHP_ARG_ENABLE(parallel-gcov, whether to enable gcov for parallel,
 [  --enable-parallel-gcov              Enable gcov for parallel], no, no)
 
@@ -56,6 +62,17 @@ if test "$PHP_PARALLEL" != "no"; then
     AX_CHECK_COMPILE_FLAG(-fno-omit-frame-pointer,  _MAINTAINER_CFLAGS="$_MAINTAINER_CFLAGS -fno-omit-frame-pointer")
   fi
 
+  if test "$PHP_PARALLEL_UNDEFINED_SANITIZER" != "no"; then
+    AX_CHECK_COMPILE_FLAG(-fsanitize=undefined,             EXTRA_CFLAGS="$EXTRA_CFLAGS -fsanitize=undefined")
+    AX_CHECK_COMPILE_FLAG(-fno-sanitize-recover=undefined,  EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-sanitize-recover=undefined")
+    AX_CHECK_COMPILE_FLAG(-fno-omit-frame-pointer,          EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-omit-frame-pointer")
+  fi
+
+  if test "$PHP_PARALLEL_THREAD_SANITIZER" != "no"; then
+    AX_CHECK_COMPILE_FLAG(-fsanitize=thread,                EXTRA_CFLAGS="$EXTRA_CFLAGS -fsanitize=thread")
+    AX_CHECK_COMPILE_FLAG(-fno-omit-frame-pointer,          EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-omit-frame-pointer")
+  fi
+
   if test "$PHP_PARALLEL_GCOV" != "no"; then
     AX_CHECK_COMPILE_FLAG(-fprofile-arcs,           EXTRA_CFLAGS="$EXTRA_CFLAGS -fprofile-arcs")
     AX_CHECK_COMPILE_FLAG(-ftest-coverage,          EXTRA_CFLAGS="$EXTRA_CFLAGS -ftest-coverage")
@@ -66,7 +83,7 @@ if test "$PHP_PARALLEL" != "no"; then
   PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
   PHP_ADD_INCLUDE($ext_srcdir)
 
-  if test "$PHP_PARALLEL_GCOV" != "no"; then
+  if test "$PHP_PARALLEL_GCOV" != "no" || test "$PHP_PARALLEL_UNDEFINED_SANITIZER" != "no" || test "$PHP_PARALLEL_THREAD_SANITIZER" != "no"; then
     PHP_SUBST(EXTRA_CFLAGS)
   fi
 

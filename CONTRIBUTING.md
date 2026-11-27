@@ -5,6 +5,19 @@ To ease reproduction of test cases, development, and CI, parallel has adopted do
 
 parallel requires a ZTS build of PHP which is built as a separate environment upon which the testing environment relies.
 
+Source Conventions
+==================
+
+The source tree deliberately uses a regular module layout. Keep new and modified code consistent with these conventions:
+
+  - Keep each C module in matching `src/<module>.c` and `src/<module>.h` files, including small private headers used only for declarations.
+  - Keep module-specific include guards in both files: `HAVE_PARALLEL_<MODULE>` for C files and `HAVE_PARALLEL_<MODULE>_H` for headers.
+  - Prefix internal symbols with `php_parallel_` and lifecycle identifiers with `PARALLEL_`.
+  - Define lifecycle hooks in pairs: `MINIT` with `MSHUTDOWN`, and `RINIT` with `RSHUTDOWN`. Keep the matching hook even when it is empty, and declare the pair in the module header.
+  - Keep initialization hierarchical: `parallel.c` initializes top-level modules, and each module initializes its own submodules. Preserve lifecycle ordering unless a dependency requires changing it.
+  - Use the `php_parallel_copy_string*` helpers for strings entering persistent or shared state. Allocate reusable internal keys and labels once as persistent interned strings during `MINIT`, rather than allocating them at each use.
+  - Preserve the standard license banner and format C sources and headers with the repository's `.clang-format` configuration.
+
 PHP Services
 ============
 
@@ -53,9 +66,10 @@ Testing (an example)
 ====================
 
 ```sh
-docker compose build php-asan-8.4
-docker compose build parallel-asan-8.4
-docker compose run --rm parallel-asan-8.4
+export PHP_BUILD=asan PHP_VERSION=8.4 PHP_VERSION_MINOR=4 PHP_VERSION_PATCH=1 PHP_SRC_ASAN=enable
+docker compose build php
+docker compose build parallel
+docker compose run --rm parallel
 phpize
 ./configure --enable-parallel
 make

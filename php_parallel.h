@@ -20,13 +20,35 @@
 # define PHP_PARALLEL_H
 
 #include "php.h"
-#include "php_ini.h"
+
 #include "ext/standard/info.h"
+#include "php_ini.h"
+#include "pthread.h"
+
+#if PHP_VERSION_ID < 80700
+# include "src/atomic_compat.h"
+#else
+# include <stdatomic.h>
+#endif
 
 extern zend_module_entry parallel_module_entry;
 # define phpext_parallel_ptr &parallel_module_entry
 
 # define PHP_PARALLEL_VERSION "1.2.15"
+
+typedef struct _php_parallel_output_t {
+	pthread_mutex_t mutex;
+	atomic_uint     workers; // Created threads not yet joined, including nested runtimes.
+} php_parallel_output_t;
+
+ZEND_BEGIN_MODULE_GLOBALS(parallel)
+php_parallel_output_t  output_context;
+php_parallel_output_t *output;
+ZEND_END_MODULE_GLOBALS(parallel)
+
+ZEND_EXTERN_MODULE_GLOBALS(parallel)
+
+#define PARALLEL_G(v) ZEND_MODULE_GLOBALS_ACCESSOR(parallel, v)
 
 # if !defined(ZTS)
 # error Only ZTS build are supported

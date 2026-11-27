@@ -18,8 +18,8 @@
 #ifndef HAVE_PARALLEL_PARALLEL_H
 #define HAVE_PARALLEL_PARALLEL_H
 
+#include "../php_parallel.h"
 #include "monitor.h"
-#include "php.h"
 #include "pthread.h"
 #include "stdint.h"
 

@@ -187,6 +187,9 @@ static zend_always_inline php_parallel_runtime_t *php_parallel_scheduler_setup(p
 
 	TSRMLS_CACHE_UPDATE();
 
+	// Descendants share the root's output mutex and worker count through startup and shutdown.
+	PARALLEL_G(output) = runtime->parent.output;
+
 	SG(server_context) = runtime->parent.server;
 	SG(request_info).argc = runtime->parent.argc;
 	SG(request_info).argv = runtime->parent.argv;
@@ -425,11 +428,9 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 {
 	php_parallel_future_t *future = php_parallel_scheduler_future;
 
-	/* Set once the future has been signalled READY by an error path below, so
-	 * the trailing READY signal is skipped. Signalling twice is a use-after-free
-	 * race: the first signal releases the consumer, which may free the future
-	 * (and its monitor) before the second php_parallel_monitor_set() runs. */
-	volatile bool          ready = false;
+	/* READY allows the consumer to destroy the future, so publish it only after
+	 * the worker's final access through frame->return_value. */
+	volatile int32_t       future_state = PHP_PARALLEL_READY;
 
 	runtime->crashed = 0;
 	runtime->missing = NULL;
@@ -451,9 +452,7 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 					} else {
 						php_parallel_exceptions_save(frame->return_value, EG(exception));
 
-						php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY | PHP_PARALLEL_ERROR);
-
-						ready = true;
+						future_state |= PHP_PARALLEL_ERROR;
 					}
 				} else {
 					zend_throw_exception_internal(NULL);
@@ -488,10 +487,9 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 						php_parallel_exceptions_save(frame->return_value, exception);
 						OBJ_RELEASE(exception);
 					}
-					php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY | PHP_PARALLEL_ERROR);
 					php_parallel_monitor_unlock(future->monitor);
 
-					ready = true;
+					future_state |= PHP_PARALLEL_ERROR;
 				}
 
 				// This runtime crashed, as such we can not give any guarantees
@@ -526,8 +524,8 @@ static void php_parallel_scheduler_run(php_parallel_runtime_t *runtime, zend_exe
 	}
 	zend_end_try();
 
-	if (future && !ready) {
-		php_parallel_monitor_set(future->monitor, PHP_PARALLEL_READY);
+	if (future) {
+		php_parallel_monitor_set(future->monitor, future_state);
 	}
 
 	php_parallel_scheduler_future = NULL;
@@ -679,9 +677,12 @@ void php_parallel_scheduler_start(php_parallel_runtime_t *runtime, zend_string *
 
 	runtime->monitor = php_parallel_monitor_create();
 
+	atomic_fetch_add(&runtime->parent.output->workers, 1);
 	if (pthread_create(&runtime->thread, NULL, php_parallel_thread, runtime) != SUCCESS) {
+		atomic_fetch_sub(&runtime->parent.output->workers, 1);
 		php_parallel_exception_ex(php_parallel_runtime_error_ce, "cannot create thread %s", strerror(errno));
-		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE);
+		// No thread was created, so cleanup must not join it.
+		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_FAILURE | PHP_PARALLEL_CLOSED);
 		php_parallel_scheduler_stop(runtime);
 		return;
 	}
@@ -712,7 +713,9 @@ void php_parallel_scheduler_stop(php_parallel_runtime_t *runtime)
 
 		php_parallel_monitor_unlock(runtime->monitor);
 
-		pthread_join(runtime->thread, NULL);
+		if (pthread_join(runtime->thread, NULL) == SUCCESS) {
+			atomic_fetch_sub(&runtime->parent.output->workers, 1);
+		}
 	} else {
 		php_parallel_monitor_unlock(runtime->monitor);
 	}
@@ -748,6 +751,17 @@ void php_parallel_scheduler_push(php_parallel_runtime_t *runtime, zval *closure,
 	php_parallel_monitor_unlock(runtime->monitor);
 }
 
+static zend_always_inline void php_parallel_scheduler_request_interrupt(php_parallel_runtime_t *runtime)
+{
+#if PHP_VERSION_ID >= 80700
+	atomic_store(runtime->child.interrupt, true);
+#elif PHP_VERSION_ID >= 80200
+	zend_atomic_bool_store(runtime->child.interrupt, true);
+#else
+	*runtime->child.interrupt = true;
+#endif
+}
+
 void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, bool kill)
 {
 	php_parallel_monitor_lock(runtime->monitor);
@@ -761,7 +775,7 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, bool kill)
 	if (kill) {
 		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_KILLED);
 
-		zend_atomic_bool_store(runtime->child.interrupt, true);
+		php_parallel_scheduler_request_interrupt(runtime);
 	} else {
 		php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSE);
 	}
@@ -772,7 +786,9 @@ void php_parallel_scheduler_join(php_parallel_runtime_t *runtime, bool kill)
 
 	php_parallel_monitor_set(runtime->monitor, PHP_PARALLEL_CLOSED);
 
-	pthread_join(runtime->thread, NULL);
+	if (pthread_join(runtime->thread, NULL) == SUCCESS) {
+		atomic_fetch_sub(&runtime->parent.output->workers, 1);
+	}
 }
 
 bool php_parallel_scheduler_cancel(php_parallel_future_t *future)
@@ -795,7 +811,7 @@ bool php_parallel_scheduler_cancel(php_parallel_future_t *future)
 		php_parallel_monitor_lock(future->monitor);
 
 		if (!php_parallel_monitor_check(future->monitor, PHP_PARALLEL_READY)) {
-			zend_atomic_bool_store(future->runtime->child.interrupt, true);
+			php_parallel_scheduler_request_interrupt(future->runtime);
 
 			php_parallel_monitor_set(future->monitor, PHP_PARALLEL_CANCELLED);
 			php_parallel_monitor_wait_locked(future->monitor, PHP_PARALLEL_READY);
@@ -853,7 +869,7 @@ PHP_MINIT_FUNCTION(PARALLEL_SCHEDULER)
 
 	memset(&sa, 0, sizeof(struct sigaction));
 	sa.sa_sigaction = php_parallel_sigsegv_handler;
-	sa.sa_flags = SA_SIGINFO;
+	sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
 
 	sigaction(SIGSEGV, &sa, &php_parallel_old_sigsegv_action);
 #endif

@@ -34,7 +34,13 @@ int     php_parallel_monitor_lock(php_parallel_monitor_t *monitor) { return pthr
 
 int32_t php_parallel_monitor_check(php_parallel_monitor_t *monitor, int32_t state)
 {
-	return (monitor->state & (state));
+	int32_t result;
+
+	pthread_mutex_lock(&monitor->mutex);
+	result = monitor->state & state;
+	pthread_mutex_unlock(&monitor->mutex);
+
+	return result;
 }
 
 int     php_parallel_monitor_unlock(php_parallel_monitor_t *monitor) { return pthread_mutex_unlock(&monitor->mutex); }

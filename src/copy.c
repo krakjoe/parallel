@@ -122,7 +122,7 @@ zend_class_entry *php_parallel_copy_scope(zend_class_entry *class)
 		}
 	}
 
-	if ((scope = zend_hash_index_find_ptr(&PCG(scope), (zend_ulong) class))) {
+	if ((scope = zend_hash_index_find_ptr(&PCG(scope), (zend_ulong)class))) {
 		return scope;
 	}
 
@@ -147,7 +147,7 @@ zend_class_entry *php_parallel_copy_scope(zend_class_entry *class)
 		return php_parallel_copy_type_unavailable_ce;
 	}
 
-	return zend_hash_index_update_ptr(&PCG(scope), (zend_ulong) class, scope);
+	return zend_hash_index_update_ptr(&PCG(scope), (zend_ulong)class, scope);
 }
 
 static zend_always_inline zend_long php_parallel_copy_resource_ctor(zend_resource *source, bool persistent)
@@ -220,7 +220,7 @@ static zend_always_inline HashTable *php_parallel_copy_hash_persistent_inline(
 		return ht;
 	}
 
-#ifdef HT_PACKED_SIZE
+#if PHP_VERSION_ID >= 80200
 	// if array is packed, copy it as packed
 	if (HT_IS_PACKED(ht)) {
 		HT_SET_DATA_ADDR(ht, php_parallel_copy_memory_func(HT_GET_DATA_ADDR(source),
@@ -301,7 +301,7 @@ static zend_always_inline HashTable *php_parallel_copy_hash_thread(HashTable *so
 
 	HT_SET_DATA_ADDR(ht, emalloc(HT_SIZE(ht)));
 	memcpy(HT_GET_DATA_ADDR(ht), HT_GET_DATA_ADDR(source), HT_HASH_SIZE(ht->nTableMask));
-#ifdef HT_PACKED_SIZE
+#if PHP_VERSION_ID >= 80200
 	if (HT_IS_PACKED(ht)) {
 		zval *p = ht->arPacked, *q = source->arPacked, *p_end = p + ht->nNumUsed;
 		for (; p < p_end; p++, q++) {
@@ -388,7 +388,7 @@ void php_parallel_copy_hash_dtor(HashTable *table, bool persistent)
 #endif
 		}
 
-#ifdef HT_PACKED_SIZE
+#if PHP_VERSION_ID >= 80200
 		if (HT_IS_PACKED(table)) {
 			zval *p = table->arPacked, *end = p + table->nNumUsed;
 			while (p < end) {
@@ -435,6 +435,41 @@ void php_parallel_copy_hash_dtor(HashTable *table, bool persistent)
 	}
 }
 
+/* zend_closure.this_ptr is a zval up to PHP 8.5 and a zend_object* from 8.6 */
+static zend_always_inline void php_parallel_copy_closure_this_ctor(zend_closure_t *closure, bool persistent)
+{
+#if PHP_VERSION_ID >= 80600
+	if (closure->this_ptr) {
+		zval zv;
+
+		ZVAL_OBJ(&zv, closure->this_ptr);
+		PARALLEL_ZVAL_COPY(&zv, &zv, persistent);
+
+		closure->this_ptr = Z_TYPE(zv) == IS_OBJECT ? Z_OBJ(zv) : NULL;
+	}
+#else
+	if (Z_TYPE(closure->this_ptr) == IS_OBJECT) {
+		PARALLEL_ZVAL_COPY(&closure->this_ptr, &closure->this_ptr, persistent);
+	}
+#endif
+}
+
+static zend_always_inline void php_parallel_copy_closure_this_dtor(zend_closure_t *closure)
+{
+#if PHP_VERSION_ID >= 80600
+	if (closure->this_ptr) {
+		zval zv;
+
+		ZVAL_OBJ(&zv, closure->this_ptr);
+		PARALLEL_ZVAL_DTOR(&zv);
+	}
+#else
+	if (Z_TYPE(closure->this_ptr) == IS_OBJECT) {
+		PARALLEL_ZVAL_DTOR(&closure->this_ptr);
+	}
+#endif
+}
+
 static zend_always_inline zend_object *php_parallel_copy_closure_persistent(zend_object *source)
 {
 	zend_closure_t *closure = (zend_closure_t *)source;
@@ -446,9 +481,7 @@ static zend_always_inline zend_object *php_parallel_copy_closure_persistent(zend
 
 	copy->func.common.fn_flags |= ZEND_ACC_CLOSURE;
 
-	if (Z_TYPE(copy->this_ptr) == IS_OBJECT) {
-		PARALLEL_ZVAL_COPY(&copy->this_ptr, &copy->this_ptr, 1);
-	}
+	php_parallel_copy_closure_this_ctor(copy, 1);
 
 	php_parallel_dependencies_store(&copy->func);
 
@@ -507,9 +540,7 @@ static zend_always_inline zend_object *php_parallel_copy_closure_thread(zend_obj
 
 	php_parallel_copy_closure_init_run_time_cache(function);
 
-	if (Z_TYPE(copy->this_ptr) == IS_OBJECT) {
-		PARALLEL_ZVAL_COPY(&copy->this_ptr, &copy->this_ptr, 0);
-	}
+	php_parallel_copy_closure_this_ctor(copy, 0);
 
 	php_parallel_dependencies_load((zend_function *)function);
 
@@ -540,9 +571,7 @@ static zend_always_inline void php_parallel_copy_closure_dtor(zend_object *sourc
 		php_parallel_copy_hash_dtor(closure->func.op_array.static_variables, 1);
 	}
 
-	if (Z_TYPE(closure->this_ptr) == IS_OBJECT) {
-		PARALLEL_ZVAL_DTOR(&closure->this_ptr);
-	}
+	php_parallel_copy_closure_this_dtor(closure);
 
 	pefree(closure, 1);
 }
@@ -711,10 +740,23 @@ static zend_always_inline void php_parallel_copy_sync_dtor(zend_object *source, 
 	pefree(object, persistent);
 }
 
+/* the class entry of the sender is freed with its runtime, so keep what the receiver needs */
+typedef struct _php_parallel_copy_object_t {
+	zend_string *name;
+	uint32_t     count;
+	zend_object  std;
+} php_parallel_copy_object_t;
+
+static zend_always_inline php_parallel_copy_object_t *php_parallel_copy_object_fetch(zend_object *o)
+{
+	return (php_parallel_copy_object_t *)(((char *)o) - offsetof(php_parallel_copy_object_t, std));
+}
+
 static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_object *source)
 {
-	zend_object      *dest;
-	zend_class_entry *ce;
+	php_parallel_copy_object_t *copy;
+	zend_object                *dest;
+	zend_class_entry           *ce;
 
 	if (source->ce->create_object) {
 		ce = php_parallel_copy_object_unavailable_ce;
@@ -731,21 +773,23 @@ static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_
 		php_parallel_copy_context_end(context, restore);
 		return dest;
 	} else {
-		dest = php_parallel_copy_mem(source, sizeof(zend_object) + zend_object_properties_size(ce), 1);
+		copy = pemalloc(sizeof(php_parallel_copy_object_t) + zend_object_properties_size(ce), 1);
+		dest = &copy->std;
+		memcpy(dest, source, sizeof(zend_object) + zend_object_properties_size(ce));
 		php_parallel_copy_context_insert(context, source, dest);
 	}
+
+	copy->name = php_parallel_copy_string_interned(ce->name);
+	copy->count = ce->default_properties_count;
 
 	GC_SET_REFCOUNT(dest, 1);
 	GC_ADD_FLAGS(dest, GC_IMMUTABLE);
 
-	if (ce == php_parallel_copy_object_unavailable_ce) {
-		dest->ce = ce;
-		dest->handlers = zend_get_std_object_handlers();
-	}
+	dest->ce = php_parallel_copy_object_unavailable_ce;
+	dest->handlers = zend_get_std_object_handlers();
 
-	if (ce->default_properties_count) {
-		zval *property = source->properties_table, *slot = dest->properties_table,
-		     *end = property + source->ce->default_properties_count;
+	if (copy->count) {
+		zval *property = source->properties_table, *slot = dest->properties_table, *end = property + copy->count;
 
 		while (property < end) {
 			PARALLEL_ZVAL_COPY(slot, property, 1);
@@ -764,13 +808,12 @@ static zend_always_inline zend_object *php_parallel_copy_object_persistent(zend_
 
 static zend_always_inline zend_object *php_parallel_copy_object_thread(zend_object *source)
 {
-	zend_object      *dest;
-	zend_class_entry *ce;
+	php_parallel_copy_object_t *copy = php_parallel_copy_object_fetch(source);
+	zend_object                *dest;
+	zend_class_entry           *ce = zend_lookup_class(copy->name);
 
-	if (source->ce->create_object) {
-		ce = php_parallel_copy_object_unavailable_ce;
-	} else {
-		ce = php_parallel_copy_scope(source->ce);
+	if (!ce) {
+		ce = php_parallel_copy_type_unavailable_ce;
 	}
 
 	php_parallel_copy_context_t *context, *restore;
@@ -796,8 +839,7 @@ static zend_always_inline zend_object *php_parallel_copy_object_thread(zend_obje
 	GC_DEL_FLAGS(dest, GC_IMMUTABLE);
 
 	if (ce->default_properties_count) {
-		zval *property = source->properties_table, *slot = dest->properties_table,
-		     *end = property + source->ce->default_properties_count;
+		zval *property = source->properties_table, *slot = dest->properties_table, *end = property + copy->count;
 
 		while (property < end) {
 			PARALLEL_ZVAL_COPY(slot, property, 0);
@@ -816,7 +858,9 @@ static zend_always_inline zend_object *php_parallel_copy_object_thread(zend_obje
 
 static zend_always_inline zend_object *php_parallel_copy_object_ctor(zend_object *source, bool persistent)
 {
-	if (source->ce == zend_ce_closure) {
+	/* a Closure over an internal function has no op_array to copy, it takes
+	 * the generic path and arrives as parallel\Runtime\Object\Unavailable */
+	if (source->ce == zend_ce_closure && ((zend_closure_t *)source)->func.type == ZEND_USER_FUNCTION) {
 		return php_parallel_copy_closure_ctor(source, persistent);
 	}
 
@@ -858,8 +902,10 @@ static zend_always_inline void php_parallel_copy_object_dtor(zend_object *source
 	}
 
 	if (GC_DELREF(source) == 0) {
-		if (source->ce->default_properties_count) {
-			zval *property = source->properties_table, *end = property + source->ce->default_properties_count;
+		php_parallel_copy_object_t *copy = php_parallel_copy_object_fetch(source);
+
+		if (copy->count) {
+			zval *property = source->properties_table, *end = property + copy->count;
 
 			while (property < end) {
 				PARALLEL_ZVAL_DTOR(property);
@@ -871,7 +917,7 @@ static zend_always_inline void php_parallel_copy_object_dtor(zend_object *source
 			php_parallel_copy_hash_dtor(source->properties, 1);
 		}
 
-		pefree(source, 1);
+		pefree(copy, 1);
 	}
 }
 

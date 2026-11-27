@@ -83,9 +83,9 @@ static zend_always_inline const char *php_parallel_check_opcode_name(zend_uchar 
 
 static zend_always_inline bool php_parallel_check_type(zend_type type)
 { /* {{{ */
-	zend_string *name;
-	zend_type   *single;
-	zend_class_entry *class;
+	zend_string              *name;
+	zend_type                *single;
+	zend_class_entry         *class;
 	php_parallel_check_type_t check, *checked;
 
 	if (ZEND_TYPE_HAS_LIST(type)) {
@@ -487,6 +487,11 @@ _php_parallel_checked_function_return:
 
 static zend_always_inline bool php_parallel_check_closure(zend_closure_t *closure)
 { /* {{{ */
+	/* a Closure over an internal function, e.g. strlen(...), has no op_array */
+	if (closure->func.type != ZEND_USER_FUNCTION) {
+		return 0;
+	}
+
 	return php_parallel_check_statics(&closure->func, NULL, NULL) &&
 	       php_parallel_check_function(&closure->func, NULL, NULL);
 } /* }}} */

@@ -10,6 +10,8 @@ if (ini_get("opcache.enable_cli")) {
     die("skip opcache must not be enabled");
 }
 ?>
+--INI--
+error_reporting=E_ALL & ~E_DEPRECATED
 --FILE--
 <?php
 use \parallel\{Runtime, Channel};
