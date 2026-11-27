@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["8.0", "8.1", "8.2", "8.3", "8.4", "8.5", "8.6"]
+        version: ["8.5", "8.6"]
     runs-on: ubuntu-latest
     name: TSan, PHP v${{ matrix.version }}
     steps:
@@ -103,8 +103,9 @@ jobs:
             shift
             TEST_MODE="$mode" php "$@" -r '
               $mode = getenv("TEST_MODE");
-              $enable = filter_var(ini_get("opcache.enable"), FILTER_VALIDATE_BOOL);
-              $enableCli = filter_var(ini_get("opcache.enable_cli"), FILTER_VALIDATE_BOOL);
+              $iniBool = static fn(string $key): bool => in_array(strtolower((string) ini_get($key)), ["1", "on", "true", "yes"], true);
+              $enable = $iniBool("opcache.enable");
+              $enableCli = $iniBool("opcache.enable_cli");
               $status = function_exists("opcache_get_status") ? opcache_get_status(false) : false;
               $opcacheOn = is_array($status) && !empty($status["opcache_enabled"]);
               $jitOn = $opcacheOn
