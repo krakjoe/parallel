@@ -39,6 +39,7 @@
 - Scope output locking to each root thread instead of locking across all threads (#426)
 - Use the alternate signal stack for SIGSEGV when running alongside Go (#407)
 - Fix copying packed arrays and closures bound to $this on PHP 8.6 (#393, #429)
+- Build and test thread-safe PHP 8.6 binaries on Windows for x64 and x86
 - Support VM interrupts on PHP 8.7 (#417)
 - Add build options for UndefinedBehaviorSanitizer and ThreadSanitizer (#385, #390)
  </notes>
