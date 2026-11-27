@@ -1,0 +1,22 @@
+name: Static analysis
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Clang, PHP 8.5 ZTS
+    runs-on: ubuntu-latest
+    container: ghcr.io/krakjoe/php-release-8.5:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Clang
+        run: apt-get update && apt-get install -y --no-install-recommends clang
+      - name: Analyze parallel
+        run: |
+          phpize
+          CC=clang ./configure --enable-parallel
+          make analyze

@@ -231,12 +231,7 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source PARA
 		// slot.
 		while (src_opline < src_end) {
 			if (src_opline->opcode == ZEND_INIT_FCALL && src_opline->op2_type == IS_CONST) {
-				uint32_t idx;
-#if ZEND_USE_ABS_CONST_ADDR
-				idx = (zval *)src_opline->op2.zv - source->op_array.literals;
-#else
-				idx = ((zval *)((char *)src_opline + src_opline->op2.constant) - source->op_array.literals);
-#endif
+				uint32_t idx = RT_CONSTANT(src_opline, src_opline->op2) - source->op_array.literals;
 				if (idx < cached->last_literal) {
 					if (literal_map[idx] == 0) {
 						literal_map[idx] = 1;
@@ -318,16 +313,15 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source PARA
 				ZEND_VM_SET_OPCODE_HANDLER(opline);
 			}
 
-			/* Remap IS_CONST operands to their new locations in the expanded literal table
-			   using the offset_map we built earlier. */
+			/* An IS_CONST operand references a source literal, so the table was nonempty and we built offset_map. */
 			if (opline->op1_type == IS_CONST) {
-				uint32_t idx;
 				zend_op *src_opline = source->op_array.opcodes + (opline - opcodes);
+				uint32_t idx = RT_CONSTANT(src_opline, src_opline->op1) - source->op_array.literals;
+
+				ZEND_ASSERT(offset_map != NULL);
 #if ZEND_USE_ABS_CONST_ADDR
-				idx = (zval *)src_opline->op1.zv - source->op_array.literals;
 				opline->op1.zv = &cached->literals[offset_map[idx]];
 #else
-				idx = ((zval *)((char *)src_opline + src_opline->op1.constant) - source->op_array.literals);
 				opline->op1.constant = (char *)&cached->literals[offset_map[idx]] - (char *)opline;
 #endif
 				if (opline->opcode == ZEND_SEND_VAL || opline->opcode == ZEND_SEND_VAL_EX ||
@@ -336,13 +330,13 @@ static zend_op_array *php_parallel_cache_create(const zend_function *source PARA
 				}
 			}
 			if (opline->op2_type == IS_CONST) {
-				uint32_t idx;
 				zend_op *src_opline = source->op_array.opcodes + (opline - opcodes);
+				uint32_t idx = RT_CONSTANT(src_opline, src_opline->op2) - source->op_array.literals;
+
+				ZEND_ASSERT(offset_map != NULL);
 #if ZEND_USE_ABS_CONST_ADDR
-				idx = (zval *)src_opline->op2.zv - source->op_array.literals;
 				opline->op2.zv = &cached->literals[offset_map[idx]];
 #else
-				idx = ((zval *)((char *)src_opline + src_opline->op2.constant) - source->op_array.literals);
 				opline->op2.constant = (char *)&cached->literals[offset_map[idx]] - (char *)opline;
 #endif
 			}

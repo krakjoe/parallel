@@ -68,7 +68,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Input, add)
 {
-	php_parallel_events_input_t *input = php_parallel_events_input_from(getThis());
+	php_parallel_events_input_t *input = php_parallel_events_input_from(ZEND_THIS);
 	zend_string                 *target;
 	zval                        *value;
 	zval                        *error;
@@ -102,7 +102,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Input, remove)
 {
-	php_parallel_events_input_t *input = php_parallel_events_input_from(getThis());
+	php_parallel_events_input_t *input = php_parallel_events_input_from(ZEND_THIS);
 	zend_string                 *target;
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -121,7 +121,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Input, clear)
 {
-	php_parallel_events_input_t *input = php_parallel_events_input_from(getThis());
+	php_parallel_events_input_t *input = php_parallel_events_input_from(ZEND_THIS);
 
 	PARALLEL_PARAMETERS_NONE(return);
 

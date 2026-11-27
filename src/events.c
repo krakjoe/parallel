@@ -95,7 +95,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Events, setInput)
 {
-	php_parallel_events_t *events = php_parallel_events_from(getThis());
+	php_parallel_events_t *events = php_parallel_events_from(ZEND_THIS);
 	zval                  *input;
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -115,7 +115,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Events, addChannel)
 {
-	php_parallel_events_t *events = php_parallel_events_from(getThis());
+	php_parallel_events_t *events = php_parallel_events_from(ZEND_THIS);
 	zval                  *target = NULL;
 	zend_string           *key = NULL;
 
@@ -136,7 +136,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Events, addFuture)
 {
-	php_parallel_events_t *events = php_parallel_events_from(getThis());
+	php_parallel_events_t *events = php_parallel_events_from(ZEND_THIS);
 	zval                  *target = NULL;
 	zend_string           *name = NULL;
 	zend_string           *key = NULL;
@@ -158,7 +158,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Events, remove)
 {
-	php_parallel_events_t *events = php_parallel_events_from(getThis());
+	php_parallel_events_t *events = php_parallel_events_from(ZEND_THIS);
 	zend_string           *target = NULL;
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -177,7 +177,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Events, setTimeout)
 {
-	php_parallel_events_t *events = php_parallel_events_from(getThis());
+	php_parallel_events_t *events = php_parallel_events_from(ZEND_THIS);
 	zend_long              timeout = -1;
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -198,7 +198,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Events, setBlocking)
 {
-	php_parallel_events_t *events = php_parallel_events_from(getThis());
+	php_parallel_events_t *events = php_parallel_events_from(ZEND_THIS);
 	bool                   blocking;
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -219,7 +219,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Events, setBlocker)
 {
-	php_parallel_events_t *events = php_parallel_events_from(getThis());
+	php_parallel_events_t *events = php_parallel_events_from(ZEND_THIS);
 	zval                  *blocker = NULL;
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -243,7 +243,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Events, poll)
 {
-	php_parallel_events_t *events = php_parallel_events_from(getThis());
+	php_parallel_events_t *events = php_parallel_events_from(ZEND_THIS);
 
 	PARALLEL_PARAMETERS_NONE(return);
 
@@ -259,7 +259,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Parallel_Events, count)
 {
-	php_parallel_events_t *events = php_parallel_events_from(getThis());
+	php_parallel_events_t *events = php_parallel_events_from(ZEND_THIS);
 
 	PARALLEL_PARAMETERS_NONE(return);
 
