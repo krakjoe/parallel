@@ -91,8 +91,8 @@ jobs:
       - name: Install lcov
         if: ${{ matrix.build == 'gcov' }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y lcov
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends lcov
 
       - name: Build parallel
         run: |
