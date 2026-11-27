@@ -106,9 +106,10 @@ jobs:
               }
               if (strcmp(trigger, "asan") == 0) {
                   char *buf = malloc(4);
-                  volatile char x = buf[4];
-                  (void)x;
+                  buf[0] = 42;
                   free(buf);
+                  volatile char x = buf[0];
+                  (void)x;
               } else if (strcmp(trigger, "ubsan") == 0) {
                   volatile int x = INT_MAX;
                   volatile int y = x + 1;
@@ -136,7 +137,7 @@ jobs:
           ZEND_GET_MODULE(sanitizer_smoke)
           EOF
 
-          cc -shared -fPIC -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+          cc -shared -fPIC -O1 -fsanitize=address,undefined -fno-sanitize=object-size -fno-sanitize-recover=undefined \
             $(php-config --includes) /tmp/sanitizer_smoke.c -o /tmp/sanitizer_smoke.so
 
           expect_trigger() {
@@ -155,7 +156,7 @@ jobs:
             echo "OK: $trigger triggered (rc=$rc)"
           }
 
-          expect_trigger asan "AddressSanitizer: heap-buffer-overflow"
+          expect_trigger asan "AddressSanitizer: heap-use-after-free"
           expect_trigger ubsan "runtime error: signed integer overflow"
           expect_trigger leak "LeakSanitizer: detected memory leaks" env ASAN_OPTIONS=detect_leaks=1
           rm -f /tmp/sanitizer_smoke.c /tmp/sanitizer_smoke.so
