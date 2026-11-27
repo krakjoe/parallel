@@ -34,7 +34,7 @@
 extern zend_module_entry parallel_module_entry;
 # define phpext_parallel_ptr &parallel_module_entry
 
-# define PHP_PARALLEL_VERSION "1.2.15"
+# define PHP_PARALLEL_VERSION "1.2.16"
 
 typedef struct _php_parallel_output_t {
 	pthread_mutex_t mutex;
