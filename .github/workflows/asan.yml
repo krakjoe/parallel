@@ -87,6 +87,79 @@ jobs:
           check_mode opcache -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=disable
           check_mode jit -d opcache.enable=1 -d opcache.enable_cli=1 -d opcache.jit=function -d opcache.jit_buffer_size=32M
 
+      - name: Smoke test ASAN, UBSan, and LeakSanitizer
+        run: |
+          cat > /tmp/sanitizer_smoke.c <<'EOF'
+          #define _GNU_SOURCE
+          #include "php.h"
+          #include <limits.h>
+          #include <stdlib.h>
+          #include <string.h>
+
+          static void *volatile smoke_sink;
+
+          static PHP_MINIT_FUNCTION(sanitizer_smoke)
+          {
+              const char *trigger = getenv("SMOKE_TRIGGER");
+              if (!trigger) {
+                  return SUCCESS;
+              }
+              if (strcmp(trigger, "asan") == 0) {
+                  char *buf = malloc(4);
+                  volatile char x = buf[4];
+                  (void)x;
+                  free(buf);
+              } else if (strcmp(trigger, "ubsan") == 0) {
+                  volatile int x = INT_MAX;
+                  volatile int y = x + 1;
+                  (void)y;
+              } else if (strcmp(trigger, "leak") == 0) {
+                  smoke_sink = malloc(64);
+                  smoke_sink = NULL;
+              }
+              return SUCCESS;
+          }
+
+          zend_module_entry sanitizer_smoke_module_entry = {
+              STANDARD_MODULE_HEADER,
+              "sanitizer_smoke",
+              NULL,
+              PHP_MINIT(sanitizer_smoke),
+              NULL,
+              NULL,
+              NULL,
+              NULL,
+              "0.1",
+              STANDARD_MODULE_PROPERTIES
+          };
+
+          ZEND_GET_MODULE(sanitizer_smoke)
+          EOF
+
+          cc -shared -fPIC -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined \
+            $(php-config --includes) /tmp/sanitizer_smoke.c -o /tmp/sanitizer_smoke.so
+
+          expect_trigger() {
+            local trigger="$1"
+            local pattern="$2"
+            shift 2
+            set +e
+            output=$(SMOKE_TRIGGER="$trigger" "$@" php -d extension=/tmp/sanitizer_smoke.so -r '' 2>&1)
+            rc=$?
+            set -e
+            if [ "$rc" -eq 0 ] || ! printf '%s\n' "$output" | grep -q "$pattern"; then
+              echo "ERROR: $trigger smoke test did not trigger as expected (rc=$rc)" >&2
+              printf '%s\n' "$output" >&2
+              exit 1
+            fi
+            echo "OK: $trigger triggered (rc=$rc)"
+          }
+
+          expect_trigger asan "AddressSanitizer: heap-buffer-overflow"
+          expect_trigger ubsan "runtime error: signed integer overflow"
+          expect_trigger leak "LeakSanitizer: detected memory leaks" env ASAN_OPTIONS=detect_leaks=1
+          rm -f /tmp/sanitizer_smoke.c /tmp/sanitizer_smoke.so
+
       - name: Build parallel
         run: |
           php -v
@@ -96,6 +169,8 @@ jobs:
             --enable-parallel-address-sanitizer \
             --enable-parallel-undefined-sanitizer
           make -j"$(nproc)"
+          nm -u modules/parallel.so | grep -q '__asan_'
+          nm -u modules/parallel.so | grep -q '__ubsan_'
           sudo make install
           echo "extension=parallel.so" | sudo tee -a "$(php -r 'echo php_ini_loaded_file();')"
           php -m
